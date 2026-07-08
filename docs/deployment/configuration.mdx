@@ -204,6 +204,7 @@ The authenticated entity will have:
 |    **OPENAI_MODEL_NAME**    |       Model name to use for OpenAI requests        |    No    | "gpt-4o-2024-08-06" | Valid OpenAI model name (e.g., "gpt-4o", "gpt-4o-mini", ...) |       Both       |
 | **OPEN_AI_ORGANIZATION_ID** |        Organization ID for OpenAI services         |    No    |        None         |                 Valid OpenAI organization ID                 |       Both       |
 |     **OPENAI_BASE_URL**     | Base URL for OpenAI API (useful for LiteLLM proxy) |    No    |        None         |          Valid URL (e.g., "http://localhost:4000")           |       Both       |
+| **KEEP_AI_DISABLE_TEMPERATURE** | Omit the `temperature` parameter from AI requests (some models, e.g. reasoning models, only accept the default and reject explicit values) |    No    |        false        |                       true / false                       |     Backend      |
 
 <Tip>
   For various different LLM based features, we also require to set these

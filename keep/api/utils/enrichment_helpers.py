@@ -53,6 +53,9 @@ def parse_and_enrich_deleted_and_assignees(alert: AlertDto, enrichments: dict):
     if "assignees" in alert.enriched_fields:
         # User can't be un-assigned. Just re-assigned to someone else
         alert.enriched_fields.remove("assignees")
+    if "assignee" in alert.enriched_fields:
+        # "assignee" is a synthetic flat field derived from "assignees" — not user-editable
+        alert.enriched_fields.remove("assignee")
 
 
 def calculated_start_firing_time(

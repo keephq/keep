@@ -75,6 +75,11 @@ describe("useQueriesHandler", () => {
         ],
       },
       facetsState: {},
+      activeFacetIds: {
+        severityFacet: true,
+        incidentNameFacet: true,
+        statusFacet: true,
+      },
       isFacetsStateInitializedFromQueryParams: false,
       isInitialStateHandled: true,
     });
@@ -172,6 +177,82 @@ describe("useQueriesHandler", () => {
       facetOptionQueries: null,
       filterCel: null,
     });
+  });
+
+  it("should not build option queries for inactive (lazy, not expanded) facets", () => {
+    // Only severity and status are active; incidentNameFacet is lazy/collapsed.
+    store.setState({
+      activeFacetIds: {
+        severityFacet: true,
+        statusFacet: true,
+      },
+    });
+
+    renderHook(() => useQueriesHandler(store));
+
+    act(() => {
+      store.setState({
+        facetsState: {
+          severityFacet: { critical: true, high: true },
+        },
+        facetsStateRefreshToken: "some-token",
+        isFacetsStateInitializedFromQueryParams: true,
+      });
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    const { facetOptionQueries } = store.getState().queriesState;
+    expect(facetOptionQueries).not.toBeNull();
+    expect(Object.keys(facetOptionQueries as object).sort()).toEqual([
+      "severityFacet",
+      "statusFacet",
+    ]);
+    expect(facetOptionQueries).not.toHaveProperty("incidentNameFacet");
+  });
+
+  it("should build option queries once an inactive facet becomes active", () => {
+    store.setState({
+      activeFacetIds: {
+        severityFacet: true,
+        statusFacet: true,
+      },
+    });
+
+    renderHook(() => useQueriesHandler(store));
+
+    act(() => {
+      store.setState({
+        facetsState: {
+          severityFacet: { critical: true },
+        },
+        facetsStateRefreshToken: "some-token",
+        isFacetsStateInitializedFromQueryParams: true,
+      });
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    expect(store.getState().queriesState.facetOptionQueries).not.toHaveProperty(
+      "incidentNameFacet"
+    );
+
+    // Simulate the user expanding the lazy facet.
+    act(() => {
+      store.getState().setFacetActive("incidentNameFacet");
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(200);
+    });
+
+    expect(store.getState().queriesState.facetOptionQueries).toHaveProperty(
+      "incidentNameFacet"
+    );
   });
 
   it("should handle complex facet paths correctly", () => {

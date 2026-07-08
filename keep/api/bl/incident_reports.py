@@ -12,6 +12,7 @@ from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.consts import OPENAI_MODEL_NAME
 from keep.api.models.db.incident import IncidentStatus
 from keep.api.models.incident import IncidentDto
+from keep.api.utils.ai_utils import get_ai_temperature_kwargs
 
 
 class IncidentMetrics(BaseModel):
@@ -163,7 +164,7 @@ class IncidentReportsBl:
                 },
             },
             seed=1239,
-            temperature=0.2,
+            **get_ai_temperature_kwargs(0.2),
         )
 
         model_response = response.choices[0].message.content

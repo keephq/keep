@@ -4,6 +4,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, validator
 
+from keep.api.core.config import config
+from keep.api.core.db import get_user as get_db_user
+from keep.api.core.db import update_user_password
 from keep.api.models.user import User
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
@@ -38,6 +41,17 @@ class UpdateUserRequest(BaseModel):
     def validate_role(cls, v):
         if v == "":
             return None
+        return v
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    @validator("new_password", allow_reuse=True)
+    def validate_new_password(cls, v):
+        if not v or not v.strip():
+            raise ValueError("New password cannot be empty")
         return v
 
 
@@ -91,6 +105,42 @@ async def create_user(
         role=role,
         groups=groups,
     )
+
+
+@router.put(
+    "/me/password",
+    description="Change the password of the currently authenticated user",
+)
+def change_my_password(
+    request_data: ChangePasswordRequest,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:settings"])
+    ),
+):
+    # Self-service password change is only supported for local (DB) accounts.
+    auth_type = config("AUTH_TYPE", default="").lower()
+    if auth_type not in ("db", "single_tenant"):
+        raise HTTPException(
+            status_code=501,
+            detail="Changing your password is not supported for this authentication type",
+        )
+
+    username = authenticated_entity.email
+    if not username:
+        raise HTTPException(status_code=400, detail="Unable to resolve current user")
+
+    # Verify the current password before allowing a change.
+    user = get_db_user(username, request_data.current_password, update_sign_in=False)
+    if not user:
+        raise HTTPException(status_code=403, detail="Current password is incorrect")
+
+    updated_user = update_user_password(
+        authenticated_entity.tenant_id, username, request_data.new_password
+    )
+    if not updated_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"status": "OK"}
 
 
 @router.put("/{user_email}", description="Update a user")

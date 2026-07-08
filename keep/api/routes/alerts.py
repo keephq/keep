@@ -20,7 +20,7 @@ from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
 from keep.api.bl.enrichments_bl import EnrichmentsBl
-from keep.api.consts import KEEP_ARQ_QUEUE_BASIC
+from keep.api.consts import KEEP_ARQ_QUEUE_BASIC, fingerprints_for_poll_payload
 from keep.api.core.alerts import (
     get_alert_facets,
     get_alert_facets_data,
@@ -279,6 +279,27 @@ def get_all_alerts(
     return enriched_alerts_dto
 
 
+@router.post("/batch", description="Get alerts by fingerprints")
+def get_alerts_by_fingerprints_batch(
+    fingerprints: list[str],
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["read:alert"])
+    ),
+) -> list[AlertDto]:
+    tenant_id = authenticated_entity.tenant_id
+    if not fingerprints:
+        return []
+
+    last_alerts = get_last_alerts_by_fingerprints(tenant_id, fingerprints)
+    alert_ids = [last_alert.alert_id for last_alert in last_alerts]
+    if not alert_ids:
+        return []
+
+    db_alerts = get_alerts_by_ids(tenant_id, alert_ids)
+    db_alerts = enrich_alerts_with_incidents(tenant_id, db_alerts)
+    return convert_db_alerts_to_dto_alerts(db_alerts, with_incidents=True)
+
+
 @router.get("/{fingerprint}/history", description="Get alert history")
 def get_alert_history(
     fingerprint: str,
@@ -357,7 +378,7 @@ def delete_alert(
 
     if delete_alert.lastReceived not in assignees_last_receievd:
         # auto-assign the deleting user to the alert
-        assignees_last_receievd[delete_alert.lastReceived] = user_email
+        assignees_last_receievd[delete_alert.lastReceived] = user_email.lower()
 
     # overwrite the enrichment
     enrichment_bl = EnrichmentsBl(tenant_id)
@@ -415,9 +436,13 @@ def assign_alert(
     if unassign:
         assignees_last_receievd.pop(last_received, None)
     else:
-        assignees_last_receievd[last_received] = user_email
+        assignees_last_receievd[last_received] = user_email.lower()
 
-    enrichments = {"assignees": assignees_last_receievd}
+    # Store the most recent assignee as a flat field so the facet/filter system
+    # can query it directly (the nested "assignees" dict is not queryable by facets).
+    flat_assignee = next(iter(reversed(assignees_last_receievd.values())), None) if assignees_last_receievd else None
+
+    enrichments = {"assignees": assignees_last_receievd, "assignee": flat_assignee}
     if not status:
         enrichments["status"] = "acknowledged"
 
@@ -968,7 +993,7 @@ def batch_enrich_alerts(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    "{}",
+                    {"fingerprints": fingerprints_for_poll_payload(fingerprints)},
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
@@ -1117,7 +1142,11 @@ def _enrich_alert(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    "{}",
+                    {
+                        "fingerprints": fingerprints_for_poll_payload(
+                            [enrich_data.fingerprint]
+                        )
+                    },
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
@@ -1234,7 +1263,11 @@ def unenrich_alert(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    "{}",
+                    {
+                        "fingerprints": fingerprints_for_poll_payload(
+                            [enrich_data.fingerprint]
+                        )
+                    },
                 )
                 logger.info("Told client to poll alerts")
             except Exception:

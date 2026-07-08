@@ -1,7 +1,7 @@
 import { createStore } from "zustand";
 import { v4 as uuidV4 } from "uuid";
 import { FacetDto, FacetOptionDto, FacetsConfig, FacetState } from "../models";
-import { toFacetState, valueToString } from "./utils";
+import { isLazyFacet, toFacetState, valueToString } from "./utils";
 
 export type FacetsPanelState = {
   facetsConfig: FacetsConfig | null;
@@ -9,6 +9,15 @@ export type FacetsPanelState = {
 
   facets: FacetDto[] | null;
   setFacets: (facets: FacetDto[]) => void;
+
+  /**
+   * IDs of facets whose options should be loaded. Non-lazy facets are active
+   * immediately; lazy facets become active only once the user expands them or
+   * they have selected options. This prevents loading options for every lazy
+   * facet on mount, which froze the page with high facet cardinality (#6577).
+   */
+  activeFacetIds: Record<string, boolean>;
+  setFacetActive: (facetId: string) => void;
 
   facetOptions: Record<string, FacetOptionDto[]> | null;
   setFacetOptions: (facetOptions: Record<string, FacetOptionDto[]>) => void;
@@ -61,7 +70,40 @@ export const createFacetsPanelStore = () =>
     setFacetsConfig: (facetsConfig: FacetsConfig) => set({ facetsConfig }),
 
     facets: null,
-    setFacets: (facets: FacetDto[]) => set({ facets }),
+    setFacets: (facets: FacetDto[]) => {
+      const previousFacets = state().facets;
+      const previousActive = state().activeFacetIds || {};
+      const activeFacetIds: Record<string, boolean> = { ...previousActive };
+      const previousFacetIds = new Set(
+        (previousFacets || []).map((facet) => facet.id)
+      );
+      // Whether this is the very first time facets are loaded. On subsequent
+      // updates, any facet not seen before is treated as newly added by the
+      // user (via "Add Facet") and should be active/expanded immediately.
+      const isInitialLoad = previousFacets === null;
+
+      // Eager facets load options immediately. A facet is eager unless it is
+      // explicitly lazy AND not static; static facets (severity/status/source)
+      // must always render their values on load. Only non-static lazy facets
+      // (high-cardinality user-defined facets) are deferred (#6577).
+      facets.forEach((facet) => {
+        const isNewlyAdded = !isInitialLoad && !previousFacetIds.has(facet.id);
+        if (!isLazyFacet(facet) || isNewlyAdded) {
+          activeFacetIds[facet.id] = true;
+        }
+      });
+      set({ facets, activeFacetIds });
+    },
+
+    activeFacetIds: {},
+    setFacetActive: (facetId: string) => {
+      if (state().activeFacetIds?.[facetId]) {
+        return;
+      }
+      set({
+        activeFacetIds: { ...(state().activeFacetIds || {}), [facetId]: true },
+      });
+    },
 
     facetOptions: null,
     setFacetOptions: (facetOptions: Record<string, FacetOptionDto[]>) =>
@@ -87,9 +129,16 @@ export const createFacetsPanelStore = () =>
 
     facetsState: {},
     patchFacetsState: (facetsStatePatch) => {
+      // Facets that have a (pre)selected state must load their options so the
+      // selection can be reflected, even if they are lazy and collapsed.
+      const activeFacetIds = { ...(state().activeFacetIds || {}) };
+      Object.keys(facetsStatePatch).forEach((facetId) => {
+        activeFacetIds[facetId] = true;
+      });
       set({
         // So that it only triggers refresh when facetsState is patched once
         facetsStateRefreshToken: state().facetsStateRefreshToken || uuidV4(),
+        activeFacetIds,
         facetsState: {
           ...(state().facetsState || {}),
           ...facetsStatePatch,
@@ -125,6 +174,7 @@ export const createFacetsPanelStore = () =>
         // So that it only triggers refresh when facetsState is changed once (option is selected\deselected by user)
         facetsStateRefreshToken: uuidV4(),
         changedFacetId: facetId,
+        activeFacetIds: { ...(state().activeFacetIds || {}), [facetId]: true },
         dirtyFacetIds: Array.from(new Set(state().dirtyFacetIds).add(facetId)),
         facetsState: {
           ...facetsState,
@@ -140,6 +190,7 @@ export const createFacetsPanelStore = () =>
         // So that it only triggers refresh when facetsState is changed once (option is selected\deselected by user)
         facetsStateRefreshToken: uuidV4(),
         changedFacetId: facetId,
+        activeFacetIds: { ...(state().activeFacetIds || {}), [facetId]: true },
         dirtyFacetIds: Array.from(new Set(state().dirtyFacetIds).add(facetId)),
         facetsState: {
           ...facetsState,
@@ -155,6 +206,7 @@ export const createFacetsPanelStore = () =>
         // So that it only triggers refresh when facetsState is changed once (option is selected\deselected by user)
         facetsStateRefreshToken: uuidV4(),
         changedFacetId: facetId,
+        activeFacetIds: { ...(state().activeFacetIds || {}), [facetId]: true },
         dirtyFacetIds: Array.from(new Set(state().dirtyFacetIds).add(facetId)),
         facetsState: {
           ...facetsState,
@@ -179,10 +231,19 @@ export const createFacetsPanelStore = () =>
       set({ isInitialStateHandled }),
 
     clearFilters: () => {
+      // Keep only eager facets active so we don't re-load every lazy facet
+      // after a reset (#6577).
+      const activeFacetIds: Record<string, boolean> = {};
+      (state().facets || []).forEach((facet) => {
+        if (!isLazyFacet(facet)) {
+          activeFacetIds[facet.id] = true;
+        }
+      });
       return set({
         isInitialStateHandled: false,
         facetsState: {},
         facetsStateRefreshToken: uuidV4(),
+        activeFacetIds,
         dirtyFacetIds: [],
       });
     },

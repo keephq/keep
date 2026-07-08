@@ -1,4 +1,4 @@
-import { editor, languages, Position, CancellationToken } from "monaco-editor";
+import type { editor, languages, Position, CancellationToken } from "monaco-editor";
 
 // NOTE: The enums below are workarounds due to inability to import from monaco-editor (turbopack related)
 enum CompletionItemKind {

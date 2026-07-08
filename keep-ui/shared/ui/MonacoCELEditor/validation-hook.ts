@@ -1,6 +1,6 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
-import { editor } from "monaco-editor";
+import type { editor } from "monaco-editor";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 
