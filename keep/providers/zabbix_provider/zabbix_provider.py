@@ -741,8 +741,18 @@ class ZabbixProvider(BaseProvider):
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
         zabbix_url = event.pop("url", None)
-        hostname = event.pop("service", None) or event.pop("host_name", None)
-        ip_address = event.pop("host_ip", None)
+        hostname = (
+            event.pop("service", None)
+            or event.pop("host_name", None)
+            # Kept for backward compatibility with older Keep-Zabbix webhook installs
+            or event.pop("hostName", None)
+            or event.pop("HOST.NAME", None)
+        )
+        ip_address = (
+            event.pop("host_ip", None)
+            or event.pop("hostIp", None)
+            or event.pop("HOST.IP", None)
+        )
 
         if zabbix_url == "{$ZABBIX.URL}":
             # This means user did not configure $ZABBIX.URL in Zabbix probably
