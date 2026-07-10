@@ -570,9 +570,19 @@ class ZabbixProvider(BaseProvider):
                 environment = "unknown"
 
             severity = self._convert_severity(problem.pop("severity", 1))
-            status = ZabbixProvider.STATUS_MAP.get(
-                problem.pop("status", "").lower(), AlertStatus.FIRING
-            )
+
+            # problem.get never returns a "status" field (that's a UI concept, not an
+            # API field), so this always fell through to the AlertStatus.FIRING default.
+            # problem.get only returns problems that are still open, so resolved/ok are
+            # not reachable here; acknowledged/suppressed come from their own flags.
+            suppressed = problem.pop("suppressed", "0") == "1"
+            acknowledged = problem.pop("acknowledged", "0") == "1"
+            if suppressed:
+                status = AlertStatus.SUPPRESSED
+            elif acknowledged:
+                status = AlertStatus.ACKNOWLEDGED
+            else:
+                status = AlertStatus.FIRING
 
             hostname = hostname_by_eventid.get(problem["eventid"])
 
