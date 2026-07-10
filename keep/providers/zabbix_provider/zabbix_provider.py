@@ -90,6 +90,13 @@ class ZabbixProvider(BaseProvider):
             documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/event/acknowledge",
         ),
         ProviderScope(
+            name="event.get",
+            description="This method allows to retrieve events, used to attach host names to pulled problems.",
+            mandatory=True,
+            mandatory_for_webhook=False,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/event/get",
+        ),
+        ProviderScope(
             name="mediatype.create",
             description="This method allows to create new media types.",
             mandatory=True,
@@ -529,12 +536,32 @@ class ZabbixProvider(BaseProvider):
             {
                 "recent": False,
                 "selectSuppressionData": "extend",
-                "selectHosts": ["host", "name"],
                 "time_from": time_from,
             },
         )
+        results = problems.get("result", [])
+
+        # problem.get doesn't support selectHosts, so hosts are fetched separately
+        # via event.get (same underlying events) and joined back in by eventid.
+        hostname_by_eventid = {}
+        eventids = [problem["eventid"] for problem in results]
+        if eventids:
+            events = self.__send_request(
+                "event.get",
+                {
+                    "eventids": eventids,
+                    "output": ["eventid"],
+                    "selectHosts": ["host", "name"],
+                },
+            )
+            for event in events.get("result", []):
+                hosts = event.get("hosts") or []
+                hostname_by_eventid[event["eventid"]] = (
+                    (hosts[0].get("name") or hosts[0].get("host")) if hosts else None
+                )
+
         formatted_alerts = []
-        for problem in problems.get("result", []):
+        for problem in results:
             name = problem.pop("name")
             problem.pop("source")
 
@@ -547,8 +574,7 @@ class ZabbixProvider(BaseProvider):
                 problem.pop("status", "").lower(), AlertStatus.FIRING
             )
 
-            hosts = problem.pop("hosts", None) or []
-            hostname = hosts[0].get("name") or hosts[0].get("host") if hosts else None
+            hostname = hostname_by_eventid.get(problem["eventid"])
 
             formatted_alerts.append(
                 AlertDto(
