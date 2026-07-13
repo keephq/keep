@@ -14,15 +14,3 @@ export const useProviders = (
     options
   );
 };
-
-export const useProvidersWithHealthCheck = (
-  options: SWRConfiguration = { revalidateOnFocus: false }
-) => {
-  const api = useApi();
-
-  return useSWRImmutable<ProvidersResponse>(
-    api.isReady() ? "/providers/healthcheck" : null,
-    (url) => api.get(url),
-    options
-  );
-};

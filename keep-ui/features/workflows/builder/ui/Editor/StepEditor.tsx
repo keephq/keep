@@ -203,7 +203,6 @@ function InstallProviderButton({
           closeModal={closeModal}
           isProviderNameDisabled={false}
           isLocalhost={false}
-          isHealthCheck={false}
         />
       </Drawer>
     </>
