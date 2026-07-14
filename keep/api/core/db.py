@@ -2241,6 +2241,7 @@ def create_rule(
     multi_level_property_name=None,
     threshold=1,
     assignee=None,
+    is_provisioned=False,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -2264,6 +2265,7 @@ def create_rule(
             multi_level_property_name=multi_level_property_name,
             threshold=threshold,
             assignee=assignee,
+            is_provisioned=is_provisioned,
         )
         session.add(rule)
         session.commit()
