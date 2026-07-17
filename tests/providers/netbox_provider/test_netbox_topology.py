@@ -160,7 +160,28 @@ class TestPullTopology:
 
     def test_webhook_only_install_validates_scopes(self):
         provider = _make_provider()
-        assert provider.validate_scopes() == {"authenticated": True}
+        with patch(REQUESTS_GET) as mock_get:
+            assert provider.validate_scopes() == {"authenticated": True}
+        mock_get.assert_not_called()
+
+    def test_validate_scopes_checks_status_and_dcim_read(self):
+        provider = _make_provider(url="https://netbox.example.com", api_token="token")
+        responses = [_response({}), _response({"results": []})]
+        with patch(REQUESTS_GET, side_effect=responses) as mock_get:
+            assert provider.validate_scopes() == {"authenticated": True}
+        paths = [call.args[0] for call in mock_get.call_args_list]
+        assert paths == [
+            "https://netbox.example.com/api/status/",
+            "https://netbox.example.com/api/dcim/devices/",
+        ]
+
+    def test_validate_scopes_reports_dcim_permission_error(self):
+        provider = _make_provider(url="https://netbox.example.com", api_token="token")
+        responses = [_response({}), _response({}, ok=False, status_code=403)]
+        with patch(REQUESTS_GET, side_effect=responses):
+            result = provider.validate_scopes()
+        assert result["authenticated"] != True  # noqa: E712
+        assert "403" in result["authenticated"]
 
     def test_pulls_devices_and_cables(self):
         provider = _make_provider(url="https://netbox.example.com", api_token="token")

@@ -247,6 +247,8 @@ class NetboxProvider(BaseTopologyProvider):
             return {"authenticated": True}
         try:
             self._get("/api/status/")
+            # the token also needs DCIM read access to pull the topology
+            self._get("/api/dcim/devices/", params={"limit": 1})
             return {"authenticated": True}
         except Exception as e:
             return {"authenticated": f"Error validating scopes: {e}"}
