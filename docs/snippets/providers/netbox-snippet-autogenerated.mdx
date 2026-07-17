@@ -1,5 +1,17 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **url**: NetBox instance URL (required: False, sensitive: False)
+- **api_token**: NetBox API token (required: False, sensitive: True)
+- **verify**: Verify SSL certificates (required: False, sensitive: False)
+- **group_racks_as_applications**: Group devices of the same rack into an application (required: False, sensitive: False)
+- **max_devices**: Maximum number of devices to pull (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **authenticated**: User is authenticated  
+
 
 
 ## In workflows
@@ -7,3 +19,9 @@ Do not edit it manually, as it will be overwritten */}
 This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
 
 
+
+
+## Topology
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology)
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context
+for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).
