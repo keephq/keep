@@ -72,47 +72,29 @@ import {
   UpdateIcon,
 } from "@radix-ui/react-icons";
 
-type HealthResults = {
-  spammy: any[];
-  rules: {
-    total: number;
-    used: number;
-    unused: number;
-  };
-  topology: {
-    covered: any[];
-    uncovered: any[];
-  };
-};
-
 type ProviderFormProps = {
   provider: Provider;
   onConnectChange?: (
     isConnecting: boolean,
     isConnected: boolean,
-    healthResults: HealthResults | null
+    installedProvider?: Provider | null
   ) => void;
   closeModal: () => void;
   isProviderNameDisabled?: boolean;
   installedProvidersMode: boolean;
   isLocalhost?: boolean;
-  isHealthCheck?: boolean;
   mutate: () => void;
 };
 
-function getInitialFormValues(provider: Provider, isHealthCheck?: boolean) {
+function getInitialFormValues(provider: Provider) {
   const initialValues: ProviderFormData = {
     provider_id: provider.id,
-    install_webhook: !isHealthCheck
-      ? (provider.can_setup_webhook ?? false)
-      : false,
+    install_webhook: provider.can_setup_webhook ?? false,
     pulling_enabled: provider.pulling_enabled,
   };
 
   Object.assign(initialValues, {
-    provider_name:
-      provider.details?.name ||
-      (isHealthCheck ? `${provider.id} health check` : undefined),
+    provider_name: provider.details?.name || undefined,
     ...provider.details?.authentication,
   });
 
@@ -141,13 +123,12 @@ const ProviderForm = ({
   isProviderNameDisabled,
   installedProvidersMode,
   isLocalhost,
-  isHealthCheck,
   mutate,
 }: ProviderFormProps) => {
   console.log("Loading the ProviderForm component");
   const searchParams = useSearchParams();
   const [formValues, setFormValues] = useState<ProviderFormData>(() =>
-    getInitialFormValues(provider, isHealthCheck)
+    getInitialFormValues(provider)
   );
   const [formErrors, setFormErrors] = useState<string | null>(null);
   const [inputErrors, setInputErrors] = useState<ProviderInputErrors>({});
@@ -436,13 +417,12 @@ const ProviderForm = ({
     if (!validate()) return;
     setIsLoading(true);
     onConnectChange?.(true, false, null);
-    submit(isHealthCheck ? `/providers/healthcheck` : `/providers/install`)
+    submit(`/providers/install`)
       .then(async (data) => {
         console.log("Connect Result:", data);
         setIsLoading(false);
-        onConnectChange?.(false, true, data);
+        onConnectChange?.(false, true, data as Provider);
         if (
-          !isHealthCheck &&
           formValues.install_webhook &&
           provider.can_setup_webhook &&
           !isLocalhost
@@ -487,7 +467,7 @@ const ProviderForm = ({
               config={providerNameFieldConfig}
               value={(formValues["provider_name"] ?? "").toString()}
               error={inputErrors["provider_name"]}
-              disabled={(isProviderNameDisabled || isHealthCheck) ?? false}
+              disabled={isProviderNameDisabled ?? false}
               title={
                 isProviderNameDisabled
                   ? "This field is disabled because it is pre-filled from the workflow."
@@ -551,9 +531,7 @@ const ProviderForm = ({
       )}
 
       <div className="w-full mt-2" key="install_webhook">
-        {!isHealthCheck &&
-          provider.can_setup_webhook &&
-          !installedProvidersMode && (
+        {provider.can_setup_webhook && !installedProvidersMode && (
             <div
               className={`${
                 isLocalhost ? "bg-gray-100 p-2 rounded-tremor-default" : ""
@@ -637,8 +615,7 @@ const ProviderForm = ({
             </div>
           )}
 
-        {!isHealthCheck &&
-          !provider.can_setup_webhook &&
+        {!provider.can_setup_webhook &&
           !installedProvidersMode &&
           provider.pulling_available && (
             <div
@@ -670,9 +647,7 @@ const ProviderForm = ({
           )}
       </div>
 
-      {!isHealthCheck &&
-        provider.can_setup_webhook &&
-        installedProvidersMode && (
+      {provider.can_setup_webhook && installedProvidersMode && (
           <>
             <div className="flex">
               <input
@@ -913,7 +888,7 @@ const ProviderForm = ({
               color="orange"
               icon={LightningBoltIcon}
             >
-              {isHealthCheck ? `Check health` : `Connect`}
+              Connect
             </Button>
           )}
         </div>
