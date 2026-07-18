@@ -88,9 +88,12 @@ def select_one_facet_option(browser, facet_name, option_name):
 
 def assert_facet(browser, facet_name, alerts, alert_property_name: str):
     counters_dict = {}
-    expect(
-        browser.locator("[data-testid='facet']", has_text=facet_name)
-    ).to_be_visible()
+    facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
+    # After a reload or a timeframe change the facet panel briefly re-renders the
+    # same facet twice, which makes the strict locator resolve to two elements.
+    # Wait for it to settle to a single facet before asserting.
+    expect(facet_locator).to_have_count(1, timeout=15000)
+    expect(facet_locator).to_be_visible()
     for alert in alerts:
         prop_value = None
         for prop in alert_property_name.split("."):
@@ -106,7 +109,6 @@ def assert_facet(browser, facet_name, alerts, alert_property_name: str):
         counters_dict[prop_value] += 1
 
     for facet_value, count in counters_dict.items():
-        facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
         expect(facet_locator).to_be_visible()
         facet_value_locator = facet_locator.locator(
             "[data-testid='facet-value']", has_text=facet_value
