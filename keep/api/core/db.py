@@ -5990,3 +5990,65 @@ def recover_prev_alert_status(alert: Alert, session: Optional[Session] = None):
         )
         session.exec(query)
         session.commit()
+
+
+@retry_on_db_error
+def delete_alerts_by_retention(
+    tenant_id: str,
+    purge_before: datetime,
+    batch_size: int = 1000,
+    session: Optional[Session] = None,
+) -> int:
+    total_deleted = 0
+    with existed_or_new_session(session) as session:
+        while True:
+            alert_ids = session.exec(
+                select(Alert.id)
+                .where(
+                    Alert.tenant_id == tenant_id,
+                    Alert.timestamp < purge_before,
+                )
+                .limit(batch_size)
+            ).all()
+            if not alert_ids:
+                break
+
+            fingerprints = session.exec(
+                select(LastAlert.fingerprint).where(
+                    LastAlert.tenant_id == tenant_id,
+                    LastAlert.alert_id.in_(alert_ids),
+                )
+            ).all()
+
+            if fingerprints:
+                session.query(LastAlertToIncident).filter(
+                    LastAlertToIncident.tenant_id == tenant_id,
+                    LastAlertToIncident.fingerprint.in_(fingerprints),
+                ).delete(synchronize_session=False)
+
+            session.query(LastAlert).filter(
+                LastAlert.tenant_id == tenant_id,
+                LastAlert.alert_id.in_(alert_ids),
+            ).delete(synchronize_session=False)
+
+            session.query(AlertToIncident).filter(
+                AlertToIncident.tenant_id == tenant_id,
+                AlertToIncident.alert_id.in_(alert_ids),
+            ).delete(synchronize_session=False)
+
+            deleted = (
+                session.query(Alert)
+                .filter(Alert.id.in_(alert_ids))
+                .delete(synchronize_session=False)
+            )
+            session.commit()
+            total_deleted += deleted
+            logger.info(
+                "Deleted batch of alerts by retention",
+                extra={
+                    "tenant_id": tenant_id,
+                    "deleted": deleted,
+                    "total_deleted": total_deleted,
+                },
+            )
+    return total_deleted

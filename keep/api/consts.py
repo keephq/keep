@@ -32,6 +32,13 @@ MAINTENANCE_WINDOW_ALERT_STRATEGY = os.environ.get(
     "MAINTENANCE_WINDOW_STRATEGY", "default"
 )  # recover_previous_status or default
 WATCHER_LAPSED_TIME = int(os.environ.get("KEEP_WATCHER_LAPSED_TIME", 60))  # in seconds
+KEEP_ALERT_RETENTION_DAYS = int(os.environ.get("KEEP_ALERT_RETENTION_DAYS", 0))
+KEEP_ALERT_RETENTION_INTERVAL = int(
+    os.environ.get("KEEP_ALERT_RETENTION_INTERVAL", 86400)
+)  # in seconds
+KEEP_ALERT_RETENTION_BATCH_SIZE = int(
+    os.environ.get("KEEP_ALERT_RETENTION_BATCH_SIZE", 1000)
+)
 ###
 # Set ARQ_TASK_POOL_TO_EXECUTE to "none", "all", "basic_processing" or "ai"
 # to split the tasks between the workers.
