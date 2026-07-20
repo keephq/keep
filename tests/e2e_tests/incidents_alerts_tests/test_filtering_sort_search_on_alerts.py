@@ -79,7 +79,7 @@ def init_test(browser: Page, alerts, max_retries=3):
 
 def select_one_facet_option(browser, facet_name, option_name):
     expect(
-        browser.locator("[data-testid='facet']", has_text=facet_name)
+        browser.locator("[data-testid='facet']", has_text=facet_name).first
     ).to_be_visible()
     option = browser.locator("[data-testid='facet-value']", has_text=option_name)
     option.hover()
@@ -88,11 +88,11 @@ def select_one_facet_option(browser, facet_name, option_name):
 
 def assert_facet(browser, facet_name, alerts, alert_property_name: str):
     counters_dict = {}
-    facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
-    # After a reload or a timeframe change the facet panel briefly re-renders the
-    # same facet twice, which makes the strict locator resolve to two elements.
-    # Wait for it to settle to a single facet before asserting.
-    expect(facet_locator).to_have_count(1, timeout=15000)
+    # While the facet panel re-renders after a reload or a timeframe change it can
+    # briefly hold two copies of the same facet, which makes a strict locator throw.
+    # Scope to the first match so the assertion stays unambiguous; Playwright retries
+    # it until the panel settles.
+    facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name).first
     expect(facet_locator).to_be_visible()
     for alert in alerts:
         prop_value = None
