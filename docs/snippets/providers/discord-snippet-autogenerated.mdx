@@ -11,7 +11,6 @@ This provider requires authentication.
 This provider can be used in workflows.
 
 
-
 As "action" to make changes or update data, example:
 ```yaml
 actions:
@@ -21,10 +20,13 @@ actions:
       with:
         content: {value}  # The content of the message.
         components: {value}  # The components of the message.
+        files: {value}  # Optional list of file attachments (bytes, tuple, or {base64, filename} dict).
+        message_id: {value}  # Optional - edits a previously sent message instead of posting a new one.
 ```
 
 
 
+Additional Discord webhook params (embeds, username, avatar_url, poll, etc.) can be passed as `with:` keys and are forwarded directly to the Discord API.
 
 Check the following workflow example:
 - [discord_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/discord_basic.yml)
