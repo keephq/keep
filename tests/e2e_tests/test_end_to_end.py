@@ -827,7 +827,7 @@ def test_run_workflow_from_alert_and_incident(
         select = modal.get_by_test_id("manual-run-workflow-select-control")
         choose_combobox_option_with_retry(page, select, "Log every incident")
         modal.get_by_role("button", name="Run").click()
-        expect(page.get_by_text("Workflow started successfully")).to_be_visible()
+        expect(page.get_by_text("Workflow started successfully").first).to_be_visible()
         # Run workflow from alert
         page.locator("[data-testid='menu-alerts-feed-link']").click()
         # wait for the alerts facets to load, so it doesn't interfere with the dropdown
@@ -843,7 +843,7 @@ def test_run_workflow_from_alert_and_incident(
         select = modal.get_by_test_id("manual-run-workflow-select-control")
         choose_combobox_option_with_retry(page, select, "Log every alert")
         modal.get_by_role("button", name="Run").click()
-        expect(page.get_by_text("Workflow started successfully")).to_be_visible()
+        expect(page.get_by_text("Workflow started successfully").first).to_be_visible()
     except Exception:
         save_failure_artifacts(page, log_entries)
         raise

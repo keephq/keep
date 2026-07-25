@@ -1,8 +1,6 @@
 import os
 from unittest.mock import patch
 
-import pytest
-
 from keep.api.redis_settings import get_redis_settings
 
 
