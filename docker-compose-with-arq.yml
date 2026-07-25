@@ -22,6 +22,7 @@ services:
       - REDIS=true
       - REDIS_HOST=keep-arq-redis
       - REDIS_PORT=6379
+      - REDIS_DB=0
     volumes:
       - ./state:/state
     depends_on:
