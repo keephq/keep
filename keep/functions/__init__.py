@@ -246,7 +246,7 @@ def to_timestamp(dt: datetime.datetime | str = "") -> int:
     return int(dt.timestamp())
 
 
-def datetime_compare(t1: datetime | None = None, t2: datetime | None = None) -> float:
+def datetime_compare(t1: datetime.datetime | None = None, t2: datetime.datetime | None = None) -> float:
     if not t1 or not t2:
         return 0
     diff = (t1 - t2).total_seconds() / 3600
