@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+from typing import ClassVar
 
 import pydantic
 from azure.identity import ClientSecretCredential
@@ -72,7 +73,7 @@ class AksProvider(BaseProvider):
     """Enrich alerts using data from AKS."""
 
     PROVIDER_DISPLAY_NAME = "Azure AKS"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

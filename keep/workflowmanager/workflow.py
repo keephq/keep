@@ -1,12 +1,11 @@
 import enum
 import logging
 import threading
-import typing
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.action_error import ActionError
 from keep.identitymanager.rbac import Roles
 from keep.iohandler.iohandler import IOHandler
-from keep.exceptions.action_error import ActionError
 from keep.step.step import Step, StepError
 
 
@@ -26,23 +25,29 @@ class Workflow:
         workflow_id: str,
         workflow_revision: int,
         workflow_name: str,
-        workflow_owners: typing.List[str],
-        workflow_tags: typing.List[str],
+        workflow_owners: list[str],
+        workflow_tags: list[str],
         workflow_interval: int,
-        workflow_triggers: typing.Optional[typing.List[dict]],
-        workflow_steps: typing.List[Step],
-        workflow_actions: typing.List[Step],
-        workflow_description: str = None,
+        workflow_triggers: list[dict] | None,
+        workflow_steps: list[Step],
+        workflow_actions: list[Step],
+        workflow_description: str | None = None,
         workflow_disabled: bool = False,
-        workflow_providers: typing.List[dict] = None,
-        workflow_providers_type: typing.List[str] = [],
+        workflow_providers: list[dict] | None = None,
+        workflow_providers_type: list[str] | None = None,
         workflow_strategy: WorkflowStrategy = WorkflowStrategy.NONPARALLEL_WITH_RETRY.value,
         on_failure: Step = None,
-        workflow_consts: typing.Dict[str, str] = {},
+        workflow_consts: dict[str, str] | None = None,
         workflow_debug: bool = False,
-        workflow_permissions: typing.List[str] = [],
+        workflow_permissions: list[str] | None = None,
         is_test: bool = False,
     ):
+        if workflow_permissions is None:
+            workflow_permissions = []
+        if workflow_consts is None:
+            workflow_consts = {}
+        if workflow_providers_type is None:
+            workflow_providers_type = []
         self.workflow_id = workflow_id
         self.workflow_revision = workflow_revision
         self.workflow_name = workflow_name
@@ -142,7 +147,7 @@ class Workflow:
                 },
             )
             action_ran = False
-            action_error = f"Failed to run action {action.name}: {str(e)}"
+            action_error = f"Failed to run action {action.name}: {e!s}"
         return action_ran, action_error, action_stop
 
     def run_actions(self):
@@ -194,7 +199,7 @@ class Workflow:
                 },
             )
             raise
-        actions_firing, actions_errors = self.run_actions()
+        _actions_firing, actions_errors = self.run_actions()
         self.logger.info(f"Finish to run workflow {self.workflow_id}")
         return actions_errors
 

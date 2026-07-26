@@ -58,7 +58,6 @@ class PythonProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
 
 if __name__ == "__main__":

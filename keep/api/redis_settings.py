@@ -6,6 +6,7 @@ supporting both direct Redis and Redis Sentinel configurations.
 """
 
 from arq.connections import RedisSettings
+
 from keep.api.core.config import config
 
 

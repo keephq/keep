@@ -18,9 +18,7 @@ def test_add_remove_alert_to_incidents(
     valid_api_key = "valid_api_key"
     setup_api_key(db_session, valid_api_key)
 
-    add_alerts_to_incident(
-        "keep", incident, [a.fingerprint for a in alerts]
-    )
+    add_alerts_to_incident("keep", incident, [a.fingerprint for a in alerts])
 
     response = client.get("/metrics?labels=a.b", headers={"X-API-KEY": "valid_api_key"})
 

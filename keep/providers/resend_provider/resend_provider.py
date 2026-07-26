@@ -3,6 +3,7 @@ ResendProvider is a class that implements the Resend API and allows email sendin
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -28,7 +29,7 @@ class ResendProvider(BaseProvider):
     """Send email using the Resend API."""
 
     PROVIDER_DISPLAY_NAME = "Resend"
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     RESEND_API_URL = "https://api.resend.com"
 
@@ -84,7 +85,6 @@ class ResendProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
 
 if __name__ == "__main__":

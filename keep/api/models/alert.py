@@ -5,15 +5,12 @@ import logging
 import urllib.parse
 import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import Any, ClassVar
 
 import pytz
 from pydantic import AnyHttpUrl, BaseModel, Extra, root_validator, validator
 
 from keep.api.models.severity_base import SeverityBaseInterface
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -52,19 +49,19 @@ class AlertStatus(Enum):
     SUPPRESSED = "suppressed"
     # No Data
     PENDING = "pending"
-    #Affected by Maintenance Windows
+    # Affected by Maintenance Windows
     MAINTENANCE = "maintenance"
 
 
 class DismissAlertRequest(BaseModel):
-    alert_id: Optional[str] = None
+    alert_id: str | None = None
 
 
 class AlertErrorDto(BaseModel):
     id: str
     provider_type: str
     event: dict
-    error_message: Optional[str] = None
+    error_message: str | None = None
     timestamp: datetime.datetime
 
 
@@ -96,9 +93,7 @@ class AlertDto(BaseModel):
     fingerprint: str | None = (
         None  # The fingerprint of the alert (used for alert de-duplication)
     )
-    deleted: bool = (
-        False  # @tal: Obselete field since we have dismissed, but kept for backwards compatibility
-    )
+    deleted: bool = False  # @tal: Obselete field since we have dismissed, but kept for backwards compatibility
     dismissUntil: str | None = None  # The time until the alert is dismissed
     # DO NOT MOVE DISMISSED ABOVE dismissedUntil since it is used in root_validator
     dismissed: bool = False  # Whether the alert has been dismissed
@@ -242,7 +237,7 @@ class AlertDto(BaseModel):
         return description_format
 
     @root_validator(pre=True)
-    def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def set_default_values(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Check and set id:
         if not values.get("id"):
             values["id"] = str(uuid.uuid4())
@@ -291,7 +286,7 @@ class AlertDto(BaseModel):
 
     # after root_validator to ensure that the values are set
     @root_validator(pre=False)
-    def validate_status(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_status(cls, values: dict[str, Any]) -> dict[str, Any]:
         # if dismissed, change status to SUPPRESSED
         # note this is happen AFTER validate_dismissed which already consider
         #   dismissed + dismissUntil
@@ -301,7 +296,7 @@ class AlertDto(BaseModel):
 
     class Config:
         extra = Extra.allow
-        schema_extra = {
+        schema_extra: ClassVar[dict[str, str]] = {
             "examples": [
                 {
                     "id": "1234",
@@ -329,7 +324,7 @@ class AlertDto(BaseModel):
             ]
         }
         use_enum_values = True
-        json_encoders = {
+        json_encoders: ClassVar[dict[str, str]] = {
             # Converts enums to their values for JSON serialization
             Enum: lambda v: v.value,
         }
@@ -371,8 +366,8 @@ class EnrichAlertRequestBody(BaseModel):
 
 class BatchEnrichAlertRequestBody(BaseModel):
     enrichments: dict[str, str]
-    fingerprints: Optional[list[str]] = None
-    cel: Optional[str] = None
+    fingerprints: list[str] | None = None
+    cel: str | None = None
 
 
 class UnEnrichAlertRequestBody(BaseModel):
@@ -403,16 +398,16 @@ class DeduplicationRuleDto(BaseModel):
 
 class DeduplicationRuleRequestDto(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     provider_type: str
-    provider_id: Optional[str] = None
+    provider_id: str | None = None
     fingerprint_fields: list[str]
     full_deduplication: bool = False
-    ignore_fields: Optional[list[str]] = None
+    ignore_fields: list[str] | None = None
 
 
 class EnrichIncidentRequestBody(BaseModel):
-    enrichments: Dict[str, Any]
+    enrichments: dict[str, Any]
     force: bool = False
 
 

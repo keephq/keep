@@ -1,4 +1,5 @@
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -22,7 +23,7 @@ class ZendutyProvider(BaseProvider):
     """Create incident in Zenduty."""
 
     PROVIDER_DISPLAY_NAME = "Zenduty"
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -38,7 +39,6 @@ class ZendutyProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(
         self,
@@ -47,7 +47,7 @@ class ZendutyProvider(BaseProvider):
         service: str = "",
         user: str = "",
         policy: str = "",
-        **kwargs: dict
+        **kwargs: dict,
     ):
         """
         Create incident Zenduty using the Zenduty API

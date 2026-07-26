@@ -3,6 +3,7 @@ GitlabPipelinesProvider is a provider that interacts with GitLab Pipelines API.
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -32,7 +33,7 @@ class GitlabpipelinesProvider(BaseProvider):
     """Enrich alerts with data from GitLab Pipelines."""
 
     PROVIDER_DISPLAY_NAME = "GitLab Pipelines"
-    PROVIDER_CATEGORY = ["Developer Tools"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Developer Tools"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -48,7 +49,6 @@ class GitlabpipelinesProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(self, gitlab_url: str = "", gitlab_method: str = "", **kwargs):
         url = gitlab_url

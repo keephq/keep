@@ -6,6 +6,7 @@ import dataclasses
 import json
 import logging
 from datetime import datetime
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -42,7 +43,7 @@ class NewrelicProviderAuthConfig:
         metadata={
             "required": False,
             "description": "New Relic API URL",
-            "validation": "https_url"
+            "validation": "https_url",
         },
         default="https://api.newrelic.com",
     )
@@ -51,10 +52,10 @@ class NewrelicProviderAuthConfig:
 class NewrelicProvider(BaseProvider):
     """Get alerts from New Relic into Keep."""
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
     NEWRELIC_WEBHOOK_NAME = "keep-webhook"
     PROVIDER_DISPLAY_NAME = "New Relic"
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="ai.issues:read",
             description="Required to read issues and related information",
@@ -97,13 +98,13 @@ class NewrelicProvider(BaseProvider):
         ),
     ]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "critical": AlertSeverity.CRITICAL,
         "warning": AlertSeverity.WARNING,
         "info": AlertSeverity.INFO,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "open": AlertStatus.FIRING,
         "closed": AlertStatus.RESOLVED,
         "acknowledged": AlertStatus.ACKNOWLEDGED,
@@ -118,7 +119,6 @@ class NewrelicProvider(BaseProvider):
         """
         Nothing to dispose here
         """
-        pass
 
     def validate_config(self):
         """
@@ -164,7 +164,7 @@ class NewrelicProvider(BaseProvider):
 
     def validate_scopes(self) -> dict[str, bool | str]:
         scopes = {scope.name: "Invalid" for scope in self.PROVIDER_SCOPES}
-        read_scopes = [key for key in scopes.keys() if "read" in key]
+        read_scopes = [key for key in scopes if "read" in key]
 
         try:
             """
@@ -222,7 +222,7 @@ class NewrelicProvider(BaseProvider):
             )
             return scopes
 
-        write_scopes = [key for key in scopes.keys() if "write" in key]
+        write_scopes = [key for key in scopes if "write" in key]
         try:
             """
             Checking if destination can be created
@@ -391,7 +391,7 @@ class NewrelicProvider(BaseProvider):
         formatted_alerts = []
 
         for issue in issues_data:
-            lastReceived = issue["updatedAt"] if "updatedAt" in issue else None
+            lastReceived = issue.get("updatedAt", None)
             # convert to date
             if lastReceived:
                 lastReceived = datetime.fromtimestamp(lastReceived / 1000).strftime(
@@ -436,7 +436,6 @@ class NewrelicProvider(BaseProvider):
             else:
                 # WTF?
                 logger.error("lastReceived is not int")
-                pass
         else:
             lastReceived = datetime.utcfromtimestamp(
                 event.get("updatedAt", 0) / 1000
@@ -610,10 +609,10 @@ class NewrelicProvider(BaseProvider):
                 " to \"
             """
 
-            mutation_query = """
+            mutation_query = f"""
             mutation {{
                 aiNotificationsCreateChannel(
-                    accountId: {account_id},
+                    accountId: {self.newrelic_config.account_id},
                     channel: {{
                         name: "{name}",
                         product: IINT,
@@ -636,12 +635,7 @@ class NewrelicProvider(BaseProvider):
                     }}
                 }}
             }}
-            """.format(
-                account_id=self.newrelic_config.account_id,
-                destination_id=destination_id,
-                name=name,
-                api_key=api_key,
-            )
+            """
 
             query = {"query": mutation_query}
             # print(query)
@@ -695,7 +689,7 @@ class NewrelicProvider(BaseProvider):
                 extra={
                     "name": name,
                     "channel_id": channel_id,
-                }
+                },
             )
 
     def __add_new_worflow(

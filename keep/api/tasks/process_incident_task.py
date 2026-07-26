@@ -28,7 +28,6 @@ def process_incident(
     }
 
     with Session(engine) as session:
-
         if ctx and isinstance(ctx, dict):
             extra["job_try"] = ctx.get("job_try", 0)
             extra["job_id"] = ctx.get("job_id", None)

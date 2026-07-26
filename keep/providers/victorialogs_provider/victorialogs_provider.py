@@ -6,6 +6,7 @@ import base64
 import dataclasses
 import json
 import typing
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -44,7 +45,7 @@ class VictorialogsProviderAuthConfig:
     )
 
     # Basic Authentication
-    username: typing.Optional[str] = dataclasses.field(
+    username: str | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
@@ -55,7 +56,7 @@ class VictorialogsProviderAuthConfig:
         },
     )
 
-    password: typing.Optional[str] = dataclasses.field(
+    password: str | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
@@ -67,7 +68,7 @@ class VictorialogsProviderAuthConfig:
     )
 
     # Bearer Token
-    bearer_token: typing.Optional[str] = dataclasses.field(
+    bearer_token: str | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
@@ -78,7 +79,7 @@ class VictorialogsProviderAuthConfig:
         },
     )
 
-    x_scope_orgid: typing.Optional[str] = dataclasses.field(
+    x_scope_orgid: str | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
@@ -107,16 +108,16 @@ class VictorialogsProvider(BaseProvider):
     """
 
     PROVIDER_DISPLAY_NAME = "VictoriaLogs"
-    PROVIDER_TAGS = ["alert"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="The instance is valid and the user is authenticated",
         ),
     ]
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -165,9 +166,7 @@ class VictorialogsProvider(BaseProvider):
         Generate the authentication headers.
         """
         if self.authentication_config.authentication_type == "Basic":
-            credentials = f"{self.authentication_config.username}:{self.authentication_config.password}".encode(
-                "utf-8"
-            )
+            credentials = f"{self.authentication_config.username}:{self.authentication_config.password}".encode()
             encoded_credentials = base64.b64encode(credentials).decode("utf-8")
             return {"Authorization": f"Basic {encoded_credentials}"}
 

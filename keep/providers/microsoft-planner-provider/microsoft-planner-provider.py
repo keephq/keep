@@ -1,4 +1,5 @@
 import dataclasses
+from typing import ClassVar
 from urllib.parse import urljoin
 
 import pydantic
@@ -47,7 +48,7 @@ class PlannerProvider(BaseProvider):
     MS_PLANS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="planner/plans")
     MS_TASKS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="planner/tasks")
 
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

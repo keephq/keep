@@ -1,5 +1,6 @@
 import dataclasses
 import enum
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -46,9 +47,9 @@ class Signl4Provider(BaseProvider):
     """Trigger SIGNL4 alerts."""
 
     PROVIDER_DISPLAY_NAME = "SIGNL4"
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="signl4:create",
             description="Create SIGNL4 alerts",
@@ -86,7 +87,6 @@ class Signl4Provider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(
         self,

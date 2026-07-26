@@ -4,7 +4,7 @@ Grafana Provider is a class that allows to ingest/digest data from Grafana.
 
 import dataclasses
 import logging
-from typing import Literal
+from typing import ClassVar, Literal
 from urllib.parse import urlparse, urlsplit, urlunparse
 
 import pydantic
@@ -47,7 +47,7 @@ class GrafanaOncallProvider(BaseProvider):
     """
 
     PROVIDER_DISPLAY_NAME = "Grafana OnCall"
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
     API_URI = "api/v1"
     provider_description = "Grafana OnCall is an oncall management solution."
@@ -61,7 +61,6 @@ class GrafanaOncallProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -72,46 +71,50 @@ class GrafanaOncallProvider(BaseProvider):
             **self.config.authentication
         )
 
-
     def clean_url(self, url):
         parsed = urlparse(url)
-        normalized_path = '/'.join(part for part in parsed.path.split('/') if part)
-        _clean_url = urlunparse(parsed._replace(path=f'/{normalized_path}'))
+        normalized_path = "/".join(part for part in parsed.path.split("/") if part)
+        _clean_url = urlunparse(parsed._replace(path=f"/{normalized_path}"))
         return _clean_url
 
+    def __init__(
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+    ):
 
-    def __init__(self, context_manager: ContextManager, provider_id: str, config: ProviderConfig):
-        
         super().__init__(context_manager, provider_id, config)
         KEEP_INTEGRATION_NAME = "Keep Integration"
 
         if self.config.authentication.get("oncall_integration_link") is not None:
-            return None
+            return
 
         # Create Grafana OnCall integration if the integration link is not saved
         headers = {
             "Authorization": f"{config.authentication['token']}",
             "Content-Type": "application/json",
         }
-        
+
         response = requests.post(
-            url=self.clean_url(f"{config.authentication['host']}/{self.API_URI}/integrations/"),
+            url=self.clean_url(
+                f"{config.authentication['host']}/{self.API_URI}/integrations/"
+            ),
             headers=headers,
-            json={
-                "name": KEEP_INTEGRATION_NAME,
-                "type":"webhook"
-            },
+            json={"name": KEEP_INTEGRATION_NAME, "type": "webhook"},
         )
         existing_integration_link = None
         if response.status_code == 400:
             # If integration already exists, get the link
-            if response.json().get("detail") == "An integration with this name already exists for this team":
+            if (
+                response.json().get("detail")
+                == "An integration with this name already exists for this team"
+            ):
                 response = requests.get(
-                    url=self.clean_url(f"{config.authentication['host']}/{self.API_URI}/integrations/"),
+                    url=self.clean_url(
+                        f"{config.authentication['host']}/{self.API_URI}/integrations/"
+                    ),
                     headers=headers,
                 )
                 response.raise_for_status()
-                for integration in response.json()['results']:
+                for integration in response.json()["results"]:
                     if integration.get("name") == KEEP_INTEGRATION_NAME:
                         existing_integration_link = integration.get("link")
                         break
@@ -121,12 +124,15 @@ class GrafanaOncallProvider(BaseProvider):
         else:
             logger.error(f"Error installing the provider: {response.status_code}")
             raise Exception(f"Error installing the provider: {response.status_code}")
-        
-        if "integrations/v1/" in urlsplit(existing_integration_link).path:
-            self.config.authentication["oncall_integration_link"] = existing_integration_link
-        else:
-            Exception("Error creating the integration link, the URL is not OnCall formatted.")
 
+        if "integrations/v1/" in urlsplit(existing_integration_link).path:
+            self.config.authentication["oncall_integration_link"] = (
+                existing_integration_link
+            )
+        else:
+            raise Exception(
+                "Error creating the integration link, the URL is not OnCall formatted."
+            )
 
     def _notify(
         self,

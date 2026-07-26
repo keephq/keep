@@ -14,6 +14,7 @@
 
 
 import enum
+from typing import ClassVar
 
 from fastapi import HTTPException
 
@@ -45,7 +46,7 @@ class Role:
             scope_parts = scope.split(":")
             if len(scope_parts) != 2:
                 return False  # Invalid scope format
-            action, resource = scope_parts
+            action, _resource = scope_parts
             if f"{action}:*" not in available_scopes:
                 return False  # No wildcard permission for this action
         # All scopes are available
@@ -54,25 +55,31 @@ class Role:
 
 # Noc has read permissions and it can assign itself to alert
 class Noc(Role):
-    SCOPES = ["read:*", "execute:workflows"]
+    SCOPES: ClassVar[list[str]] = ["read:*", "execute:workflows"]
     DESCRIPTION = "read permissions and assign itself to alert"
 
 
 # Admin has all permissions
 class Admin(Role):
-    SCOPES = ["read:*", "write:*", "delete:*", "update:*", "execute:*"]
+    SCOPES: ClassVar[list[str]] = [
+        "read:*",
+        "write:*",
+        "delete:*",
+        "update:*",
+        "execute:*",
+    ]
     DESCRIPTION = "do everything"
 
 
 # Webhook has write:alert permission to write alerts
 # this is internal role used by API keys
 class Webhook(Role):
-    SCOPES = ["write:alert", "write:incident"]
+    SCOPES: ClassVar[list[str]] = ["write:alert", "write:incident"]
     DESCRIPTION = "write alerts using API keys"
 
 
 class WorkflowRunner(Role):
-    SCOPES = ["write:workflows", "execute:workflows"]
+    SCOPES: ClassVar[list[str]] = ["write:workflows", "execute:workflows"]
     DESCRIPTION = "Run workflows using API keys"
 
 

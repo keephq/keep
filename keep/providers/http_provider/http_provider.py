@@ -5,6 +5,7 @@ HttpProvider is a class that provides a way to send HTTP requests.
 import copy
 import json
 import typing
+from typing import ClassVar
 
 import requests
 from requests.exceptions import JSONDecodeError
@@ -17,7 +18,7 @@ from keep.providers.models.provider_config import ProviderConfig
 class HttpProvider(BaseProvider):
     """Enrich alerts with data from HTTP."""
 
-    BLACKLISTED_ENDPOINTS = [
+    BLACKLISTED_ENDPOINTS: ClassVar[list[str]] = [
         "metadata.google.internal",
         "metadata.internal",
         "169.254.169.254",
@@ -42,7 +43,6 @@ class HttpProvider(BaseProvider):
         """
         Nothing to do here.
         """
-        pass
 
     def validate_config(self):
         """
@@ -53,10 +53,10 @@ class HttpProvider(BaseProvider):
         self,
         url: str,
         method: typing.Literal["GET", "POST", "PUT", "DELETE"],
-        headers: dict = None,
-        body: dict = None,
-        params: dict = None,
-        proxies: dict = None,
+        headers: dict | None = None,
+        body: dict | None = None,
+        params: dict | None = None,
+        proxies: dict | None = None,
         verify: bool = True,
         **kwargs,
     ):
@@ -78,10 +78,10 @@ class HttpProvider(BaseProvider):
         self,
         url: str,
         method: typing.Literal["GET", "POST", "PUT", "DELETE"],
-        headers: dict = None,
-        body: dict = None,
-        params: dict = None,
-        proxies: dict = None,
+        headers: dict | None = None,
+        body: dict | None = None,
+        params: dict | None = None,
+        proxies: dict | None = None,
         fail_on_error: bool = True,
         verify: bool = True,
         **kwargs: dict,

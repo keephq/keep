@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, validator
@@ -17,22 +16,22 @@ logger = logging.getLogger(__name__)
 
 class CreateUserRequest(BaseModel):
     email: str = Field(alias="username")
-    name: Optional[str] = None
-    password: Optional[str] = None  # auth0 does not need password
-    role: Optional[str] = (
+    name: str | None = None
+    password: str | None = None  # auth0 does not need password
+    role: str | None = (
         None  # user can be assigned to group and get its roles from groups
     )
-    groups: Optional[list[str]] = None
+    groups: list[str] | None = None
 
     class Config:
         allow_population_by_field_name = True
 
 
 class UpdateUserRequest(BaseModel):
-    email: Optional[str] = Field(alias="username")
-    password: Optional[str] = None
-    role: Optional[str] = Field(default=None)
-    groups: Optional[list[str]] = None
+    email: str | None = Field(alias="username")
+    password: str | None = None
+    role: str | None = Field(default=None)
+    groups: list[str] | None = None
 
     class Config:
         allow_population_by_field_name = True

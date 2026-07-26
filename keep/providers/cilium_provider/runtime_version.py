@@ -97,10 +97,9 @@ def ValidateProtobufRuntimeVersion(
         if gen_major == MAJOR - 1:
             if _warning_count < _MAX_WARNING_COUNT:
                 warnings.warn(
-                    "Protobuf gencode version %s is exactly one major version older"
-                    " than the runtime version %s at %s. Please update the gencode to"
+                    f"Protobuf gencode version {gen_version} is exactly one major version older"
+                    f" than the runtime version {version} at {location}. Please update the gencode to"
                     " avoid compatibility violations in the next runtime release."
-                    % (gen_version, version, location)
                 )
                 _warning_count += 1
         else:

@@ -4,6 +4,7 @@ MondayProvider is a class that provides a way to create new pulse on Monday.com.
 
 import dataclasses
 import json
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -51,18 +52,18 @@ class MondayProviderAuthConfig:
 
 class MondayProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Monday"
-    PROVIDER_CATEGORY = ["Collaboration", "Organizational Tools"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration", "Organizational Tools"]
     OAUTH2_URL = config("MONDAY_OAUTH2_URL", default=None)
     MONDAY_CLIENT_ID = config("MONDAY_CLIENT_ID", default=None)
     MONDAY_CLIENT_SECRET = config("MONDAY_CLIENT_SECRET", default=None)
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="create_pulse",
             description="Create a new pulse",
         ),
     ]
 
-    PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["ticketing"]
 
     url = "https://api.monday.com/v2"
 
@@ -146,7 +147,7 @@ class MondayProvider(BaseProvider):
         board_id: int,
         group_id: str,
         item_name: str,
-        column_values: dict = None,
+        column_values: dict | None = None,
     ):
         try:
             self.logger.info("Creating new item")
@@ -201,7 +202,7 @@ class MondayProvider(BaseProvider):
         board_id: int,
         group_id: str,
         item_name: str,
-        column_values: dict = None,
+        column_values: dict | None = None,
     ):
         try:
             self.logger.info("Creating new item")

@@ -2,7 +2,6 @@ import logging
 import os
 import threading
 from collections import defaultdict
-from typing import Dict, Optional, Set
 
 from sqlmodel import select
 
@@ -27,7 +26,6 @@ from keep.topologies.topologies_service import TopologiesService
 
 
 class TopologyProcessor:
-
     @staticmethod
     def get_instance() -> "TopologyProcessor":
         if not hasattr(TopologyProcessor, "_instance"):
@@ -90,12 +88,10 @@ class TopologyProcessor:
                 self.logger.info("Processing topology for all tenants")
                 self._process_all_tenants()
                 self.logger.info(
-                    "Finished processing topology for all tenants will wait for next interval [{}]".format(
-                        self.process_interval
-                    )
+                    f"Finished processing topology for all tenants will wait for next interval [{self.process_interval}]"
                 )
             except Exception as e:
-                self.logger.exception("Error in topology processing: %s", str(e))
+                self.logger.exception("Error in topology processing: %s")
 
             # Wait for the next interval or until stopped
             self._stop_event.wait(self.process_interval)
@@ -128,7 +124,7 @@ class TopologyProcessor:
                 self._process_tenant(tenant_id)
                 self.logger.info(f"Finished processing topology for tenant {tenant_id}")
             except Exception as e:
-                self.logger.exception(f"Error processing tenant {tenant_id}: {str(e)}")
+                self.logger.exception(f"Error processing tenant {tenant_id}: {e!s}")
 
     def _process_tenant(self, tenant_id: str):
         """Process topology for a single tenant"""
@@ -204,7 +200,7 @@ class TopologyProcessor:
                     tenant_id, application, services_to_alerts
                 )
 
-    def _get_topology_based_incidents(self, tenant_id: str) -> Dict[str, Incident]:
+    def _get_topology_based_incidents(self, tenant_id: str) -> dict[str, Incident]:
         """Get all topology-based incidents for a tenant"""
         with existed_or_new_session() as session:
             incidents = session.exec(
@@ -217,9 +213,9 @@ class TopologyProcessor:
 
     def _check_topology_for_incidents(
         self,
-        last_alerts: Dict[str, AlertDto],
-        topology_based_incidents: Dict[str, Incident],
-    ) -> Set[Incident]:
+        last_alerts: dict[str, AlertDto],
+        topology_based_incidents: dict[str, Incident],
+    ) -> set[Incident]:
         """Check if the topology should create incidents"""
         incidents = []
         # get all alerts within the same application:
@@ -229,7 +225,7 @@ class TopologyProcessor:
 
     def _get_application_based_incident(
         self, tenant_id, application: TopologyServiceApplication
-    ) -> Optional[Incident]:
+    ) -> Incident | None:
         """Get the incident for an application"""
         with existed_or_new_session() as session:
             incident = session.exec(
@@ -258,7 +254,7 @@ class TopologyProcessor:
         tenant_id: str,
         application: TopologyServiceApplication,
         incident: Incident,
-        services_with_alerts: Dict[str, list[AlertDto]],
+        services_with_alerts: dict[str, list[AlertDto]],
     ) -> None:
         """
         Update an existing application-based incident with new alerts and status
@@ -301,11 +297,8 @@ class TopologyProcessor:
                     else:
                         statuses.append(alert.status.value)
                 all_resolved = all(
-                    [
-                        s == AlertStatus.RESOLVED.value
-                        or s == AlertStatus.SUPPRESSED.value
-                        for s in statuses
-                    ]
+                    s == AlertStatus.RESOLVED.value or s == AlertStatus.SUPPRESSED.value
+                    for s in statuses
                 )
                 # If all alerts are resolved, update incident status to resolved
                 if all_resolved and incident.status != IncidentStatus.RESOLVED.value:
@@ -336,7 +329,7 @@ class TopologyProcessor:
         self,
         tenant_id,
         application: TopologyServiceApplication,
-        services_with_alerts: Dict[str, list[AlertDto]],
+        services_with_alerts: dict[str, list[AlertDto]],
     ) -> None:
         """
         Create a new application-based incident

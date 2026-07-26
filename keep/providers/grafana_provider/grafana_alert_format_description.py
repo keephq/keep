@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
 
 class Evaluator(BaseModel):
-    params: List[int]
+    params: list[int]
     type: str
 
 
@@ -15,11 +15,11 @@ class Operator(BaseModel):
 
 
 class Query(BaseModel):
-    params: List
+    params: list
 
 
 class Reducer(BaseModel):
-    params: List
+    params: list
     type: str
 
 
@@ -37,7 +37,7 @@ class Datasource(BaseModel):
 
 
 class Model1(BaseModel):
-    conditions: List[Condition]
+    conditions: list[Condition]
     datasource: Datasource
     expression: str
     hide: bool
@@ -64,7 +64,7 @@ class GrafanaAlertFormatDescription(BaseModel):
     condition: str = Field(
         ..., max_length=1, description="Must be one of the refId in data"
     )
-    data: List[Datum]
+    data: list[Datum]
     execErrState: Literal["OK", "Alerting", "Error"]
     folderUID: str = Field(
         ...,
@@ -86,7 +86,7 @@ class GrafanaAlertFormatDescription(BaseModel):
     )
 
     class Config:
-        schema_extra = {
+        schema_extra: ClassVar[dict[str, str]] = {
             "example": {
                 "condition": "A",
                 "folderUID": "keep_alerts",

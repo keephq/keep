@@ -34,9 +34,11 @@ async def extract_generic_body(request: Request) -> dict | bytes | FormData:
         dict | bytes | FormData: The body of the request.
     """
     content_type = request.headers.get("Content-Type")
-    if content_type == "application/x-www-form-urlencoded":
-        return await request.form()
-    elif isinstance(content_type, str) and content_type.startswith("multipart/form-data"):
+    if (
+        content_type == "application/x-www-form-urlencoded"
+        or isinstance(content_type, str)
+        and content_type.startswith("multipart/form-data")
+    ):
         return await request.form()
     else:
         try:
@@ -77,7 +79,7 @@ def get_pusher_client() -> Pusher | None:
             app_id=pusher_app_id,
             key=pusher_app_key,
             secret=pusher_app_secret,
-            ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
+            ssl=os.environ.get("PUSHER_USE_SSL", "false") != "false",
             cluster=os.environ.get("PUSHER_CLUSTER"),
         )
     except ValueError:

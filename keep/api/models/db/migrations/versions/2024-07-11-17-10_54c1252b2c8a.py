@@ -458,7 +458,7 @@ def upgrade() -> None:
                 "Table already exists, which most likely means that tables has already been created before the migration mechanism was introduced. It's ok!"
             )
         else:
-            raise e
+            raise
 
 
 def downgrade() -> None:

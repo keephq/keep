@@ -4,16 +4,15 @@ import uuid
 from time import sleep
 
 import pytest
-from sqlalchemy import desc, text
 
 from keep.api.core.db import create_rule as create_rule_db
 from keep.api.core.db import (
     enrich_incidents_with_alerts,
     get_incident_alerts_by_incident_id,
     get_last_incidents,
+    set_last_alert,
 )
 from keep.api.core.db import get_rules as get_rules_db
-from keep.api.core.db import set_last_alert
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Alert, Incident
@@ -88,7 +87,7 @@ def test_sanity_2(db_session):
             name="grafana-test-alert",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.CRITICAL,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             labels={"label_1": "a"},
         ),
     ]
@@ -234,7 +233,7 @@ def test_incident_attributes(db_session):
             name=f"grafana-test-alert-{i}",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.CRITICAL,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             labels={"label_1": "a"},
         )
         for i in range(3)
@@ -280,7 +279,7 @@ def test_incident_attributes(db_session):
         # check that there are results
         assert results is not None
         assert len(results) == 1
-        assert results[0].user_generated_name == "{}".format(rules[0].name)
+        assert results[0].user_generated_name == f"{rules[0].name}"
         assert results[0].alerts_count == i + 1
         assert (
             results[0].last_seen_time.isoformat(timespec="milliseconds") + "Z"
@@ -297,7 +296,7 @@ def test_incident_severity(db_session):
             name=f"grafana-test-alert-{i}",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.INFO,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             labels={"label_1": "a"},
         )
         for i in range(3)
@@ -343,7 +342,7 @@ def test_incident_severity(db_session):
     # check that there are results
     assert results is not None
     assert len(results) == 1
-    assert results[0].user_generated_name == "{}".format(rules[0].name)
+    assert results[0].user_generated_name == f"{rules[0].name}"
     assert results[0].alerts_count == 3
     assert results[0].severity.value == IncidentSeverity.INFO.value
 
@@ -376,13 +375,13 @@ def test_incident_no_auto_resolution(db_session, create_alert):
     create_alert(
         "Something went wrong",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
     create_alert(
         "Something went wrong again",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
 
@@ -398,7 +397,7 @@ def test_incident_no_auto_resolution(db_session, create_alert):
     incident = incidents[0]
     assert incident.status == IncidentStatus.FIRING.value
 
-    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+    _db_alerts, alert_count = get_incident_alerts_by_incident_id(
         tenant_id=SINGLE_TENANT_UUID,
         incident_id=str(incident.id),
         limit=10,
@@ -410,7 +409,7 @@ def test_incident_no_auto_resolution(db_session, create_alert):
     create_alert(
         "Something went wrong",
         AlertStatus.RESOLVED,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
 
@@ -425,7 +424,7 @@ def test_incident_no_auto_resolution(db_session, create_alert):
 
     incident = incidents[0]
 
-    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+    _db_alerts, alert_count = get_incident_alerts_by_incident_id(
         tenant_id=SINGLE_TENANT_UUID,
         incident_id=str(incident.id),
         limit=10,
@@ -438,7 +437,7 @@ def test_incident_no_auto_resolution(db_session, create_alert):
     create_alert(
         "Something went wrong again",
         AlertStatus.RESOLVED,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
 
@@ -453,7 +452,7 @@ def test_incident_no_auto_resolution(db_session, create_alert):
 
     incident = incidents[0]
 
-    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+    _db_alerts, alert_count = get_incident_alerts_by_incident_id(
         tenant_id=SINGLE_TENANT_UUID,
         incident_id=str(incident.id),
         limit=10,
@@ -491,13 +490,13 @@ def test_incident_resolution_on_all(db_session, create_alert):
     create_alert(
         "Something went wrong",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
     create_alert(
         "Something went wrong again",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
 
@@ -513,7 +512,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
     incident = incidents[0]
     assert incident.status == IncidentStatus.FIRING.value
 
-    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+    _db_alerts, alert_count = get_incident_alerts_by_incident_id(
         tenant_id=SINGLE_TENANT_UUID,
         incident_id=str(incident.id),
         limit=10,
@@ -525,7 +524,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
     create_alert(
         "Something went wrong",
         AlertStatus.RESOLVED,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
 
@@ -540,7 +539,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
 
     incident = incidents[0]
 
-    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+    _db_alerts, alert_count = get_incident_alerts_by_incident_id(
         tenant_id=SINGLE_TENANT_UUID,
         incident_id=str(incident.id),
         limit=10,
@@ -553,7 +552,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
     create_alert(
         "Something went wrong again",
         AlertStatus.RESOLVED,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
 
@@ -568,7 +567,7 @@ def test_incident_resolution_on_all(db_session, create_alert):
 
     incident = incidents[0]
 
-    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+    _db_alerts, alert_count = get_incident_alerts_by_incident_id(
         tenant_id=SINGLE_TENANT_UUID,
         incident_id=str(incident.id),
         limit=10,
@@ -612,13 +611,13 @@ def test_incident_resolution_on_edge(
     create_alert(
         "fp1",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
     create_alert(
         "fp2",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
 
@@ -634,7 +633,7 @@ def test_incident_resolution_on_edge(
     incident = incidents[0]
     assert incident.status == IncidentStatus.FIRING.value
 
-    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+    _db_alerts, alert_count = get_incident_alerts_by_incident_id(
         tenant_id=SINGLE_TENANT_UUID,
         incident_id=str(incident.id),
         limit=10,
@@ -647,7 +646,7 @@ def test_incident_resolution_on_edge(
     create_alert(
         fp1,
         AlertStatus.RESOLVED,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
 
@@ -662,7 +661,7 @@ def test_incident_resolution_on_edge(
 
     incident = incidents[0]
 
-    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+    _db_alerts, alert_count = get_incident_alerts_by_incident_id(
         tenant_id=SINGLE_TENANT_UUID,
         incident_id=str(incident.id),
         limit=10,
@@ -674,7 +673,7 @@ def test_incident_resolution_on_edge(
     create_alert(
         fp2,
         AlertStatus.RESOLVED,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {"severity": AlertSeverity.CRITICAL.value},
     )
 
@@ -689,7 +688,7 @@ def test_incident_resolution_on_edge(
 
     incident = incidents[0]
 
-    db_alerts, alert_count = get_incident_alerts_by_incident_id(
+    _db_alerts, alert_count = get_incident_alerts_by_incident_id(
         tenant_id=SINGLE_TENANT_UUID,
         incident_id=str(incident.id),
         limit=10,
@@ -719,7 +718,7 @@ def test_rule_multiple_alerts(db_session, create_alert):
     create_alert(
         "Critical Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -741,7 +740,7 @@ def test_rule_multiple_alerts(db_session, create_alert):
     create_alert(
         "Critical Alert 2",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -765,7 +764,7 @@ def test_rule_multiple_alerts(db_session, create_alert):
     create_alert(
         "High Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.HIGH.value,
         },
@@ -814,7 +813,7 @@ def test_rule_event_groups_expires(db_session, create_alert):
     create_alert(
         "Critical Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -830,7 +829,7 @@ def test_rule_event_groups_expires(db_session, create_alert):
     create_alert(
         "High Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.HIGH.value,
         },
@@ -914,7 +913,7 @@ def test_incident_name_template_simple(db_session):
             name="Test alert",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.CRITICAL,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             labels={"host": "web-server-1", "service": "nginx"},
         ),
     ]
@@ -965,7 +964,7 @@ def test_incident_name_template_nested(db_session):
             name="Complex alert",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.CRITICAL,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             labels={
                 "environment": "production",
                 "metadata": {"region": "us-east", "datacenter": "dc1"},
@@ -1012,7 +1011,7 @@ def test_incident_name_template_fallback(db_session):
             name="Missing fields alert",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.CRITICAL,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             labels={},  # empty labels
         ),
     ]
@@ -1057,7 +1056,7 @@ def test_incident_name_template_multiple_alerts(db_session):
         name="First alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1", "service": "nginx"},
     )
 
@@ -1097,7 +1096,7 @@ def test_incident_name_template_multiple_alerts(db_session):
         name="Second alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-2", "service": "nginx"},
     )
 
@@ -1127,7 +1126,7 @@ def test_incident_name_template_partial_fields(db_session):
             name="Partial fields alert",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.CRITICAL,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             labels={"host": "web-1"},  # service is missing
         ),
     ]
@@ -1172,7 +1171,7 @@ def test_incident_name_template_complex_fields(db_session):
             name="Complex fields alert",
             status=AlertStatus.FIRING,
             severity=AlertSeverity.CRITICAL,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             labels={  # Dictionary
                 "hosts": ["web-1", "web-2"],
                 "services": {"primary": "nginx", "secondary": "mysql"},
@@ -1227,7 +1226,7 @@ def test_incident_name_template_different_alerts_same_incident(db_session):
         name="First alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1", "service": "nginx"},
     )
 
@@ -1266,7 +1265,7 @@ def test_incident_name_template_different_alerts_same_incident(db_session):
         name="Second alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-2", "service": "mysql"},
     )
 
@@ -1310,7 +1309,7 @@ def test_multiple_incidents_name_template(db_session):
         name="First alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1", "services": ["nginx"]},
     )
 
@@ -1338,7 +1337,7 @@ def test_multiple_incidents_name_template(db_session):
         name="Second alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-2", "services": ["mysql", "redis"]},
     )
 
@@ -1367,7 +1366,7 @@ def test_multiple_incidents_name_template(db_session):
         name="Third alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1", "services": ["postgresql"]},  # Same host as alert1
     )
 
@@ -1441,7 +1440,7 @@ def test_multiple_incidents_name_template_with_updates(db_session):
         name="First alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1", "service": "nginx"},
     )
 
@@ -1468,7 +1467,7 @@ def test_multiple_incidents_name_template_with_updates(db_session):
         name="Second alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "db-1", "service": "mysql"},
     )
 
@@ -1494,7 +1493,7 @@ def test_multiple_incidents_name_template_with_updates(db_session):
         name="Third alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-2", "service": "nginx"},  # Same service as alert1
     )
 
@@ -1519,7 +1518,7 @@ def test_multiple_incidents_name_template_with_updates(db_session):
         name="Fourth alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "db-2", "service": "mysql"},
     )
 
@@ -1572,7 +1571,7 @@ def test_incident_created_only_for_firing_alerts(db_session):
             name="Non-firing alert",
             status=AlertStatus.RESOLVED,  # Non-firing status
             severity=AlertSeverity.CRITICAL,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             fingerprint="Non-firing alert",
         ),
         AlertDto(
@@ -1581,7 +1580,7 @@ def test_incident_created_only_for_firing_alerts(db_session):
             name="Firing alert",
             status=AlertStatus.FIRING,  # Firing status
             severity=AlertSeverity.CRITICAL,
-            lastReceived=datetime.datetime.now().isoformat(),
+            lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
             fingerprint="Firing alert",
         ),
     ]
@@ -1651,7 +1650,7 @@ def test_same_incident_in_the_past_id_set(db_session, client, test_app):
         name="First critical alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
     )
 
     alert = Alert(
@@ -1676,7 +1675,7 @@ def test_same_incident_in_the_past_id_set(db_session, client, test_app):
 
     # Set the status of the first incident to resolved
     response_resolved = client.post(
-        "/incidents/{}/status".format(incident1.id),
+        f"/incidents/{incident1.id}/status",
         headers={"x-api-key": "some-key"},
         json={
             "status": IncidentStatus.RESOLVED.value,
@@ -1696,7 +1695,7 @@ def test_same_incident_in_the_past_id_set(db_session, client, test_app):
         name="Second critical alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
     )
 
     alert = Alert(
@@ -1750,7 +1749,7 @@ def test_correlation_to_incident_candidate(db_session):
         name="First critical alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
     )
 
     alert = Alert(
@@ -1784,7 +1783,7 @@ def test_incident_prefix_simple(db_session):
         name="Test alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1"},
     )
 
@@ -1830,7 +1829,7 @@ def test_incident_prefix_with_template(db_session):
         name="Test alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1", "service": "nginx"},
     )
 
@@ -1892,7 +1891,7 @@ def test_incident_prefix_multiple_incidents(db_session):
         name="First alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1"},
     )
 
@@ -1919,7 +1918,7 @@ def test_incident_prefix_multiple_incidents(db_session):
         name="Second alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-2"},
     )
 
@@ -1946,7 +1945,7 @@ def test_incident_prefix_multiple_incidents(db_session):
         name="Third alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1"},  # Same host as alert1
     )
 
@@ -1990,7 +1989,7 @@ def test_rule_alerts_threshold(db_session, create_alert):
     create_alert(
         "Critical Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -2012,7 +2011,7 @@ def test_rule_alerts_threshold(db_session, create_alert):
     create_alert(
         "Critical Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -2062,7 +2061,7 @@ def test_rule_multiple_alerts_with_threshold(db_session, create_alert):
     create_alert(
         "Critical Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -2084,7 +2083,7 @@ def test_rule_multiple_alerts_with_threshold(db_session, create_alert):
     create_alert(
         "Critical Alert 2",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -2108,7 +2107,7 @@ def test_rule_multiple_alerts_with_threshold(db_session, create_alert):
     create_alert(
         "High Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.HIGH.value,
         },
@@ -2125,7 +2124,7 @@ def test_rule_multiple_alerts_with_threshold(db_session, create_alert):
     create_alert(
         "High Alert 2",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.HIGH.value,
         },
@@ -2165,7 +2164,7 @@ def test_incident_created_with_assignee(db_session):
         name="Test alert",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-1"},
     )
 
@@ -2213,7 +2212,7 @@ def test_incident_created_without_assignee(db_session):
         name="Test alert without assignee",
         status=AlertStatus.FIRING,
         severity=AlertSeverity.CRITICAL,
-        lastReceived=datetime.datetime.now().isoformat(),
+        lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         labels={"host": "web-2"},
     )
 
@@ -2274,11 +2273,8 @@ def test_rule_alerts_threshold_with_grouping(db_session, create_alert):
     create_alert(
         "Critical Alert G1.1",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
-        {
-            "severity": AlertSeverity.CRITICAL.value,
-            "group": "group-1"
-        },
+        datetime.datetime.now(tz=datetime.UTC),
+        {"severity": AlertSeverity.CRITICAL.value, "group": "group-1"},
     )
 
     # No incident yet
@@ -2297,7 +2293,7 @@ def test_rule_alerts_threshold_with_grouping(db_session, create_alert):
     create_alert(
         "Critical Alert G2.1",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
             "group": "group-2",
@@ -2311,7 +2307,9 @@ def test_rule_alerts_threshold_with_grouping(db_session, create_alert):
     assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
     # But two hidden groups are there
     assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 2
-    incident_2 = db_session.query(Incident).order_by(Incident.creation_time.desc()).first()
+    incident_2 = (
+        db_session.query(Incident).order_by(Incident.creation_time.desc()).first()
+    )
 
     enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident_2], db_session)
 
@@ -2322,13 +2320,12 @@ def test_rule_alerts_threshold_with_grouping(db_session, create_alert):
     create_alert(
         "Critical Alert G1.2",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
             "group": "group-1",
         },
     )
-
 
     # One incident was official started
     assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 1
@@ -2374,7 +2371,7 @@ def test_rule_alerts_threshold_same_fingerprint(db_session, create_alert):
     create_alert(
         "Critical Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -2395,7 +2392,7 @@ def test_rule_alerts_threshold_same_fingerprint(db_session, create_alert):
     create_alert(
         "Critical Alert",
         AlertStatus.RESOLVED,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -2416,7 +2413,7 @@ def test_rule_alerts_threshold_same_fingerprint(db_session, create_alert):
     create_alert(
         "Critical Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -2432,7 +2429,7 @@ def test_rule_alerts_threshold_same_fingerprint(db_session, create_alert):
     create_alert(
         "Critical Alert",
         AlertStatus.FIRING,
-        datetime.datetime.utcnow(),
+        datetime.datetime.now(tz=datetime.UTC),
         {
             "severity": AlertSeverity.CRITICAL.value,
         },
@@ -2451,7 +2448,6 @@ def test_rule_alerts_threshold_same_fingerprint(db_session, create_alert):
     )
     assert alert_count == 1
     assert len(alerts) == 1
-
 
     last_alert = db_session.query(Alert).order_by(Alert.timestamp.desc()).first()
     last_alert_dto = convert_db_alerts_to_dto_alerts(

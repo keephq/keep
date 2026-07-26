@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -18,12 +17,12 @@ class AlertAuditDto(BaseModel):
     action: ActionType
     user_id: str
     description: str
-    mentions: Optional[List[CommentMentionDto]] = None
+    mentions: list[CommentMentionDto] | None = None
 
     @classmethod
     def from_orm(cls, alert_audit: AlertAudit) -> "AlertAuditDto":
         mentions_data = None
-        if hasattr(alert_audit, 'mentions') and alert_audit.mentions:
+        if hasattr(alert_audit, "mentions") and alert_audit.mentions:
             mentions_data = [
                 CommentMentionDto(mentioned_user_id=mention.mentioned_user_id)
                 for mention in alert_audit.mentions

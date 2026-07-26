@@ -10,14 +10,12 @@ class SimpleFieldMapping:
 
 
 class JsonFieldMapping:
-
     def __init__(self, json_prop: str, prop_in_json: list[str]):
         self.json_prop = json_prop
         self.prop_in_json = prop_in_json
 
 
 class PropertyMetadataInfo:
-
     def __init__(
         self,
         field_name: str,
@@ -32,13 +30,12 @@ class PropertyMetadataInfo:
 
 
 class FieldMappingConfiguration:
-
     def __init__(
         self,
         map_from_pattern: str,
         map_to: list[str] | str,
         data_type: DataType = None,
-        enum_values: list[str] = None,
+        enum_values: list[str] | None = None,
     ):
         self.map_from_pattern = map_from_pattern
         self.enum_values = enum_values
@@ -92,6 +89,7 @@ class PropertiesMetadata:
             If the property path matches a known field or a wildcard pattern, it returns the corresponding mappings.
             Supports JSON type mappings and simple field mappings.
     """
+
     def __init__(self, fields_mapping_configurations: list[FieldMappingConfiguration]):
         self.wildcard_configurations: dict[FieldMappingConfiguration] = {}
         self.known_configurations: dict[FieldMappingConfiguration] = {}
@@ -105,7 +103,7 @@ class PropertiesMetadata:
                 enum_values=field_mapping.enum_values,
             )
 
-            if '*' in field_mapping.map_from_pattern:
+            if "*" in field_mapping.map_from_pattern:
                 self.wildcard_configurations[
                     new_field_mapping_config.map_from_pattern
                 ] = new_field_mapping_config
@@ -242,7 +240,10 @@ class PropertiesMetadata:
 
         # If no direct mapping is found, check for wildcard patterns in known fields
         if not field_mapping_config:
-            for pattern, field_mapping_config_from_dict in self.wildcard_configurations.items():
+            for (
+                pattern,
+                field_mapping_config_from_dict,
+            ) in self.wildcard_configurations.items():
                 if fnmatch.fnmatch(prop_path_str, pattern):
                     field_mapping_config = field_mapping_config_from_dict
                     mapping_key = pattern

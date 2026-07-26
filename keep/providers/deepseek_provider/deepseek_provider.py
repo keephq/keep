@@ -1,7 +1,8 @@
-import json
 import dataclasses
-import pydantic
+import json
+from typing import ClassVar
 
+import pydantic
 from openai import OpenAI
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -22,7 +23,7 @@ class DeepseekProviderAuthConfig:
 
 class DeepseekProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "DeepSeek"
-    PROVIDER_CATEGORY = ["AI"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["AI"]
     BASE_URL = "https://api.deepseek.com"
 
     def __init__(
@@ -92,8 +93,8 @@ class DeepseekProvider(BaseProvider):
 
 
 if __name__ == "__main__":
-    import os
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(

@@ -3,7 +3,7 @@ TeamsProvider is a class that implements the BaseOutputProvider interface for Mi
 """
 
 import dataclasses
-from typing import Any, Optional
+from typing import Any, ClassVar
 
 import json5 as json
 import pydantic
@@ -34,7 +34,7 @@ class TeamsProvider(BaseProvider):
     """Send alert message to Teams."""
 
     PROVIDER_DISPLAY_NAME = "Microsoft Teams"
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -50,17 +50,16 @@ class TeamsProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(
         self,
         message: str = "",
         typeCard: str = "message",
-        themeColor: Optional[str] = None,
-        sections: str | list = [],
+        themeColor: str | None = None,
+        sections: str | list | None = None,
         schema: str = "http://adaptivecards.io/schemas/adaptive-card.json",
-        attachments: str | list = [],
-        mentions: str | list = [],
+        attachments: str | list | None = None,
+        mentions: str | list | None = None,
         **kwargs: dict[str, Any],
     ):
         """
@@ -76,6 +75,12 @@ class TeamsProvider(BaseProvider):
             mentions (str | list): List of user mentions to include in the Adaptive Card. Each mention should be a dict with 'id' (user ID, Microsoft Entra Object ID, or UPN) and 'name' (display name) keys.
                 Example: [{"id": "user-id-123", "name": "John Doe"}, {"id": "john.doe@example.com", "name": "John Doe"}]
         """
+        if mentions is None:
+            mentions = []
+        if attachments is None:
+            attachments = []
+        if sections is None:
+            sections = []
         self.logger.debug("Notifying alert message to Teams")
         webhook_url = self.authentication_config.webhook_url
 

@@ -1,9 +1,9 @@
 import json
 import os
 
-import opentelemetry.trace as trace
 from google.api_core.exceptions import AlreadyExists
 from google.cloud import secretmanager
+from opentelemetry import trace
 
 from keep.secretmanager.secretmanager import BaseSecretManager
 

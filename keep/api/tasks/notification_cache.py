@@ -1,6 +1,5 @@
 import os
 import time
-from typing import Dict, Tuple
 
 # Get polling interval from env
 POLLING_INTERVAL = int(os.getenv("PUSHER_POLLING_INTERVAL", "15"))
@@ -17,7 +16,7 @@ class NotificationCache:
 
     def __init__(self):
         if not self.__initialized:
-            self.cache: Dict[Tuple[str, str], float] = {}
+            self.cache: dict[tuple[str, str], float] = {}
             self.__initialized = True
 
     def should_notify(self, tenant_id: str, event_type: str) -> bool:

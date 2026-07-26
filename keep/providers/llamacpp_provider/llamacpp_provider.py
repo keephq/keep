@@ -1,4 +1,6 @@
 import dataclasses
+from typing import ClassVar
+
 import pydantic
 import requests
 
@@ -16,13 +18,13 @@ class LlamacppProviderAuthConfig:
             "description": "Llama.cpp Server Host URL",
             "sensitive": False,
         },
-        default="http://localhost:8080"
+        default="http://localhost:8080",
     )
 
 
 class LlamacppProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Llama.cpp"
-    PROVIDER_CATEGORY = ["AI"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["AI"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -55,7 +57,7 @@ class LlamacppProvider(BaseProvider):
             "n_predict": max_tokens,
             "temperature": 0.7,
             "stop": ["\n\n"],  # Common stop sequence
-            "stream": False
+            "stream": False,
         }
 
         try:
@@ -63,13 +65,13 @@ class LlamacppProvider(BaseProvider):
             response = requests.post(api_url, json=payload)
             response.raise_for_status()
             content = response.json()["content"]
-            
+
             return {
                 "response": content,
             }
 
         except requests.exceptions.RequestException as e:
-            raise ProviderException(f"Error calling Llama.cpp API: {str(e)}")
+            raise ProviderException(f"Error calling Llama.cpp API: {e!s}")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import json
 import time
 import uuid
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 import requests
@@ -54,9 +55,9 @@ def test_parse_sanity_check(db_session):
         SINGLE_TENANT_UUID, workflow_path, providers_path
     )
     assert parsed_workflows is not None
-    assert (
-        len(parsed_workflows) > 0
-    ), "caution: the expected output is a list with at least one alert, instead got non "
+    assert len(parsed_workflows) > 0, (
+        "caution: the expected output is a list with at least one alert, instead got non "
+    )
     for index, parse_workflow in enumerate(parsed_workflows):
         print(
             "validating parsed alert #"
@@ -233,7 +234,7 @@ class TestProvidersFromFile:
 
 class TestParseAlert:
     alert_id = "test-alert"
-    alert = {"id": alert_id}
+    alert: ClassVar[dict[str, str]] = {"id": alert_id}
 
     def test_parse_alert_id(self):
         # ARRANGE
@@ -302,7 +303,6 @@ reusable_actions_path = str(path_to_test_resources / "reusable_actions_for_testi
 
 
 class TestReusableActionWithWorkflow:
-
     def test_if_action_is_expanded(self, db_session):
         workflow_store = WorkflowStore()
         workflows = workflow_store.get_workflows_from_path(
@@ -318,7 +318,7 @@ class TestReusableActionWithWorkflow:
         for workflow in workflows:
             actions = workflow.context_manager.actions_context
             assert len(actions) > 0
-            for action_key, action_data in actions.items():
+            for action_data in actions.values():
                 assert "provider" in action_data
 
             assert (
@@ -392,7 +392,6 @@ class TestReusableActionWithWorkflow:
 
 
 class TestParserUtils:
-
     def test_deep_merge_dict(self):
         """Dictionary: if the merge combines recursively and prioritize values of source"""
         source = {"1": {"s11": "s11", "s12": "s12"}, "2": {"s21": "s21"}}

@@ -7,6 +7,7 @@ import typing
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from smtplib import SMTP, SMTP_SSL
+from typing import ClassVar
 
 import pydantic
 
@@ -69,7 +70,7 @@ class SmtpProviderAuthConfig:
 
 
 class SmtpProvider(BaseProvider):
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="send_email",
             description="Send email using SMTP protocol",
@@ -77,9 +78,9 @@ class SmtpProvider(BaseProvider):
             alias="Send Email",
         )
     ]
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
-    PROVIDER_TAGS = ["messaging"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["messaging"]
     PROVIDER_DISPLAY_NAME = "SMTP"
 
     def __init__(
@@ -137,8 +138,8 @@ class SmtpProvider(BaseProvider):
         from_name: str,
         to_email: str | list,
         subject: str,
-        body: str = None,
-        html: str = None,
+        body: str | None = None,
+        html: str | None = None,
     ):
         """
         Send an email using SMTP protocol.
@@ -148,13 +149,13 @@ class SmtpProvider(BaseProvider):
             msg["From"] = from_email
         else:
             msg["From"] = f"{from_name} <{from_email}>"
-        
+
         if isinstance(to_email, str):
             msg["To"] = to_email
         else:
             msg["To"] = ", ".join(to_email)
         msg["Subject"] = subject
-        
+
         # Prefer HTML content if provided, otherwise use plain text
         if html:
             msg.attach(MIMEText(html, "html"))
@@ -168,13 +169,20 @@ class SmtpProvider(BaseProvider):
         smtp.quit()
 
     def _notify(
-        self, from_email: str, from_name: str, to_email: str, subject: str, body: str = None, html: str = None, **kwargs
+        self,
+        from_email: str,
+        from_name: str,
+        to_email: str,
+        subject: str,
+        body: str | None = None,
+        html: str | None = None,
+        **kwargs,
     ):
         """
         Send an email using SMTP protocol.
         """
         self.send_email(from_email, from_name, to_email, subject, body, html)
-        
+
         # Return the notification details
         result = {"from": from_email, "to": to_email, "subject": subject}
         if html:

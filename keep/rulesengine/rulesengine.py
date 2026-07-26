@@ -2,7 +2,6 @@ import copy
 import json
 import logging
 import re
-from typing import List, Optional
 
 import celpy
 import celpy.c7nlib
@@ -19,9 +18,9 @@ from keep.api.core.db import (
     enrich_incidents_with_alerts,
     get_alerts_by_fingerprint,
     get_incident_for_grouping_rule,
+    is_all_alerts_in_status,
 )
 from keep.api.core.db import get_rules as get_rules_db
-from keep.api.core.db import is_all_alerts_in_status
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Incident
@@ -56,7 +55,7 @@ class RulesEngine:
         self.env = celpy.Environment()
 
     def run_rules(
-        self, events: list[AlertDto], session: Optional[Session] = None
+        self, events: list[AlertDto], session: Session | None = None
     ) -> list[IncidentDto]:
         """
         Evaluate the rules on the events and create incidents if needed
@@ -71,7 +70,7 @@ class RulesEngine:
         return cel_incidents
 
     def _run_cel_rules(
-        self, events: list[AlertDto], session: Optional[Session] = None
+        self, events: list[AlertDto], session: Session | None = None
     ) -> list[IncidentDto]:
         """
         Evaluate the rules on the events and create incidents if needed
@@ -94,7 +93,7 @@ class RulesEngine:
                 except ValueError as e:
                     if "Invalid name" in str(e):
                         self.logger.warning(
-                            f"{str(e)} in the CEL expression {rule.definition_cel} for alert {event.id}. This might mean there's a blank space in the field name",
+                            f"{e!s} in the CEL expression {rule.definition_cel} for alert {event.id}. This might mean there's a blank space in the field name",
                             extra={"alert_id": event.id, "payload": event.dict()},
                         )
                         continue
@@ -118,16 +117,25 @@ class RulesEngine:
                     for rule_fingerprint in rule_fingerprints:
                         # #If the alert recover its previous status, we need to check if there are any alerts with the same fingerprint that were resolved
                         creation_allowed = True
-                        if hasattr(event, "previous_status") and (event.previous_status == AlertStatus.MAINTENANCE.value):
-                            alerts_solved = get_alerts_by_fingerprint(self.tenant_id, event.fingerprint, status=AlertStatus.RESOLVED.value)
-                            if alerts_solved and any(event.lastReceived < solved_alert.event["lastReceived"] for solved_alert in alerts_solved):
+                        if hasattr(event, "previous_status") and (
+                            event.previous_status == AlertStatus.MAINTENANCE.value
+                        ):
+                            alerts_solved = get_alerts_by_fingerprint(
+                                self.tenant_id,
+                                event.fingerprint,
+                                status=AlertStatus.RESOLVED.value,
+                            )
+                            if alerts_solved and any(
+                                event.lastReceived < solved_alert.event["lastReceived"]
+                                for solved_alert in alerts_solved
+                            ):
                                 creation_allowed = False
                         incident, send_created_event = self._get_or_create_incident(
                             rule=rule,
                             rule_fingerprint=",".join(rule_fingerprint),
                             session=session,
                             event=event,
-                            creation_allowed=creation_allowed
+                            creation_allowed=creation_allowed,
                         )
                         if incident:
                             incident = assign_alert_to_incident(
@@ -138,7 +146,6 @@ class RulesEngine:
                             )
 
                             if not incident.is_visible:
-
                                 self.logger.info(
                                     f"No existing incidents for rule {rule.name}. Checking incident creation conditions"
                                 )
@@ -196,7 +203,9 @@ class RulesEngine:
 
                             incident = IncidentBl(
                                 self.tenant_id, session
-                            ).resolve_incident_if_require(incident, handle_workflow_event=False)
+                            ).resolve_incident_if_require(
+                                incident, handle_workflow_event=False
+                            )
 
                             incident_dto = IncidentDto.from_db_incident(incident)
                             if send_created_event:
@@ -248,7 +257,7 @@ class RulesEngine:
 
     def _get_or_create_incident(
         self, rule: Rule, rule_fingerprint, session, event, creation_allowed=True
-    ) -> (Optional[Incident], bool):
+    ) -> (Incident | None, bool):
 
         existed_incident, expired = get_incident_for_grouping_rule(
             self.tenant_id,
@@ -295,8 +304,7 @@ class RulesEngine:
                     var_to_replace += this_event_val
                 pattern = r"\{\{\s*" + re.escape(var) + r"\s*\}\}"
                 # it happens when the last value is already in the incident name so its skipped
-                if var_to_replace.endswith(","):
-                    var_to_replace = var_to_replace[:-1]
+                var_to_replace = var_to_replace.removesuffix(",")
                 # update the incident name template
                 # note that it will be commited later, when the incident is commited
                 incident_name = re.sub(pattern, var_to_replace, incident_name)
@@ -457,7 +465,7 @@ class RulesEngine:
         sanitized = _sanitize_dict(payload)
         return sanitized
 
-    def _check_if_rule_apply(self, rule: Rule, event: AlertDto) -> List[str]:
+    def _check_if_rule_apply(self, rule: Rule, event: AlertDto) -> list[str]:
         """
         Evaluates if a rule applies to an event using CEL. Handles type coercion for ==/!= between int and str.
         """
@@ -609,7 +617,7 @@ class RulesEngine:
                 )
                 return [["none"]]
             # if any of the values is None, we will return "none"
-            if any([fingerprint is None for fingerprint in rule_fingerprints]):
+            if any(fingerprint is None for fingerprint in rule_fingerprints):
                 self.logger.warning(
                     f"Failed to fetch the appropriate labels from the event {event.id} and rule {rule.name}",
                     extra={
@@ -654,7 +662,7 @@ class RulesEngine:
                         },
                     )
                     return [["none"]]
-                for key in value.keys():
+                for key in value:
                     fingerprints.add(value[key].get(rule.multi_level_property_name))
                 return [[key] for key in fingerprints]
         return [["none"]]
@@ -678,7 +686,7 @@ class RulesEngine:
         return activations
 
     def filter_alerts(
-        self, alerts: list[AlertDto], cel: str, alerts_activation: list = None
+        self, alerts: list[AlertDto], cel: str, alerts_activation: list | None = None
     ):
         """This function filters alerts according to a CEL
 
@@ -713,7 +721,7 @@ class RulesEngine:
             except ValueError as e:
                 if "Invalid name" in str(e):
                     logger.warning(
-                        f"{str(e)} in the CEL expression {cel} for alert {alert.id}. This might mean there's a blank space in the field name",
+                        f"{e!s} in the CEL expression {cel} for alert {alert.id}. This might mean there's a blank space in the field name",
                         extra={"alert_id": alert.id, "payload": alert.dict()},
                     )
                     continue

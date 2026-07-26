@@ -28,11 +28,13 @@ repos:
         stages: [commit, push, manual]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.1.6
+    rev: v0.11.4
     hooks:
       # Run the linter.
       - id: ruff
-        args: [--fix]
+        args: [--fix, --unsafe-fixes]
+      # Run the formatter.
+      - id: ruff-format
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v2.1.1
     hooks:

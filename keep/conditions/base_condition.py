@@ -1,6 +1,7 @@
 """
 Base class for all conditions.
 """
+
 import abc
 import logging
 
@@ -15,7 +16,7 @@ class BaseCondition(metaclass=abc.ABCMeta):
         condition_type,
         condition_name,
         condition_config,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize a provider.

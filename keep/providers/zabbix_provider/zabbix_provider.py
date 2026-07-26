@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import random
-from typing import Union
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -62,12 +62,12 @@ class ZabbixProvider(BaseProvider):
     Pull/Push alerts from Zabbix into Keep.
     """
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
     KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix
     KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = (
         "zabbix_provider_script.js"  # zabbix mediatype script file
     )
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="action.create",
             description="This method allows to create new actions.",
@@ -153,7 +153,7 @@ class ZabbixProvider(BaseProvider):
             documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/user/update",
         ),
     ]
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="Close Problem",
             func_name="close_problem",
@@ -204,7 +204,7 @@ class ZabbixProvider(BaseProvider):
         ),
     ]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         0: AlertSeverity.LOW,
         1: AlertSeverity.INFO,
         2: AlertSeverity.WARNING,
@@ -213,7 +213,7 @@ class ZabbixProvider(BaseProvider):
         5: AlertSeverity.CRITICAL,
     }
 
-    SEVERITY_NAME_TO_ID_MAP = {
+    SEVERITY_NAME_TO_ID_MAP: ClassVar[dict[str, str]] = {
         "not_classified": 0,
         "not classified": 0,
         "information": 1,
@@ -223,7 +223,7 @@ class ZabbixProvider(BaseProvider):
         "disaster": 5,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "problem": AlertStatus.FIRING,
         "ok": AlertStatus.RESOLVED,
         "resolved": AlertStatus.RESOLVED,
@@ -240,7 +240,6 @@ class ZabbixProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def close_problem(self, id: str):
         """
@@ -268,7 +267,7 @@ class ZabbixProvider(BaseProvider):
     def surrpress_problem(
         self,
         id: str,
-        suppress_until: datetime.datetime = datetime.datetime.now()
+        suppress_until: datetime.datetime = datetime.datetime.now(tz=datetime.UTC)
         + datetime.timedelta(days=1),
     ):
         """
@@ -346,7 +345,7 @@ class ZabbixProvider(BaseProvider):
         for acknowledge in problem.get("result", [])[0].get("acknowledges", []):
             if acknowledge.get("action") == "4":
                 time = datetime.datetime.fromtimestamp(int(acknowledge.get("clock")))
-                messages.append(f'{time}: {acknowledge.get("message")}')
+                messages.append(f"{time}: {acknowledge.get('message')}")
         return messages
 
     def change_severity(
@@ -375,15 +374,21 @@ class ZabbixProvider(BaseProvider):
             if 0 <= severity_int <= 5:
                 severity = severity_int
             else:
-                raise ValueError(f"Invalid severity number: {new_severity}. Must be between 0-5.")
+                raise ValueError(
+                    f"Invalid severity number: {new_severity}. Must be between 0-5."
+                )
         else:
             # Handle string input
             severity_lower = new_severity.lower().strip()
             if severity_lower in ZabbixProvider.SEVERITY_NAME_TO_ID_MAP:
                 severity = ZabbixProvider.SEVERITY_NAME_TO_ID_MAP[severity_lower]
             else:
-                valid_severities = list(ZabbixProvider.SEVERITY_NAME_TO_ID_MAP.keys()) + ["0", "1", "2", "3", "4", "5"]
-                raise ValueError(f"Invalid severity: {new_severity}. Valid values are: {valid_severities}")
+                valid_severities = list(
+                    ZabbixProvider.SEVERITY_NAME_TO_ID_MAP.keys()
+                ) + ["0", "1", "2", "3", "4", "5"]
+                raise ValueError(
+                    f"Invalid severity: {new_severity}. Valid values are: {valid_severities}"
+                )
 
         self.__send_request(
             "event.acknowledge", {"eventids": id, "severity": severity, "action": 8}
@@ -410,10 +415,10 @@ class ZabbixProvider(BaseProvider):
                     validated_scopes[scope.name] = "Permission denied"
                     continue
                 else:
-                    if error and any(phrase in error.lower() for phrase in [
-                        "invalid parameter",
-                        "incorrect arguments"
-                    ]):
+                    if error and any(
+                        phrase in error.lower()
+                        for phrase in ["invalid parameter", "incorrect arguments"]
+                    ):
                         # This is OK, it means the request is broken but we have access to the endpoint.
                         pass
                     else:
@@ -423,7 +428,7 @@ class ZabbixProvider(BaseProvider):
         return validated_scopes
 
     def __send_request(
-        self, method: str, params: dict = None, include_auth: bool = True
+        self, method: str, params: dict | None = None, include_auth: bool = True
     ):
         """
         Send a request to Zabbix API.
@@ -486,7 +491,7 @@ class ZabbixProvider(BaseProvider):
         return response_json
 
     @staticmethod
-    def _convert_severity(severity: Union[int, str]) -> AlertSeverity:
+    def _convert_severity(severity: int | str) -> AlertSeverity:
         """
         Convert Zabbix severity to Keep AlertSeverity.
 
@@ -509,11 +514,15 @@ class ZabbixProvider(BaseProvider):
             if severity_stripped.isdigit():
                 severity_int = int(severity_stripped)
                 if 0 <= severity_int <= 5:
-                    return ZabbixProvider.SEVERITIES_MAP.get(severity_int, AlertSeverity.INFO)
+                    return ZabbixProvider.SEVERITIES_MAP.get(
+                        severity_int, AlertSeverity.INFO
+                    )
 
             # If not a valid integer string, handle as text
             severity_lower = severity_stripped.lower()
-            severity_int = ZabbixProvider.SEVERITY_NAME_TO_ID_MAP.get(severity_lower, 1)  # Default to Information
+            severity_int = ZabbixProvider.SEVERITY_NAME_TO_ID_MAP.get(
+                severity_lower, 1
+            )  # Default to Information
             return ZabbixProvider.SEVERITIES_MAP.get(severity_int, AlertSeverity.INFO)
 
         # Fallback for any other type
@@ -522,7 +531,9 @@ class ZabbixProvider(BaseProvider):
     def _get_alerts(self) -> list[AlertDto]:
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/problem/get
         time_from = int(
-            (datetime.datetime.now() - datetime.timedelta(days=7)).timestamp()
+            (
+                datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=7)
+            ).timestamp()
         )
         problems = self.__send_request(
             "problem.get",
@@ -658,11 +669,9 @@ class ZabbixProvider(BaseProvider):
             {"output": ["name"]},
         )
         action_exists = any(
-            [
-                action
-                for action in existing_actions.get("result", [])
-                if action["name"] == action_name
-            ]
+            action
+            for action in existing_actions.get("result", [])
+            if action["name"] == action_name
         )
         if not action_exists:
             self.logger.info("Creating action")

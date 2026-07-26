@@ -1,4 +1,3 @@
-from typing import Optional
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     ComparisonNodeOperator,
@@ -14,13 +13,13 @@ from keep.api.core.cel_to_sql.ast_nodes import (
     UnaryNode,
     UnaryNodeOperator,
 )
-
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
     PropertiesMetadata,
     PropertyMetadataInfo,
     SimpleFieldMapping,
 )
+
 
 class JsonPropertyAccessNode(PropertyAccessNode):
     """
@@ -34,6 +33,7 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         property_to_extract (str): The specific property to extract from the JSON object.
         method_access_node (MethodAccessNode): The method access node used for extraction. (*.contains, *.startsWith, etc)
     """
+
     def __init__(
         self,
         json_property_name: str,
@@ -47,10 +47,11 @@ class JsonPropertyAccessNode(PropertyAccessNode):
         self.property_to_extract = property_to_extract
         self.data_type = data_type
 
-    json_property_name: Optional[str]
-    property_to_extract: Optional[list[str]]
-    method_access_node: Optional[MethodAccessNode]
-    data_type: Optional[DataType]
+    json_property_name: str | None
+    property_to_extract: list[str] | None
+    method_access_node: MethodAccessNode | None
+    data_type: DataType | None
+
 
 class MultipleFieldsNode(Node):
     """
@@ -59,12 +60,14 @@ class MultipleFieldsNode(Node):
 
     Attributes:
         fields (list[PropertyAccessNode]): A list of PropertyAccessNode instances representing the fields.
-    
+
     Args:
         fields (list[PropertyAccessNode]): A list of PropertyAccessNode instances to initialize the node with.
     """
+
     fields: list[PropertyAccessNode]
-    data_type: Optional[DataType]
+    data_type: DataType | None
+
 
 class PropertiesMappingException(Exception):
     """
@@ -73,7 +76,7 @@ class PropertiesMappingException(Exception):
     Attributes:
         message (str): Explanation of the error.
     """
-    pass
+
 
 class PropertiesMapper:
     """
@@ -98,6 +101,7 @@ class PropertiesMapper:
         _map_property(property_access_node: PropertyAccessNode) -> tuple[MultipleFieldsNode, PropertyMetadataInfo]:
             Maps a property access node to its corresponding database fields based on the metadata.
     """
+
     def __init__(self, properties_metadata: PropertiesMetadata):
         self.properties_metadata = properties_metadata
 
@@ -264,80 +268,78 @@ class PropertiesMapper:
         if not isinstance(comparison_node.second_operand, ConstantNode):
             return comparison_node
 
-        if mapping.enum_values:
-            if comparison_node.operator in [
-                ComparisonNodeOperator.GE,
-                ComparisonNodeOperator.GT,
-                ComparisonNodeOperator.LE,
-                ComparisonNodeOperator.LT,
-            ]:
-                if comparison_node.second_operand.value not in mapping.enum_values:
-                    if comparison_node.operator in [
-                        ComparisonNodeOperator.LT,
-                        ComparisonNodeOperator.LE,
-                    ]:
-                        return UnaryNode(
-                            operator=UnaryNodeOperator.NOT,
-                            operand=ComparisonNode(
-                                first_operand=comparison_node.first_operand,
-                                operator=ComparisonNodeOperator.IN,
-                                second_operand=[
-                                    ConstantNode(value=item)
-                                    for item in mapping.enum_values
-                                ],
-                            ),
-                        )
-                    else:
-                        return ComparisonNode(
+        if mapping.enum_values and comparison_node.operator in [
+            ComparisonNodeOperator.GE,
+            ComparisonNodeOperator.GT,
+            ComparisonNodeOperator.LE,
+            ComparisonNodeOperator.LT,
+        ]:
+            if comparison_node.second_operand.value not in mapping.enum_values:
+                if comparison_node.operator in [
+                    ComparisonNodeOperator.LT,
+                    ComparisonNodeOperator.LE,
+                ]:
+                    return UnaryNode(
+                        operator=UnaryNodeOperator.NOT,
+                        operand=ComparisonNode(
                             first_operand=comparison_node.first_operand,
                             operator=ComparisonNodeOperator.IN,
                             second_operand=[
                                 ConstantNode(value=item) for item in mapping.enum_values
                             ],
-                        )
+                        ),
+                    )
+                else:
+                    return ComparisonNode(
+                        first_operand=comparison_node.first_operand,
+                        operator=ComparisonNodeOperator.IN,
+                        second_operand=[
+                            ConstantNode(value=item) for item in mapping.enum_values
+                        ],
+                    )
 
-                index = mapping.enum_values.index(comparison_node.second_operand.value)
-                ranges = {
-                    ComparisonNodeOperator.GT: [index + 1, None],
-                    ComparisonNodeOperator.GE: [index, None],
-                    ComparisonNodeOperator.LT: [index, None],
-                    ComparisonNodeOperator.LE: [index + 1, None],
-                }
+            index = mapping.enum_values.index(comparison_node.second_operand.value)
+            ranges = {
+                ComparisonNodeOperator.GT: [index + 1, None],
+                ComparisonNodeOperator.GE: [index, None],
+                ComparisonNodeOperator.LT: [index, None],
+                ComparisonNodeOperator.LE: [index + 1, None],
+            }
 
-                start_index, end_index = ranges[comparison_node.operator]
+            start_index, end_index = ranges[comparison_node.operator]
 
-                if (
-                    comparison_node.operator == ComparisonNodeOperator.LE
-                    and start_index >= len(mapping.enum_values)
-                ):
-                    # it handles the case when queried value is the last in enum
-                    # and hence any value is applicable
-                    # and there is no need to even do filtering
-                    return None
+            if (
+                comparison_node.operator == ComparisonNodeOperator.LE
+                and start_index >= len(mapping.enum_values)
+            ):
+                # it handles the case when queried value is the last in enum
+                # and hence any value is applicable
+                # and there is no need to even do filtering
+                return None
 
-                if (
-                    comparison_node.operator == ComparisonNodeOperator.GT
-                    and start_index >= len(mapping.enum_values)
-                ):
-                    # nothig could be greater than the last value in enum
-                    # so it will always return False
-                    return ConstantNode(value=False)
+            if (
+                comparison_node.operator == ComparisonNodeOperator.GT
+                and start_index >= len(mapping.enum_values)
+            ):
+                # nothig could be greater than the last value in enum
+                # so it will always return False
+                return ConstantNode(value=False)
 
-                result = ComparisonNode(
-                    first_operand=comparison_node.first_operand,
-                    operator=ComparisonNodeOperator.IN,
-                    second_operand=[
-                        ConstantNode(value=item)
-                        for item in mapping.enum_values[start_index:end_index]
-                    ],
-                )
+            result = ComparisonNode(
+                first_operand=comparison_node.first_operand,
+                operator=ComparisonNodeOperator.IN,
+                second_operand=[
+                    ConstantNode(value=item)
+                    for item in mapping.enum_values[start_index:end_index]
+                ],
+            )
 
-                if comparison_node.operator in [
-                    ComparisonNodeOperator.LT,
-                    ComparisonNodeOperator.LE,
-                ]:
-                    result = UnaryNode(operator=UnaryNodeOperator.NOT, operand=result)
-                return result
+            if comparison_node.operator in [
+                ComparisonNodeOperator.LT,
+                ComparisonNodeOperator.LE,
+            ]:
+                result = UnaryNode(operator=UnaryNodeOperator.NOT, operand=result)
+            return result
 
         return comparison_node
 
@@ -357,7 +359,9 @@ class PropertiesMapper:
                 data_type=data_type,
             )
 
-        raise NotImplementedError(f"Mapping type {type(mapping).__name__} is not supported yet")
+        raise NotImplementedError(
+            f"Mapping type {type(mapping).__name__} is not supported yet"
+        )
 
     def _map_property(
         self, property_access_node: PropertyAccessNode, throw_mapping_error=True

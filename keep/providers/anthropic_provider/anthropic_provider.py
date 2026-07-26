@@ -1,5 +1,7 @@
-import json
 import dataclasses
+import json
+from typing import ClassVar
+
 import pydantic
 from anthropic import Anthropic, AuthenticationError
 
@@ -44,7 +46,7 @@ class AnthropicProviderAuthConfig:
 
 class AnthropicProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Anthropic"
-    PROVIDER_CATEGORY = ["AI"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["AI"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -123,8 +125,8 @@ class AnthropicProvider(BaseProvider):
 
 
 if __name__ == "__main__":
-    import os
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(

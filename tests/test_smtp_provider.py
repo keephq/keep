@@ -2,14 +2,13 @@
 Tests for SMTP Provider with HTML email support
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.smtp_provider.smtp_provider import SmtpProvider
 from keep.providers.models.provider_config import ProviderConfig
+from keep.providers.smtp_provider.smtp_provider import SmtpProvider
 
 
 class TestSmtpProvider:
@@ -63,18 +62,18 @@ class TestSmtpProvider:
         mock_smtp_class.assert_called_once_with("smtp.example.com", 587)
         mock_smtp.starttls.assert_called_once()
         mock_smtp.login.assert_called_once_with("test@example.com", "testpassword")
-        
+
         # Verify email was sent
         mock_smtp.sendmail.assert_called_once()
         call_args = mock_smtp.sendmail.call_args
         assert call_args[0][0] == "sender@example.com"
         assert call_args[0][1] == "recipient@example.com"
-        
+
         # Verify the email content contains plain text
         email_content = call_args[0][2]
         assert "Content-Type: text/plain" in email_content
         assert "This is a plain text email" in email_content
-        
+
         # Verify return value
         assert result == {
             "from": "sender@example.com",
@@ -103,18 +102,18 @@ class TestSmtpProvider:
         mock_smtp_class.assert_called_once_with("smtp.example.com", 587)
         mock_smtp.starttls.assert_called_once()
         mock_smtp.login.assert_called_once_with("test@example.com", "testpassword")
-        
+
         # Verify email was sent
         mock_smtp.sendmail.assert_called_once()
         call_args = mock_smtp.sendmail.call_args
         assert call_args[0][0] == "sender@example.com"
         assert call_args[0][1] == "recipient@example.com"
-        
+
         # Verify the email content contains HTML
         email_content = call_args[0][2]
         assert "Content-Type: text/html" in email_content
         assert "<p>This is an <strong>HTML</strong> email</p>" in email_content
-        
+
         # Verify return value
         assert result == {
             "from": "sender@example.com",
@@ -124,7 +123,9 @@ class TestSmtpProvider:
         }
 
     @patch("keep.providers.smtp_provider.smtp_provider.SMTP")
-    def test_send_html_email_with_both_body_and_html(self, mock_smtp_class, smtp_provider):
+    def test_send_html_email_with_both_body_and_html(
+        self, mock_smtp_class, smtp_provider
+    ):
         """Test that HTML takes precedence when both body and html are provided."""
         # Setup mock SMTP instance
         mock_smtp = MagicMock()
@@ -143,13 +144,13 @@ class TestSmtpProvider:
         # Verify email was sent
         mock_smtp.sendmail.assert_called_once()
         call_args = mock_smtp.sendmail.call_args
-        
+
         # Verify HTML content is used (not plain text)
         email_content = call_args[0][2]
         assert "Content-Type: text/html" in email_content
         assert "<p>HTML content</p>" in email_content
         assert "Content-Type: text/plain" not in email_content
-        
+
         # Verify return value contains both
         assert result == {
             "from": "sender@example.com",
@@ -167,7 +168,7 @@ class TestSmtpProvider:
         mock_smtp_class.return_value = mock_smtp
 
         recipients = ["recipient1@example.com", "recipient2@example.com"]
-        
+
         # Send HTML email to multiple recipients
         result = smtp_provider._notify(
             from_email="sender@example.com",
@@ -182,11 +183,11 @@ class TestSmtpProvider:
         call_args = mock_smtp.sendmail.call_args
         assert call_args[0][0] == "sender@example.com"
         assert call_args[0][1] == recipients
-        
+
         # Verify the To header contains all recipients
         email_content = call_args[0][2]
         assert "To: recipient1@example.com, recipient2@example.com" in email_content
-        
+
         # Verify return value
         assert result == {
             "from": "sender@example.com",
@@ -196,14 +197,18 @@ class TestSmtpProvider:
         }
 
     @patch("keep.providers.smtp_provider.smtp_provider.SMTP")
-    def test_send_email_without_body_or_html_raises_error(self, mock_smtp_class, smtp_provider):
+    def test_send_email_without_body_or_html_raises_error(
+        self, mock_smtp_class, smtp_provider
+    ):
         """Test that sending an email without body or html raises an error."""
         # Setup mock SMTP instance
         mock_smtp = MagicMock()
         mock_smtp_class.return_value = mock_smtp
 
         # Attempt to send email without body or html
-        with pytest.raises(ValueError, match="Either 'body' or 'html' must be provided"):
+        with pytest.raises(
+            ValueError, match="Either 'body' or 'html' must be provided"
+        ):
             smtp_provider._notify(
                 from_email="sender@example.com",
                 from_name="Test Sender",
@@ -307,7 +312,7 @@ class TestSmtpProvider:
         # Verify email was sent
         mock_smtp.sendmail.assert_called_once()
         call_args = mock_smtp.sendmail.call_args
-        
+
         # Verify the From header contains only email
         email_content = call_args[0][2]
         assert "From: sender@example.com" in email_content
@@ -318,9 +323,9 @@ class TestSmtpProvider:
         with patch.object(smtp_provider, "generate_smtp_client") as mock_generate:
             mock_smtp = MagicMock()
             mock_generate.return_value = mock_smtp
-            
+
             result = smtp_provider.validate_scopes()
-            
+
             assert result == {"send_email": True}
             mock_smtp.quit.assert_called_once()
 
@@ -328,7 +333,7 @@ class TestSmtpProvider:
         """Test failed scope validation."""
         with patch.object(smtp_provider, "generate_smtp_client") as mock_generate:
             mock_generate.side_effect = Exception("Connection failed")
-            
+
             result = smtp_provider.validate_scopes()
-            
+
             assert result == {"send_email": "Connection failed"}

@@ -39,7 +39,6 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
 
         Do all the necessary setup for the identity manager.
         """
-        pass
 
     # default identity manager does not support sso
     @property
@@ -48,14 +47,12 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
 
     def get_sso_providers(self) -> list[str]:
         raise NotImplementedError(
-            "get_sso_providers() method not implemented"
-            " for {}".format(self.__class__.__name__)
+            f"get_sso_providers() method not implemented for {self.__class__.__name__}"
         )
 
     def get_sso_wizard_url(self, authenticated_entity: AuthenticatedEntity) -> str:
         raise NotImplementedError(
-            "get_sso_wizard_url() method not implemented"
-            " for {}".format(self.__class__.__name__)
+            f"get_sso_wizard_url() method not implemented for {self.__class__.__name__}"
         )
 
     @abc.abstractmethod
@@ -67,8 +64,7 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             list: The list of users.
         """
         raise NotImplementedError(
-            "get_users() method not implemented"
-            " for {}".format(self.__class__.__name__)
+            f"get_users() method not implemented for {self.__class__.__name__}"
         )
 
     def get_groups(self) -> str | dict:
@@ -82,7 +78,7 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         return []
 
     @abc.abstractmethod
-    def create_user(self, user_email, user_name, password, role, groups=[]) -> None:
+    def create_user(self, user_email, user_name, password, role, groups=None) -> None:
         """
         Create a user in the identity manager.
 
@@ -124,8 +120,7 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             dict: The authentication verifier.
         """
         raise NotImplementedError(
-            "get_auth_verifier() method not implemented"
-            " for {}".format(self.__class__.__name__)
+            f"get_auth_verifier() method not implemented for {self.__class__.__name__}"
         )
 
     def create_resource(
@@ -145,7 +140,6 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             scopes (list): A list of scopes associated with the resource,
                            defining the types of actions that can be performed.
         """
-        pass
 
     def delete_resource(self, resource_id: str) -> None:
         """
@@ -158,7 +152,6 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         Args:
             resource_id (str): The unique identifier of the resource to be deleted.
         """
-        pass
 
     def check_permission(
         self, resource_id: str, scope: str, authenticated_entity: AuthenticatedEntity
@@ -181,7 +174,6 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
                            permission, an exception with a 403 status code should
                            be raised.
         """
-        pass
 
     def create_permissions(self, permissions: list[ResourcePermission]) -> None:
         """
@@ -195,7 +187,6 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
             permissions (list): A list of permission objects, each containing the
                                 resource, scope, and user or group information.
         """
-        pass
 
     def get_permissions(self) -> list[ResourcePermission]:
         """
@@ -227,7 +218,6 @@ class BaseIdentityManager(metaclass=abc.ABCMeta):
         Returns:
             list: A list of permission objects.
         """
-        pass
 
     def get_roles(self) -> list[Role]:
         """

@@ -3,6 +3,7 @@ Icinga2 Provider is a class that provides a way to receive alerts from Icinga2 u
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -77,13 +78,13 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
     """
 
     PROVIDER_DISPLAY_NAME = "Icinga2"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
     WEBHOOK_INSTALLATION_REQUIRED = True
     PROVIDER_ICON = "icinga2-icon.png"
 
     # Define provider scopes
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="read_alerts",
             description="Read alerts from Icinga2",
@@ -91,7 +92,7 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
     ]
 
     # Icinga2 states Mapping to Keep alert states ...
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "OK": AlertStatus.RESOLVED,
         "WARNING": AlertStatus.FIRING,
         "CRITICAL": AlertStatus.FIRING,
@@ -101,7 +102,7 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
     }
 
     # Mapping Icinga2 states to Keep alert severities
-    SEVERITY_MAP = {
+    SEVERITY_MAP: ClassVar[dict[str, str]] = {
         "OK": AlertSeverity.INFO,
         "WARNING": AlertSeverity.WARNING,
         "CRITICAL": AlertSeverity.CRITICAL,
@@ -119,7 +120,6 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
         """
         Dispose of the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -201,7 +201,7 @@ To send alerts from Icinga2 to Keep, configure a new notification command:
 
         except Exception as e:
             self.logger.exception("Failed to get alerts from Icinga2")
-            raise Exception(f"Failed to get alerts from Icinga2: {str(e)}")
+            raise Exception(f"Failed to get alerts from Icinga2: {e!s}")
 
     @staticmethod
     def _format_alert(

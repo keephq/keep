@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from typing import Optional
 
 from opentelemetry import trace
 from sqlmodel import Session
@@ -184,7 +183,7 @@ def convert_db_alerts_to_dto_alerts(
     alerts: list[Alert | tuple[Alert, LastAlertToIncident]],
     with_incidents: bool = False,
     with_alert_instance_enrichment: bool = False,
-    session: Optional[Session] = None,
+    session: Session | None = None,
 ) -> list[AlertDto | AlertWithIncidentLinkMetadataDto]:
     """
     Enriches the alerts with the enrichment data.
@@ -201,7 +200,6 @@ def convert_db_alerts_to_dto_alerts(
         with tracer.start_as_current_span("alerts_enrichment"):
             # enrich the alerts with the enrichment data
             for _object in alerts:
-
                 # We may have an Alert only or and Alert with an LastAlertToIncident
                 if isinstance(_object, Alert):
                     alert, alert_to_incident = _object, None
@@ -216,15 +214,14 @@ def convert_db_alerts_to_dto_alerts(
 
                 alert.event.update(enrichments)
 
-                if with_incidents:
-                    if alert._incidents:
-                        alert.event["incident"] = ",".join(
-                            str(incident.id) for incident in alert._incidents
-                        )
-                        alert.event["incident_dto"] = [
-                            IncidentDto.from_db_incident(incident)
-                            for incident in alert._incidents
-                        ]
+                if with_incidents and alert._incidents:
+                    alert.event["incident"] = ",".join(
+                        str(incident.id) for incident in alert._incidents
+                    )
+                    alert.event["incident_dto"] = [
+                        IncidentDto.from_db_incident(incident)
+                        for incident in alert._incidents
+                    ]
                 try:
                     if alert_to_incident is not None:
                         alert_dto = AlertWithIncidentLinkMetadataDto.from_db_instance(

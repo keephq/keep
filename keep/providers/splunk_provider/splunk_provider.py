@@ -3,6 +3,7 @@ import datetime
 import json
 import logging
 import time
+from typing import ClassVar
 from xml.etree.ElementTree import ParseError
 
 import pydantic
@@ -60,7 +61,7 @@ class SplunkProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "Splunk"
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="list_all_objects",
             description="The user can get all the alerts",
@@ -74,9 +75,9 @@ class SplunkProvider(BaseProvider):
             alias="Needed to connect to webhook",
         ),
     ]
-    FINGERPRINT_FIELDS = ["exception", "logger", "service"]
-    PROVIDER_CATEGORY = ["Monitoring"]
-    SEVERITIES_MAP = {
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["exception", "logger", "service"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "LOW": AlertSeverity.LOW,
         "INFO": AlertSeverity.INFO,
         "WARNING": AlertSeverity.WARNING,
@@ -219,7 +220,7 @@ class SplunkProvider(BaseProvider):
             )
             validated_scopes = dict(
                 [
-                    [scope.name, "HTTP_ERROR ({status})".format(status=e.status)]
+                    [scope.name, f"HTTP_ERROR ({e.status})"]
                     for scope in self.PROVIDER_SCOPES
                 ]
             )
@@ -271,7 +272,6 @@ class SplunkProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True

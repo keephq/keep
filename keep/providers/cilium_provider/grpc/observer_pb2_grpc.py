@@ -31,7 +31,7 @@ if _version_not_supported:
 """
 
 
-class ObserverStub(object):
+class ObserverStub:
     """Observer returns a stream of Flows depending on which filter the user want
     to observe.
     """
@@ -80,7 +80,7 @@ class ObserverStub(object):
         )
 
 
-class ObserverServicer(object):
+class ObserverServicer:
     """Observer returns a stream of Flows depending on which filter the user want
     to observe.
     """
@@ -167,7 +167,7 @@ def add_ObserverServicer_to_server(servicer, server):
 
 
 # This class is part of an EXPERIMENTAL API.
-class Observer(object):
+class Observer:
     """Observer returns a stream of Flows depending on which filter the user want
     to observe.
     """

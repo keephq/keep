@@ -3,8 +3,8 @@ AxiomProvider is a class that allows to ingest/digest data from Axiom.
 """
 
 import dataclasses
-from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -25,7 +25,7 @@ class AxiomProviderAuthConfig:
     api_token: str = dataclasses.field(
         metadata={"required": True, "sensitive": True, "description": "Axiom API Token"}
     )
-    organization_id: Optional[str] = dataclasses.field(
+    organization_id: str | None = dataclasses.field(
         metadata={
             "required": False,
             "sensitive": False,
@@ -55,7 +55,7 @@ class AxiomProvider(BaseProvider):
     """
 
     PROVIDER_DISPLAY_NAME = "Axiom"
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -66,7 +66,6 @@ class AxiomProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -146,7 +145,9 @@ class AxiomProvider(BaseProvider):
 
         def convert_to_iso_format(date_str):
             try:
-                dt = datetime.strptime(date_str[:19], "%Y-%m-%d %H:%M:%S")
+                dt = datetime.strptime(date_str[:19], "%Y-%m-%d %H:%M:%S").replace(
+                    tzinfo=timezone.utc
+                )
 
                 if len(date_str) > 19 and date_str[19] == ".":
                     milliseconds = date_str[20:23].ljust(3, "0")

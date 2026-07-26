@@ -11,8 +11,8 @@ from unittest.mock import MagicMock, patch
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.contextmanager.contextmanager import ContextManager
-from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.keep_provider.keep_provider import KeepProvider
+from keep.providers.models.provider_config import ProviderConfig
 
 
 def test_notify_alert_with_none_alert_results_no_crash():
@@ -44,16 +44,16 @@ def test_notify_alert_with_none_alert_results_no_crash():
         "steps": {"this": {"results": {}}},  # not a list -> alert_results becomes None
     }
 
-    with patch.object(
-        context_manager, "get_full_context", return_value=mock_context
-    ):
+    with patch.object(context_manager, "get_full_context", return_value=mock_context):
         # Mock the io_handler to avoid needing real alert infrastructure
         provider.io_handler = MagicMock()
         provider.io_handler.render_context.return_value = {}
 
         # Mock process_event and alert DAO to avoid DB dependency
-        with patch("keep.providers.keep_provider.keep_provider.process_event"), \
-             patch.object(provider, "logger"):
+        with (
+            patch("keep.providers.keep_provider.keep_provider.process_event"),
+            patch.object(provider, "logger"),
+        ):
             # Before the fix, this would raise:
             # TypeError: object of type 'NoneType' has no len()
             result = provider._notify_alert()
@@ -89,14 +89,14 @@ def test_notify_alert_with_none_alert_results_and_alert_param():
 
     alert_data = {"name": "test-alert", "status": "firing"}
 
-    with patch.object(
-        context_manager, "get_full_context", return_value=mock_context
-    ):
+    with patch.object(context_manager, "get_full_context", return_value=mock_context):
         provider.io_handler = MagicMock()
         provider.io_handler.render_context.return_value = alert_data
 
-        with patch("keep.providers.keep_provider.keep_provider.process_event"), \
-             patch.object(provider, "logger"):
+        with (
+            patch("keep.providers.keep_provider.keep_provider.process_event"),
+            patch.object(provider, "logger"),
+        ):
             # This should work: alert param provides the alert data
             result = provider._notify_alert(alert=alert_data)
 

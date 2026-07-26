@@ -1,7 +1,7 @@
 import asyncio
 import importlib
-import sys
 import json
+import sys
 
 import pytest
 from fastapi.testclient import TestClient

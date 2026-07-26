@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -27,12 +27,16 @@ from keep.api.core.db import (
     get_last_workflow_workflow_to_alert_executions,
     get_or_create_dummy_workflow,
     get_session,
-    get_workflow_by_id as get_workflow_by_id_db,
     get_workflow_version,
     get_workflow_versions,
-    update_workflow_by_id as update_workflow_by_id_db,
+)
+from keep.api.core.db import (
+    get_workflow_by_id as get_workflow_by_id_db,
 )
 from keep.api.core.db import get_workflow_executions as get_workflow_executions_db
+from keep.api.core.db import (
+    update_workflow_by_id as update_workflow_by_id_db,
+)
 from keep.api.core.workflows import (
     get_workflow_facets,
     get_workflow_facets_data,
@@ -99,7 +103,7 @@ def fetch_facet_options(
         )
     except CelToSqlException as e:
         logger.exception(
-            f'Error parsing CEL expression "{facet_options_query.cel}". {str(e)}'
+            f'Error parsing CEL expression "{facet_options_query.cel}". {e!s}'
         )
         raise HTTPException(
             status_code=400,
@@ -228,7 +232,7 @@ def query_workflows(
             sort_dir=query.sort_dir,
         )
     except CelToSqlException as e:
-        logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
+        logger.exception(f'Error parsing CEL expression "{query.cel}". {e!s}')
         raise HTTPException(
             status_code=400,
             detail=f"Error parsing CEL expression: {query.cel}",
@@ -360,9 +364,9 @@ def get_event_from_body(body: dict, tenant_id: str):
 )
 def run_workflow(
     workflow_id: str,
-    event_type: Optional[str] = Query(None),
-    event_id: Optional[str] = Query(None),
-    body: Optional[Dict[Any, Any]] = Body(None),
+    event_type: str | None = Query(None),
+    event_id: str | None = Query(None),
+    body: dict[Any, Any] | None = Body(None),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["execute:workflows"])
     ),
@@ -491,7 +495,7 @@ async def run_workflow_from_definition(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:workflows"])
     ),
-    body: Dict[Any, Any] = Body({}),
+    body: dict[Any, Any] = Body({}),
 ) -> WorkflowRunResponseDTO:
     tenant_id = authenticated_entity.tenant_id
     created_by = authenticated_entity.email
@@ -585,7 +589,6 @@ async def get_workflow_dict_from_string(workflow_raw: str | bytes) -> dict:
         # backward compatibility
         if "alert" in workflow_data:
             workflow_data = workflow_data.pop("alert")
-        #
         elif "workflow" in workflow_data:
             workflow_data = workflow_data.pop("workflow")
 
@@ -980,9 +983,9 @@ def get_workflow_runs_by_id(
     tab: int = 1,
     limit: int = 25,
     offset: int = 0,
-    status: Optional[List[str]] = Query(None),
-    trigger: Optional[List[str]] = Query(None),
-    execution_id: Optional[str] = None,
+    status: list[str] | None = Query(None),
+    trigger: list[str] | None = Query(None),
+    execution_id: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:workflows"])
     ),
@@ -1187,7 +1190,7 @@ def toggle_workflow_state(
     # Toggle the disabled state
     # TODO: update workflow_raw
     workflow.is_disabled = not workflow.is_disabled
-    workflow.last_updated = datetime.datetime.now()
+    workflow.last_updated = datetime.datetime.now(tz=datetime.UTC)
 
     session.add(workflow)
     session.commit()
@@ -1210,7 +1213,7 @@ def toggle_workflow_state(
 )
 def write_workflow_secret(
     workflow_id: str,
-    secret_data: Dict[str, str],
+    secret_data: dict[str, str],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:secrets"])
     ),
@@ -1257,7 +1260,7 @@ def read_workflow_secret(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:secrets"])
     ),
-) -> Union[Dict, str]:
+) -> dict | str:
     """
     Read a secret value for a workflow. Optionally parse as JSON if is_json is True.
     """

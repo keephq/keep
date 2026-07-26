@@ -6,7 +6,7 @@ import pytest
 import pytz
 from freezegun import freeze_time
 
-import keep.functions as functions
+from keep import functions
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.action_type import ActionType
@@ -25,8 +25,8 @@ from keep.iohandler.iohandler import IOHandler
         # tuples
         ("tulple of different items", ("alpha", "beta"), True),
         # sets
-        ("sets should always be False if there are no differences", {1, 1, 1}, False),
-        ("sets should be True if there are differences", {1, 1, 1, 2}, True),
+        ("sets should always be False if there are no differences", {1}, False),
+        ("sets should be True if there are differences", {1, 2}, True),
         # strings
         ("a string is an iterator in Python", "string", True),
         ("a string with repeating letters", "gg", False),
@@ -41,9 +41,9 @@ from keep.iohandler.iohandler import IOHandler
     ],
 )
 def test_functions_diff(test_description, given, expected):
-    assert (
-        functions.diff(given) == expected
-    ), f"{test_description}: Expected {given} to return {expected}"
+    assert functions.diff(given) == expected, (
+        f"{test_description}: Expected {given} to return {expected}"
+    )
 
 
 def test_keep_add_function():
@@ -68,6 +68,7 @@ def test_keep_mul_function():
     """
     assert functions.mul(1, 2) == 2
     assert functions.mul(1, 2, 3) == 6
+
 
 def test_keep_mul_function_with_zero():
     """
@@ -200,7 +201,7 @@ def test_keep_to_utc_function():
     dt = functions.to_utc("2021-01-01 00:00:00")
     assert dt.tzinfo == pytz.utc
     assert isinstance(dt, datetime.datetime)
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(tz=datetime.UTC)
     now_utc = functions.to_utc(now)
     assert now_utc.tzinfo == pytz.utc
 
@@ -209,8 +210,8 @@ def test_keep_datetime_compare_function():
     """
     Test the datetime_compare function
     """
-    dt1 = datetime.datetime.now()
-    dt2 = datetime.datetime.now() + datetime.timedelta(hours=1)
+    dt1 = datetime.datetime.now(tz=datetime.UTC)
+    dt2 = datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(hours=1)
     assert int(functions.datetime_compare(dt1, dt2)) == -1
     assert int(functions.datetime_compare(dt2, dt1)) == 1
     assert int(functions.datetime_compare(dt1, dt1)) == 0
@@ -301,7 +302,7 @@ def test_substract_minutes():
 
 
 def test_to_utc():
-    local_dt = datetime.datetime.now()
+    local_dt = datetime.datetime.now(tz=datetime.UTC)
     utc_dt = functions.to_utc(local_dt)
     # Compare the timezone names instead of the timezone objects
     assert utc_dt.tzinfo.tzname(utc_dt) == datetime.timezone.utc.tzname(None)
@@ -1251,7 +1252,7 @@ def test_dict_merge():
     d1 = {"a": 1, "b": 2}
     d2 = {"b": 3, "c": 4}
     d3 = '{"c": 5, "d": 6}'
-    
+
     result = functions.dict_merge(d1, d2, d3)
     assert result == {"a": 1, "b": 3, "c": 5, "d": 6}
 
@@ -1261,4 +1262,3 @@ def test_dict_merge():
     # invalid inputs
     result = functions.dict_merge(d1, "invalid", {"e": 7})
     assert result == {"a": 1, "b": 2, "e": 7}
-

@@ -40,7 +40,7 @@ def main(args):
         # Read arguments
         bad_arguments: bool = False
         if len(args) >= 4:
-            msg = "{0} {1} {2} {3} {4}".format(
+            msg = "{} {} {} {} {}".format(
                 args[1],
                 args[2],
                 args[3],
@@ -57,7 +57,7 @@ def main(args):
             f.write(msg + "\n")
 
         if bad_arguments:
-            debug("# ERROR: Exiting, bad arguments. Inputted: %s" % args)
+            debug(f"# ERROR: Exiting, bad arguments. Inputted: {args}")
             sys.exit(ERR_BAD_ARGUMENTS)
 
         # Core function
@@ -111,13 +111,13 @@ def debug(msg: str) -> None:
 
 def generate_msg(alert: any, options: any) -> any:
     level = alert["rule"]["level"]
-    title = (
-        alert["rule"]["description"] if "description" in alert["rule"] else "N/A"
-    )
+    title = alert["rule"].get("description", "N/A")
     rule_id = alert["rule"]["id"]
-    agent_id = alert["agentless"]["host"] if "agentless" in alert else alert["agent"]["id"]
+    agent_id = (
+        alert["agentless"]["host"] if "agentless" in alert else alert["agent"]["id"]
+    )
     agent_name = "Agentless Host" if "agentless" in alert else alert["agent"]["name"]
-    full_log = alert["full_log"] if "full_log" in alert else "N/A"
+    full_log = alert.get("full_log", "N/A")
 
     severity = "low"
     if level > 14:
@@ -144,7 +144,7 @@ def send_msg(msg: str, url: str, api_key: str) -> None:
         "X-API-KEY": api_key,
     }
     res = requests.post(url, json=msg, headers=headers, timeout=10)
-    debug("# Response received: %s" % res.json)
+    debug(f"# Response received: {res.json}")
 
 
 def get_json_alert(file_location: str) -> any:
@@ -152,10 +152,10 @@ def get_json_alert(file_location: str) -> any:
         with open(file_location) as alert_file:
             return json.load(alert_file)
     except FileNotFoundError:
-        debug("# JSON file for alert %s doesn't exist" % file_location)
+        debug(f"# JSON file for alert {file_location} doesn't exist")
         sys.exit(ERR_FILE_NOT_FOUND)
     except json.decoder.JSONDecodeError as e:
-        debug("Failed getting JSON alert. Error: %s" % e)
+        debug(f"Failed getting JSON alert. Error: {e}")
         sys.exit(ERR_INVALID_JSON)
 
 
@@ -164,9 +164,9 @@ def get_json_options(file_location: str) -> any:
         with open(file_location) as options_file:
             return json.load(options_file)
     except FileNotFoundError:
-        debug("# JSON file for options %s doesn't exist" % file_location)
+        debug(f"# JSON file for options {file_location} doesn't exist")
     except BaseException as e:
-        debug("Failed getting JSON options. Error: %s" % e)
+        debug(f"Failed getting JSON options. Error: {e}")
         sys.exit(ERR_INVALID_JSON)
 
 

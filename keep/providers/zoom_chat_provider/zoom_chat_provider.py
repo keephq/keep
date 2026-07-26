@@ -6,7 +6,7 @@ import dataclasses
 import http
 import os
 import time
-from typing import Optional
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -24,7 +24,7 @@ class ZoomChatProviderAuthConfig:
     """
     ZoomChatProviderAuthConfig holds the authentication information for the ZoomChatProvider.
     """
-    
+
     webhook_url: HttpsUrl = dataclasses.field(
         metadata={
             "name": "webhook_url",
@@ -42,29 +42,29 @@ class ZoomChatProviderAuthConfig:
             "sensitive": True,
         },
     )
-    account_id: Optional[str] = dataclasses.field(
+    account_id: str | None = dataclasses.field(
         default="zoom_account_id",
         metadata={
             "required": False,
             "description": "Zoom Account ID",
             "sensitive": True,
-        }
+        },
     )
-    client_id: Optional[str] = dataclasses.field(
+    client_id: str | None = dataclasses.field(
         default="zoom_client_id",
         metadata={
             "required": False,
             "description": "Zoom Client ID",
             "sensitive": True,
-        }
+        },
     )
-    client_secret: Optional[str] = dataclasses.field(
+    client_secret: str | None = dataclasses.field(
         default="zoom_client_secret",
         metadata={
             "required": False,
             "description": "Zoom Client Secret",
             "sensitive": True,
-        }
+        },
     )
 
 
@@ -72,11 +72,11 @@ class ZoomChatProvider(BaseProvider):
     """Send alert message to Zoom Chat using the Incoming Webhook application."""
 
     PROVIDER_DISPLAY_NAME = "Zoom Chat"
-    PROVIDER_TAGS = ["messaging"]
-    PROVIDER_CATEGORY = ["Communication"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["messaging"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Communication"]
     BASE_URL = "https://api.zoom.us/v2"
-    
-    PROVIDER_SCOPES = [
+
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="user:read:user:admin",
             description="View a Zoom user's details",
@@ -136,7 +136,7 @@ class ZoomChatProvider(BaseProvider):
                 )
             return response.json()["access_token"]
         except Exception as e:
-            raise ProviderException(f"Failed to get access token: {str(e)}")
+            raise ProviderException(f"Failed to get access token: {e!s}")
 
     def _get_headers(self) -> dict:
         """
@@ -185,7 +185,6 @@ class ZoomChatProvider(BaseProvider):
     def dispose(self):
         """Clean up resources."""
         self.access_token = None
-        pass
 
     def _get_zoom_userinfo(self, email: str) -> dict:
         """Get a user's information from Zoom API using email address."""
@@ -202,15 +201,15 @@ class ZoomChatProvider(BaseProvider):
                     f"Failed to retrieve user info for {email}: {response.status_code} - {response.text}"
                 )
         except requests.exceptions.RequestException as e:
-            raise ProviderException(f"Failed to retrieve user info: {str(e)}")
+            raise ProviderException(f"Failed to retrieve user info: {e!s}")
 
     def _notify(
         self,
         severity: str = "info",
-        title: Optional[str] = "",
+        title: str | None = "",
         message: str = "",
-        tagged_users:  Optional[str] = "",
-        details_url:  Optional[str] = "",
+        tagged_users: str | None = "",
+        details_url: str | None = "",
         **kwargs: dict,
     ) -> str:
         """
@@ -259,7 +258,9 @@ class ZoomChatProvider(BaseProvider):
                             else (
                                 "#EAB308"
                                 if severity == "warning"
-                                else "#10B981" if severity == "low" else "#3B82F6"
+                                else "#10B981"
+                                if severity == "low"
+                                else "#3B82F6"
                             )
                         )
                     )
@@ -338,9 +339,7 @@ if __name__ == "__main__":
     webhook_auth_token = os.environ.get("ZOOM_WEBHOOK_AUTH_TOKEN")
 
     if not all([webhook_url, webhook_auth_token]):
-        raise Exception(
-            "ZOOM_WEBHOOK_URL and ZOOM_WEBHOOK_AUTH_TOKEN are required"
-        )
+        raise Exception("ZOOM_WEBHOOK_URL and ZOOM_WEBHOOK_AUTH_TOKEN are required")
 
     # Create context manager
     context_manager = ContextManager(

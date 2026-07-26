@@ -7,6 +7,7 @@ import os
 import time
 import typing
 import uuid
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -73,7 +74,7 @@ class PagerdutyProvider(
 ):
     """Pull alerts and query incidents from PagerDuty."""
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="incidents_read",
             description="Read incidents data.",
@@ -104,42 +105,42 @@ class PagerdutyProvider(
     BASE_API_URL = "https://api.pagerduty.com"
     SUBSCRIPTION_API_URL = f"{BASE_API_URL}/webhook_subscriptions"
     PROVIDER_DISPLAY_NAME = "PagerDuty"
-    ALERT_SEVERITIES_MAP = {
+    ALERT_SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "critical": AlertSeverity.CRITICAL,
         "error": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
         "info": AlertSeverity.INFO,
     }
-    URGENCY_TO_ALERT_SEVERITY = {
+    URGENCY_TO_ALERT_SEVERITY: ClassVar[dict[str, str]] = {
         "high": AlertSeverity.HIGH,
         "low": AlertSeverity.INFO,
     }
-    URGENCY_TO_INCIDENT_SEVERITY = {
+    URGENCY_TO_INCIDENT_SEVERITY: ClassVar[dict[str, str]] = {
         "high": IncidentSeverity.HIGH,
         "low": IncidentSeverity.INFO,
     }
-    INCIDENT_SEVERITIES_MAP = {
+    INCIDENT_SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "P1": IncidentSeverity.CRITICAL,
         "P2": IncidentSeverity.HIGH,
         "P3": IncidentSeverity.WARNING,
         "P4": IncidentSeverity.INFO,
     }
-    PRIORITY_TO_ALERT_SEVERITY = {
+    PRIORITY_TO_ALERT_SEVERITY: ClassVar[dict[str, str]] = {
         "P1": AlertSeverity.CRITICAL,
         "P2": AlertSeverity.HIGH,
         "P3": AlertSeverity.WARNING,
         "P4": AlertSeverity.INFO,
     }
-    ALERT_STATUS_MAP = {
+    ALERT_STATUS_MAP: ClassVar[dict[str, str]] = {
         "triggered": AlertStatus.FIRING,
         "resolved": AlertStatus.RESOLVED,
     }
-    ALERT_STATUS_TO_EVENT_TYPE_MAP = {
+    ALERT_STATUS_TO_EVENT_TYPE_MAP: ClassVar[dict[str, str]] = {
         AlertStatus.FIRING.value: "trigger",
         AlertStatus.RESOLVED.value: "resolve",
         AlertStatus.ACKNOWLEDGED.value: "acknowledge",
     }
-    INCIDENT_STATUS_MAP = {
+    INCIDENT_STATUS_MAP: ClassVar[dict[str, str]] = {
         "triggered": IncidentStatus.FIRING,
         "acknowledged": IncidentStatus.ACKNOWLEDGED,
         "resolved": IncidentStatus.RESOLVED,
@@ -153,8 +154,8 @@ class PagerdutyProvider(
         if PAGERDUTY_CLIENT_ID is not None and PAGERDUTY_CLIENT_SECRET is not None
         else None
     )
-    PROVIDER_CATEGORY = ["Incident Management"]
-    FINGERPRINT_FIELDS = ["alert_key"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["alert_key"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -198,7 +199,7 @@ class PagerdutyProvider(
                     "grant_type": "refresh_token",
                     "client_id": PagerdutyProvider.PAGERDUTY_CLIENT_ID,
                     "client_secret": PagerdutyProvider.PAGERDUTY_CLIENT_SECRET,
-                    "refresh_token": f'{self.authentication_config.oauth_data["refresh_token"]}',
+                    "refresh_token": f"{self.authentication_config.oauth_data['refresh_token']}",
                 },
             )
             access_token_response.raise_for_status()
@@ -319,7 +320,6 @@ class PagerdutyProvider(
         headers = self.__get_headers()
         scopes = {}
         for scope in self.PROVIDER_SCOPES:
-
             # If the provider is installed using a routing key, we skip scopes validation for now.
             if self.authentication_config.routing_key:
                 if scope.name == "incidents_read":
@@ -367,7 +367,7 @@ class PagerdutyProvider(
         client: str | None = None,
         client_url: str | None = None,
         **kwargs,
-    ) -> typing.Dict[str, typing.Any]:
+    ) -> dict[str, typing.Any]:
         """
         Builds the payload for an event alert.
 
@@ -398,7 +398,7 @@ class PagerdutyProvider(
 
         if not dedup:
             # If no dedup is given, use epoch timestamp
-            dedup = str(datetime.datetime.now().timestamp())
+            dedup = str(datetime.datetime.now(tz=datetime.UTC).timestamp())
             # Try to get it from the context (if there's an alert, for example)
             if self.context_manager.event_context:
                 dedup = self.context_manager.event_context.fingerprint
@@ -484,8 +484,15 @@ class PagerdutyProvider(
         url = "https://events.pagerduty.com/v2/enqueue"
 
         payload = self._build_alert(
-            title, routing_key, dedup, severity, event_type, source,
-            client=client, client_url=client_url, **kwargs
+            title,
+            routing_key,
+            dedup,
+            severity,
+            event_type,
+            source,
+            client=client,
+            client_url=client_url,
+            **kwargs,
         )
         result = requests.post(url, json=payload)
         result.raise_for_status()
@@ -623,7 +630,6 @@ class PagerdutyProvider(
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def setup_incident_webhook(
         self,
@@ -748,9 +754,11 @@ class PagerdutyProvider(
             client_url (str): URL of the monitoring client triggering this event (Events API v2 only)
             kwargs (dict): Additional event/incident fields
         """
-        if not routing_key: # If routing_key not specified in workflow, fallback to config routing_key
+        if (
+            not routing_key
+        ):  # If routing_key not specified in workflow, fallback to config routing_key
             routing_key = self.authentication_config.routing_key
-        if  routing_key:
+        if routing_key:
             return self._send_alert(
                 title,
                 dedup=dedup,
@@ -774,10 +782,10 @@ class PagerdutyProvider(
                 resolution,
             )
 
-    def _query(self, incident_id: str = None, incident_key: str = None):
+    def _query(self, incident_id: str | None = None, incident_key: str | None = None):
         if incident_id:
             return self._get_specific_incident(incident_id)
-        elif incident_key: # Query Incident via incident_key (dedup_key)
+        elif incident_key:  # Query Incident via incident_key (dedup_key)
             return self._get_specific_incident_with_incident_key(incident_key)
         else:
             return self.__get_all_incidents_or_alerts()
@@ -913,7 +921,9 @@ class PagerdutyProvider(
         response.raise_for_status()
         return response.json()
 
-    def _get_specific_incident_with_incident_key(self, incident_key: str): # Query Incident via incident_key (dedup_key)
+    def _get_specific_incident_with_incident_key(
+        self, incident_key: str
+    ):  # Query Incident via incident_key (dedup_key)
         self.logger.info("Getting Incident", extra={"incident_key": incident_key})
         url = f"{self.BASE_API_URL}/incidents"
         params = {
@@ -930,13 +940,15 @@ class PagerdutyProvider(
                 "services",
                 "teams",
                 "users",
-            ]
+            ],
         }
         response = requests.get(url, headers=self.__get_headers(), params=params)
         response.raise_for_status()
         return response.json()
 
-    def __get_all_incidents_or_alerts(self, incident_id: str = None, limit: int = 100):
+    def __get_all_incidents_or_alerts(
+        self, incident_id: str | None = None, limit: int = 100
+    ):
         self.logger.info(
             "Getting incidents or alerts",
             extra={
@@ -946,7 +958,7 @@ class PagerdutyProvider(
         )
         paginated_response = []
         offset = 0
-        max_iterations = os.environ.get("KEEP_PAGERDUTY_MAX_ITERATIONS", 2)
+        max_iterations = os.environ.get("KEEP_PAGERDUTY_MAX_ITERATIONS", "2")
         current_iteration = 0
         total = True
         while True:
@@ -1047,7 +1059,7 @@ class PagerdutyProvider(
                 services_response = services_response.json()
             except Exception as e:
                 self.logger.error("Failed to get all services", extra={"exception": e})
-                raise e
+                raise
             more = services_response.get("more", False)
             offset = services_response.get("offset", 0)
             all_services.extend(services_response.get(endpoint, []))
@@ -1215,7 +1227,7 @@ class PagerdutyProvider(
         return IncidentDto(
             id=incident_id,
             creation_time=created_at,
-            user_generated_name=f'PD-{event.get("title", "unknown")}-{original_incident_id}',
+            user_generated_name=f"PD-{event.get('title', 'unknown')}-{original_incident_id}",
             status=status,
             severity=severity,
             alert_sources=["pagerduty"],

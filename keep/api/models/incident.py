@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar
 from uuid import UUID
 
 from pydantic import (
@@ -10,8 +10,8 @@ from pydantic import (
     Extra,
     Field,
     PrivateAttr,
-    validator,
     root_validator,
+    validator,
 )
 from sqlmodel import col, desc
 
@@ -23,13 +23,15 @@ class IncidentStatusChangeDto(BaseModel):
     status: IncidentStatus
     comment: str | None
     tagged_users: list[str] = []
-    
-    @validator('tagged_users')
+
+    @validator("tagged_users")
     @classmethod
     def validate_no_duplicate_users(cls, value):
         """Ensure there are no duplicate users in the tagged_users list."""
         if len(value) != len(set(value)):
-            unique_users = list(dict.fromkeys(value))  # Preserves order while removing duplicates
+            unique_users = list(
+                dict.fromkeys(value)
+            )  # Preserves order while removing duplicates
             return unique_users
         return value
 
@@ -48,7 +50,7 @@ class IncidentDtoIn(BaseModel):
 
     class Config:
         extra = Extra.allow
-        schema_extra = {
+        schema_extra: ClassVar[dict[str, str]] = {
             "examples": [
                 {
                     "id": "c2509cb3-6168-4347-b83b-a41da9df2d5b",
@@ -107,7 +109,7 @@ class IncidentDto(IncidentDtoIn):
 
     _tenant_id: str = PrivateAttr()
     # AlertDto, not explicitly typed because of circular dependency
-    _alerts: Optional[List] = PrivateAttr(default=None)
+    _alerts: list | None = PrivateAttr(default=None)
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -115,7 +117,6 @@ class IncidentDto(IncidentDtoIn):
             self._alerts = data["alerts"]
         if "tenant_id" in data:
             self._tenant_id = data.pop("tenant_id")
-
 
     def __str__(self) -> str:
         # Convert the model instance to a dictionary
@@ -127,7 +128,7 @@ class IncidentDto(IncidentDtoIn):
         schema_extra = IncidentDtoIn.Config.schema_extra
         underscore_attrs_are_private = True
 
-        json_encoders = {
+        json_encoders: ClassVar[dict[str, str]] = {
             # Converts UUID to their values for JSON serialization
             UUID: lambda v: str(v),
         }
@@ -137,7 +138,7 @@ class IncidentDto(IncidentDtoIn):
         return self.user_generated_name or self.ai_generated_name
 
     @property
-    def alerts(self) -> List:
+    def alerts(self) -> list:
         if self._alerts is not None:
             return self._alerts
 
@@ -157,7 +158,7 @@ class IncidentDto(IncidentDtoIn):
         return convert_db_alerts_to_dto_alerts(alerts)
 
     @root_validator(pre=True)
-    def set_default_values(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def set_default_values(cls, values: dict[str, Any]) -> dict[str, Any]:
         # Check and set default status
         status = values.get("status")
         try:
@@ -238,7 +239,7 @@ class IncidentDto(IncidentDtoIn):
             assignee=self.assignee,
             severity=self.severity.order,
             status=self.status.value,
-            creation_time=self.creation_time or datetime.datetime.utcnow(),
+            creation_time=self.creation_time or datetime.datetime.now(tz=datetime.UTC),
             start_time=self.start_time,
             end_time=self.end_time,
             last_seen_time=self.last_seen_time,
@@ -304,16 +305,16 @@ class IncidentSorting(Enum):
 
 
 class IncidentListFilterParamsDto(BaseModel):
-    statuses: List[IncidentStatus] = [s.value for s in IncidentStatus]
-    severities: List[IncidentSeverity] = [s.value for s in IncidentSeverity]
-    assignees: List[str]
-    services: List[str]
-    sources: List[str]
+    statuses: list[IncidentStatus] = [s.value for s in IncidentStatus]
+    severities: list[IncidentSeverity] = [s.value for s in IncidentSeverity]
+    assignees: list[str]
+    services: list[str]
+    sources: list[str]
 
 
 class IncidentCandidate(BaseModel):
     incident_name: str
-    alerts: List[int] = Field(
+    alerts: list[int] = Field(
         description="List of alert numbers (1-based index) included in this incident"
     )
     reasoning: str
@@ -321,7 +322,7 @@ class IncidentCandidate(BaseModel):
         description="Assessed severity level",
         enum=["Low", "Medium", "High", "Critical"],
     )
-    recommended_actions: List[str]
+    recommended_actions: list[str]
     confidence_score: float = Field(
         description="Confidence score of the incident clustering (0.0 to 1.0)"
     )
@@ -331,7 +332,7 @@ class IncidentCandidate(BaseModel):
 
 
 class IncidentClustering(BaseModel):
-    incidents: List[IncidentCandidate]
+    incidents: list[IncidentCandidate]
 
 
 class IncidentCommit(BaseModel):

@@ -1,8 +1,9 @@
-import json
 import dataclasses
+import json
+from typing import Any, ClassVar
+
 import pydantic
 import requests
-from typing import Optional, Dict, Any
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -31,7 +32,7 @@ class VllmProviderAuthConfig:
 
 class VllmProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "vLLM"
-    PROVIDER_CATEGORY = ["AI"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["AI"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -50,7 +51,7 @@ class VllmProvider(BaseProvider):
         scopes = {}
         return scopes
 
-    def _prepare_headers(self) -> Dict[str, str]:
+    def _prepare_headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
         if self.authentication_config.api_key:
             headers["Authorization"] = f"Bearer {self.authentication_config.api_key}"
@@ -67,8 +68,8 @@ class VllmProvider(BaseProvider):
         temperature: float = 0.7,
         model: str = "Qwen/Qwen1.5-1.8B-Chat",
         max_tokens: int = 1024,
-        structured_output_format: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        structured_output_format: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         headers = self._prepare_headers()
         formatted_prompt = self._format_messages(prompt)
 
@@ -91,18 +92,18 @@ class VllmProvider(BaseProvider):
                 json=payload,
             )
             response.raise_for_status()
-            
+
             # Parse the response
             result = response.json()
-            
+
             # Extract the generated text from the response
 
             # Adjust this based on your vLLM API response structure
             try:
-                generated_text = result["choices"][0]['text']
+                generated_text = result["choices"][0]["text"]
             except KeyError:
                 generated_text = ""
-            
+
             # Try to parse as JSON if it's meant to be structured
             if structured_output_format:
                 try:
@@ -117,12 +118,12 @@ class VllmProvider(BaseProvider):
             }
 
         except requests.exceptions.RequestException as e:
-            raise ProviderException(f"Error querying vLLM API: {str(e)}")
+            raise ProviderException(f"Error querying vLLM API: {e!s}")
 
 
 if __name__ == "__main__":
-    import os
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(

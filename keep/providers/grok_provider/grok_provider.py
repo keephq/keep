@@ -1,5 +1,7 @@
-import json
 import dataclasses
+import json
+from typing import ClassVar
+
 import pydantic
 import requests
 
@@ -22,7 +24,7 @@ class GrokProviderAuthConfig:
 
 class GrokProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Grok"
-    PROVIDER_CATEGORY = ["AI"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["AI"]
     API_BASE = "https://api.x.ai/v1"  # Example API base URL
 
     def __init__(
@@ -51,7 +53,7 @@ class GrokProvider(BaseProvider):
     ):
         headers = {
             "Authorization": f"Bearer {self.authentication_config.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         # Prepare payload with structured output if needed
@@ -66,9 +68,7 @@ class GrokProvider(BaseProvider):
 
         try:
             response = requests.post(
-                f"{self.API_BASE}/chat/completions",
-                headers=headers,
-                json=payload
+                f"{self.API_BASE}/chat/completions", headers=headers, json=payload
             )
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
@@ -85,12 +85,12 @@ class GrokProvider(BaseProvider):
             }
 
         except requests.exceptions.RequestException as e:
-            raise ProviderException(f"Error calling Grok API: {str(e)}")
+            raise ProviderException(f"Error calling Grok API: {e!s}")
 
 
 if __name__ == "__main__":
-    import os
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(

@@ -4,7 +4,7 @@ Elasticsearch provider.
 
 import dataclasses
 import json
-import typing
+from typing import ClassVar
 
 import pydantic
 from elasticsearch import Elasticsearch
@@ -28,7 +28,7 @@ class ElasticProviderAuthConfig:
             "validation": "any_http_url",
         },
     )
-    cloud_id: typing.Optional[str] = dataclasses.field(
+    cloud_id: str | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
@@ -44,7 +44,7 @@ class ElasticProviderAuthConfig:
         },
         default=True,
     )
-    api_key: typing.Optional[str] = dataclasses.field(
+    api_key: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "Elasticsearch API Key",
@@ -54,7 +54,7 @@ class ElasticProviderAuthConfig:
             "hint": "Should be the encoded api key in base64",
         },
     )
-    username: typing.Optional[str] = dataclasses.field(
+    username: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "Elasticsearch username",
@@ -62,7 +62,7 @@ class ElasticProviderAuthConfig:
             "config_main_group": "authentication",
         },
     )
-    password: typing.Optional[str] = dataclasses.field(
+    password: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "Elasticsearch password",
@@ -95,9 +95,9 @@ class ElasticProvider(BaseProvider):
     """Enrich alerts with data from Elasticsearch."""
 
     PROVIDER_DISPLAY_NAME = "Elastic"
-    PROVIDER_CATEGORY = ["Monitoring", "Database"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring", "Database"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="connect_to_server",
             description="The user can connect to the server",
@@ -170,9 +170,7 @@ class ElasticProvider(BaseProvider):
         try:
             es.info()
         except Exception as e:
-            raise ProviderConnectionFailed(
-                f"Failed to connect to Elasticsearch: {str(e)}"
-            )
+            raise ProviderConnectionFailed(f"Failed to connect to Elasticsearch: {e!s}")
 
         return es
 
@@ -217,7 +215,7 @@ class ElasticProvider(BaseProvider):
         except Exception:
             self.logger.exception("Failed to close Elasticsearch client")
 
-    def _query(self, query: str | dict, index: str = None) -> list[str]:
+    def _query(self, query: str | dict, index: str | None = None) -> list[str]:
         """
         Query Elasticsearch index.
 

@@ -1,22 +1,28 @@
 import json
 import logging
 from typing import Any
+from uuid import UUID, uuid4
+
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
-from keep.api.core.cel_to_sql.ast_nodes import DataType
-from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
-from keep.api.core.facets_query_builder.get_facets_query_builder import (
-    get_facets_query_builder,
-)
-from keep.api.core.facets_query_builder.utils import get_facet_key
-from keep.api.models.facet import CreateFacetDto, FacetDto, FacetOptionDto, FacetOptionsQueryDto
-from uuid import UUID, uuid4
 
 # from pydantic import BaseModel
 from sqlmodel import Session
 
+from keep.api.core.cel_to_sql.ast_nodes import DataType
+from keep.api.core.cel_to_sql.properties_metadata import PropertiesMetadata
 from keep.api.core.db import engine
+from keep.api.core.facets_query_builder.get_facets_query_builder import (
+    get_facets_query_builder,
+)
+from keep.api.core.facets_query_builder.utils import get_facet_key
 from keep.api.models.db.facet import Facet, FacetType
+from keep.api.models.facet import (
+    CreateFacetDto,
+    FacetDto,
+    FacetOptionDto,
+    FacetOptionsQueryDto,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +249,7 @@ def delete_facet(tenant_id: str, entity_type: str, facet_id: str) -> bool:
             .where(Facet.tenant_id == tenant_id)
             .where(Facet.id == UUID(facet_id))
             .where(Facet.entity_type == entity_type)
-        ).first()[0] # result returned as tuple
+        ).first()[0]  # result returned as tuple
         if facet:
             session.delete(facet)
             session.commit()
@@ -252,7 +258,7 @@ def delete_facet(tenant_id: str, entity_type: str, facet_id: str) -> bool:
 
 
 def get_facets(
-    tenant_id: str, entity_type: str, facet_ids_to_load: list[str] = None
+    tenant_id: str, entity_type: str, facet_ids_to_load: list[str] | None = None
 ) -> list[FacetDto]:
     """
     Retrieve a list of facet DTOs for a given tenant and entity type.
@@ -267,8 +273,7 @@ def get_facets(
     """
     with Session(engine) as session:
         query = select(Facet).where(
-            Facet.tenant_id == tenant_id,
-            Facet.entity_type == entity_type
+            Facet.tenant_id == tenant_id, Facet.entity_type == entity_type
         )
 
         if facet_ids_to_load:
@@ -279,7 +284,7 @@ def get_facets(
         facet_dtos = []
 
         for facet in facets_from_db:
-            facet = facet[0] # because each row is returned as a tuple
+            facet = facet[0]  # because each row is returned as a tuple
             facet_dtos.append(
                 FacetDto(
                     id=str(facet.id),

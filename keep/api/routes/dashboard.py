@@ -2,17 +2,18 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from keep.api.core.db import (
-    create_dashboard as create_dashboard_db,
-    get_provider_distribution,
-    get_incidents_created_distribution,
-    get_combined_workflow_execution_distribution,
     calc_incidents_mttr,
+    get_combined_workflow_execution_distribution,
+    get_incidents_created_distribution,
+    get_provider_distribution,
+)
+from keep.api.core.db import (
+    create_dashboard as create_dashboard_db,
 )
 from keep.api.core.db import delete_dashboard as delete_dashboard_db
 from keep.api.core.db import get_dashboards as get_dashboards_db
@@ -24,18 +25,18 @@ from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
 class DashboardCreateDTO(BaseModel):
     dashboard_name: str
-    dashboard_config: Dict
+    dashboard_config: dict
 
 
 class DashboardUpdateDTO(BaseModel):
-    dashboard_config: Optional[Dict] = None  # Allow partial updates
-    dashboard_name: Optional[str] = None
+    dashboard_config: dict | None = None  # Allow partial updates
+    dashboard_name: str | None = None
 
 
 class DashboardResponseDTO(BaseModel):
     id: str
     dashboard_name: str
-    dashboard_config: Dict
+    dashboard_config: dict
     created_at: datetime
     updated_at: datetime
 
@@ -85,7 +86,7 @@ def provision_dashboards(tenant_id: str):
     )
 
 
-@router.get("", response_model=List[DashboardResponseDTO])
+@router.get("", response_model=list[DashboardResponseDTO])
 def read_dashboards(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:dashboards"])

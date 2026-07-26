@@ -7,7 +7,7 @@ import datetime
 import json
 import logging
 import uuid
-from typing import Literal, Union
+from typing import ClassVar, Literal
 from urllib.parse import urlparse
 
 import pydantic
@@ -56,7 +56,7 @@ class KibanaProviderAuthConfig:
 class KibanaProvider(BaseProvider):
     """Enrich alerts with data from Kibana."""
 
-    PROVIDER_CATEGORY = ["Monitoring", "Developer Tools"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring", "Developer Tools"]
     DEFAULT_TIMEOUT = 10
     WEBHOOK_PAYLOAD = json.dumps(
         {
@@ -70,7 +70,7 @@ class KibanaProvider(BaseProvider):
     SIEM_WEBHOOK_PAYLOAD = """{{#context.alerts}}{{{.}}}{{/context.alerts}}"""
 
     # Mock payloads for validating scopes
-    MOCK_ALERT_PAYLOAD = {
+    MOCK_ALERT_PAYLOAD: ClassVar[dict[str, str]] = {
         "name": "keep-test-alert",
         "schedule": {"interval": "1m"},
         "rule_type_id": "observability.rules.custom_threshold",
@@ -84,7 +84,7 @@ class KibanaProvider(BaseProvider):
             },
         },
     }
-    MOCK_CONNECTOR_PAYLOAD = {
+    MOCK_CONNECTOR_PAYLOAD: ClassVar[dict[str, str]] = {
         "name": "keep-test-connector",
         "config": {
             "hasAuth": False,
@@ -97,7 +97,7 @@ class KibanaProvider(BaseProvider):
         "connector_type_id": ".webhook",
     }
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="rulesSettings:read",
             description="Read alerts",
@@ -124,9 +124,9 @@ class KibanaProvider(BaseProvider):
         ),
     ]
 
-    SEVERITIES_MAP = {}
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {}
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "active": AlertStatus.FIRING,
         "Alert": AlertStatus.FIRING,
         "recovered": AlertStatus.RESOLVED,
@@ -138,7 +138,7 @@ class KibanaProvider(BaseProvider):
         super().__init__(context_manager, provider_id, config)
 
     @staticmethod
-    def parse_event_raw_body(raw_body: Union[bytes, dict, FormData]) -> dict:
+    def parse_event_raw_body(raw_body: bytes | dict | FormData) -> dict:
         """
         Parse the raw body from various input types into a dictionary.
 
@@ -241,7 +241,6 @@ class KibanaProvider(BaseProvider):
                 if e.status_code == 403 or e.status_code == 401:
                     validated_scopes[scope.name] = e.detail
                 # this means we faild on something else which is not permissions and it's probably ok.
-                pass
             except Exception as e:
                 self.logger.exception(
                     "Failed validating scope",
@@ -532,7 +531,7 @@ class KibanaProvider(BaseProvider):
     def validate_config(self):
         if self.is_installed or self.is_provisioned:
             host = self.config.authentication["kibana_host"]
-            if not (host.startswith("http://") or host.startswith("https://")):
+            if not (host.startswith(("http://", "https://"))):
                 scheme = (
                     "http://"
                     if ("localhost" in host or "127.0.0.1" in host)
@@ -639,11 +638,11 @@ class KibanaProvider(BaseProvider):
                 url = None
             if not isinstance(service, str):
                 logger.warning(
-                    "Could not extract service in SIEM Kibana alert", extra={"service": service}
+                    "Could not extract service in SIEM Kibana alert",
+                    extra={"service": service},
                 )
                 service = None
 
-            
             alert_dto = AlertDto(
                 name=name,
                 description=description,
@@ -656,7 +655,7 @@ class KibanaProvider(BaseProvider):
             )
             if fingerprint:
                 alert_dto.fingerprint = fingerprint
-                
+
             logger.info("Finished to parse SIEM Kibana alert")
             return alert_dto
         # Check if this is the new webhook format

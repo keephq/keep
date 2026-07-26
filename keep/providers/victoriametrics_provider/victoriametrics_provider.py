@@ -4,6 +4,7 @@ VictoriametricsProvider is a class that allows to install webhooks and get alert
 
 import dataclasses
 import datetime
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -125,26 +126,6 @@ class VictoriametricsProviderAuthConfig:
     )
 
     # Auth Configuration
-    BasicAuthUsername: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "Username for basic authentication",
-            "config_sub_group": "auth",
-            "config_main_group": "authentication",
-        },
-        default=None,
-    )
-
-    BasicAuthPassword: str | None = dataclasses.field(
-        metadata={
-            "required": False,
-            "description": "Password for basic authentication",
-            "config_sub_group": "auth",
-            "config_main_group": "authentication",
-            "sensitive": True,
-        },
-        default=None,
-    )
 
     SkipValidation: bool = dataclasses.field(
         metadata={
@@ -190,7 +171,7 @@ receivers:
         password: {api_key}
 """
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="connected",
             description="The user can connect to the client",
@@ -198,8 +179,8 @@ receivers:
             alias="Connect to the client",
         ),
     ]
-    PROVIDER_CATEGORY = ["Monitoring"]
-    SEVERITIES_MAP = {
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "critical": AlertSeverity.CRITICAL,
         "high": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
@@ -208,7 +189,7 @@ receivers:
         "info": AlertSeverity.INFO,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "firing": AlertStatus.FIRING,
         "resolved": AlertStatus.RESOLVED,
         "acknowledged": AlertStatus.ACKNOWLEDGED,
@@ -279,7 +260,6 @@ receivers:
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -336,7 +316,7 @@ receivers:
             host = f"{self.authentication_config.VMAlertHost}:{self.authentication_config.VMAlertPort}"
 
         # If HTTP/HTTPS is explicitly specified, use it
-        if host.startswith("http://") or host.startswith("https://"):
+        if host.startswith(("http://", "https://")):
             self._vmalert_host = host
             return host.rstrip("/")
 
@@ -376,7 +356,7 @@ receivers:
             host = f"{self.authentication_config.VMBackendHost}:{self.authentication_config.VMBackendPort}"
 
         # If HTTP/HTTPS is explicitly specified, use it
-        if host.startswith("http://") or host.startswith("https://"):
+        if host.startswith(("http://", "https://")):
             self._vmbackend_host = host
             return host.rstrip("/")
 
@@ -466,9 +446,9 @@ receivers:
                     )
                 )
             return alerts
-        except Exception as e:
+        except Exception:
             self.logger.exception("Failed to get alerts")
-            raise e
+            raise
 
     def _query(self, query="", start="", end="", step="", queryType="", **kwargs: dict):
         """Query metrics from VM Backend."""
@@ -489,9 +469,9 @@ receivers:
                 response.raise_for_status()
                 results = response.json()
                 return results.get("data", {}).get("result", [])
-            except Exception as e:
+            except Exception:
                 self.logger.exception("Failed to perform instant query")
-                raise e
+                raise
 
         elif queryType == "query_range":
             response = requests.get(

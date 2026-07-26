@@ -1,5 +1,6 @@
 import pytest
 from playwright.sync_api import Page
+
 from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
     create_fake_alert,
     upload_alert,
@@ -114,9 +115,9 @@ def test_legit_html_content(
         # proper CSS line-clamp. Verify text content is preserved.
         text_content = incident_row.inner_text()
         assert "Test Failure" in text_content, "Summary text not found"
-        assert (
-            "test_csb_upload_send_two_times_same_sequence_number" in text_content
-        ), "Code text not found in summary"
+        assert "test_csb_upload_send_two_times_same_sequence_number" in text_content, (
+            "Code text not found in summary"
+        )
         assert "Google" in text_content, "Link text not found in summary"
     except Exception:
         save_failure_artifacts(browser, log_entries=[])

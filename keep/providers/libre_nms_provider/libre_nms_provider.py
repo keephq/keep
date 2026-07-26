@@ -3,6 +3,7 @@ LibreNMS Provider is a class that provides a way to receive alerts from LibreNMS
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -61,23 +62,23 @@ To send alerts from LibreNMS to Keep, Use the following webhook url to configure
     """
 
     PROVIDER_DISPLAY_NAME = "LibreNMS"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="read_alerts",
             description="Read alerts from LibreNMS",
         ),
     ]
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "0": AlertStatus.RESOLVED,
         "1": AlertStatus.FIRING,
         "2": AlertStatus.ACKNOWLEDGED,
     }
 
-    SEVERITY_MAP = {
+    SEVERITY_MAP: ClassVar[dict[str, str]] = {
         "ok": AlertSeverity.INFO,
         "warning": AlertSeverity.WARNING,
         "critical": AlertSeverity.CRITICAL,
@@ -92,7 +93,6 @@ To send alerts from LibreNMS to Keep, Use the following webhook url to configure
         """
         Dispose the provider
         """
-        pass
 
     def validate_config(self):
         """
@@ -175,7 +175,7 @@ To send alerts from LibreNMS to Keep, Use the following webhook url to configure
 
         except Exception as e:
             self.logger.exception("Failed to get alerts from LibreNMS")
-            raise Exception(f"Failed to get alerts from LibreNMS: {str(e)}")
+            raise Exception(f"Failed to get alerts from LibreNMS: {e!s}")
 
     @staticmethod
     def _format_alert(

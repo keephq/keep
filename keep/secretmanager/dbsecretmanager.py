@@ -1,11 +1,11 @@
-from datetime import datetime
 import json
+from datetime import datetime
+
 from sqlmodel import Session, select
 
+from keep.api.core.db import engine
 from keep.api.models.db.secret import Secret
 from keep.secretmanager.secretmanager import BaseSecretManager
-
-from keep.api.core.db import engine
 
 
 class DbSecretManager(BaseSecretManager):
@@ -18,15 +18,13 @@ class DbSecretManager(BaseSecretManager):
         with Session(engine) as session:
             try:
                 secret_model = session.exec(
-                    select(Secret).where(
-                        Secret.key == secret_name
-                    )
+                    select(Secret).where(Secret.key == secret_name)
                 ).one_or_none()
                 if secret_model:
                     if is_json:
                         return json.loads(secret_model.value)
                     return secret_model.value
-            except Exception as e:    
+            except Exception as e:
                 self.logger.error(
                     "Failed to read secret",
                     extra={"error": str(e)},
@@ -35,14 +33,11 @@ class DbSecretManager(BaseSecretManager):
             if not secret_model:
                 raise KeyError(f"Secret {secret_name} not found")
 
-
     def write_secret(self, secret_name: str, secret_value: str) -> None:
-        self.logger.info("Writing secret", extra={"secret_name": secret_name})        
+        self.logger.info("Writing secret", extra={"secret_name": secret_name})
         with Session(engine) as session:
             secret_model = session.exec(
-                select(Secret).where(
-                    Secret.key == secret_name
-                )
+                select(Secret).where(Secret.key == secret_name)
             ).one_or_none()
 
             try:
@@ -51,12 +46,12 @@ class DbSecretManager(BaseSecretManager):
                     secret_model.last_updated = datetime.utcnow()
                     session.commit()
                     return
-                
+
                 secret_model = Secret(
                     key=secret_name,
                     value=secret_value,
                 )
-                    
+
                 session.add(secret_model)
                 session.commit()
             except Exception as e:
@@ -67,12 +62,10 @@ class DbSecretManager(BaseSecretManager):
                 raise
 
     def delete_secret(self, secret_name: str) -> None:
-        self.logger.info("Deleting secret", extra={"secret_name": secret_name})        
+        self.logger.info("Deleting secret", extra={"secret_name": secret_name})
         with Session(engine) as session:
             secret_model = session.exec(
-                select(Secret).where(
-                    Secret.key == secret_name
-                )
+                select(Secret).where(Secret.key == secret_name)
             ).one_or_none()
             try:
                 if secret_model:
@@ -83,4 +76,4 @@ class DbSecretManager(BaseSecretManager):
                     "Failed to delete secret",
                     extra={"error": str(e)},
                 )
-                raise        
+                raise

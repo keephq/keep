@@ -3,10 +3,10 @@ import json
 import logging
 
 import celpy
+from opentelemetry import trace
 from sqlmodel import Session
 
 from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY
-from opentelemetry import trace
 from keep.api.core.db import (
     add_audit,
     get_alert_by_event_id,
@@ -30,8 +30,8 @@ from keep.workflowmanager.workflowmanager import WorkflowManager
 
 tracer = trace.get_tracer(__name__)
 
-class MaintenanceWindowsBl:
 
+class MaintenanceWindowsBl:
     def __init__(self, tenant_id: str, session: Session | None) -> None:
         self.logger = logging.getLogger(__name__)
         self.tenant_id = tenant_id
@@ -40,8 +40,12 @@ class MaintenanceWindowsBl:
             self.session.query(MaintenanceWindowRule)
             .filter(MaintenanceWindowRule.tenant_id == tenant_id)
             .filter(MaintenanceWindowRule.enabled == True)
-            .filter(MaintenanceWindowRule.end_time >= datetime.datetime.now(datetime.UTC))
-            .filter(MaintenanceWindowRule.start_time <= datetime.datetime.now(datetime.UTC))
+            .filter(
+                MaintenanceWindowRule.end_time >= datetime.datetime.now(datetime.UTC)
+            )
+            .filter(
+                MaintenanceWindowRule.start_time <= datetime.datetime.now(datetime.UTC)
+            )
             .all()
         )
 
@@ -66,14 +70,18 @@ class MaintenanceWindowsBl:
                 )
                 continue
 
-            if maintenance_rule.end_time.replace(tzinfo=datetime.UTC) <= datetime.datetime.now(datetime.UTC):
+            if maintenance_rule.end_time.replace(
+                tzinfo=datetime.UTC
+            ) <= datetime.datetime.now(datetime.UTC):
                 # this is wtf error, should not happen because of query in init
                 self.logger.error(
                     "Fetched maintenance window which already ended by mistake, should not happen!"
                 )
                 continue
 
-            cel_result = MaintenanceWindowsBl.evaluate_cel(maintenance_rule, alert, env, self.logger, extra)
+            cel_result = MaintenanceWindowsBl.evaluate_cel(
+                maintenance_rule, alert, env, self.logger, extra
+            )
 
             if cel_result:
                 self.logger.info(
@@ -118,7 +126,13 @@ class MaintenanceWindowsBl:
         return False
 
     @staticmethod
-    def evaluate_cel(maintenance_window: MaintenanceWindowRule, alert: AlertDto | Alert, environment: celpy.Environment, logger, logger_extra_info: dict) -> bool:
+    def evaluate_cel(
+        maintenance_window: MaintenanceWindowRule,
+        alert: AlertDto | Alert,
+        environment: celpy.Environment,
+        logger,
+        logger_extra_info: dict,
+    ) -> bool:
 
         cel = preprocess_cel_expression(maintenance_window.cel_query)
         ast = environment.compile(cel)
@@ -135,19 +149,25 @@ class MaintenanceWindowsBl:
 
         try:
             cel_result = prgm.evaluate(activation)
-            return True if cel_result else False
+            return bool(cel_result)
         except celpy.evaluation.CELEvalError as e:
             error_msg = str(e).lower()
             if "no such member" in error_msg or "undeclared reference" in error_msg:
                 logger.debug(
-                    f"Skipping maintenance window rule due to missing field: {str(e)}",
-                    extra={**logger_extra_info, "maintenance_rule_id": maintenance_window.id},
+                    f"Skipping maintenance window rule due to missing field: {e!s}",
+                    extra={
+                        **logger_extra_info,
+                        "maintenance_rule_id": maintenance_window.id,
+                    },
                 )
                 return False
             # Log unexpected CEL errors but don't fail the entire event processing
             logger.error(
-                f"Unexpected CEL evaluation error: {str(e)}",
-                extra={**logger_extra_info, "maintenance_rule_id": maintenance_window.id},
+                f"Unexpected CEL evaluation error: {e!s}",
+                extra={
+                    **logger_extra_info,
+                    "maintenance_rule_id": maintenance_window.id,
+                },
             )
             return False
 
@@ -198,12 +218,20 @@ class MaintenanceWindowsBl:
                     if (
                         w_start < alert.timestamp
                         and alert.timestamp < w_end
-                        and w_end > datetime.datetime.utcnow()
+                        and w_end > datetime.datetime.now(tz=datetime.UTC)
                         and is_enable
                     ):
-                        logger.info("Checking alert %s in maintenance window %s", alert.id, window.id)
+                        logger.info(
+                            "Checking alert %s in maintenance window %s",
+                            alert.id,
+                            window.id,
+                        )
                         is_in_cel = MaintenanceWindowsBl.evaluate_cel(
-                            window, alert, env, logger, {"tenant_id": alert.tenant_id, "alert_id": alert.id}
+                            window,
+                            alert,
+                            env,
+                            logger,
+                            {"tenant_id": alert.tenant_id, "alert_id": alert.id},
                         )
                         # Recover source structure
                         if not isinstance(alert.event.get("source"), list):
@@ -211,7 +239,11 @@ class MaintenanceWindowsBl:
                         if is_in_cel:
                             active = True
                             set_maintenance_windows_trace(alert, window, session)
-                            logger.info("Alert %s is blocked due to the maintenance window: %s.", alert.id, window.id)
+                            logger.info(
+                                "Alert %s is blocked due to the maintenance window: %s.",
+                                alert.id,
+                                window.id,
+                            )
                             break
                 if not active:
                     recover_prev_alert_status(alert, session)
@@ -227,19 +259,26 @@ class MaintenanceWindowsBl:
                         ),
                     )
 
-            for (tenant, fp) in fingerprints_to_check:
+            for tenant, fp in fingerprints_to_check:
                 last_alert = get_last_alert_by_fingerprint(tenant, fp, session)
                 alert = get_alert_by_event_id(tenant, str(last_alert.alert_id), session)
                 if "previous_status" not in alert.event:
                     logger.info(
                         f"Alert {alert.id} does not have previous status, cannot proceed with recover strategy",
-                        extra={"tenant_id": tenant, "fingerprint": fp, "alert_id": alert.id, "alert.status": alert.event.get("status")},
+                        extra={
+                            "tenant_id": tenant,
+                            "fingerprint": fp,
+                            "alert_id": alert.id,
+                            "alert.status": alert.event.get("status"),
+                        },
                     )
                     continue
                 if not isinstance(alert.event.get("source"), list):
                     alert.event["source"] = [alert.event["source"]]
                 alert_dto = AlertDto(**alert.event)
-                with tracer.start_as_current_span("mw_recover_strategy_push_to_workflows"):
+                with tracer.start_as_current_span(
+                    "mw_recover_strategy_push_to_workflows"
+                ):
                     try:
                         # Now run any workflow that should run based on this alert
                         # TODO: this should publish event
@@ -258,7 +297,9 @@ class MaintenanceWindowsBl:
                             },
                         )
 
-                with tracer.start_as_current_span("mw_recover_strategy_run_rules_engine"):
+                with tracer.start_as_current_span(
+                    "mw_recover_strategy_run_rules_engine"
+                ):
                     # Now we need to run the rules engine
                     if KEEP_CORRELATION_ENABLED:
                         incidents = []
@@ -278,7 +319,9 @@ class MaintenanceWindowsBl:
                                 },
                             )
                         pusher_cache = get_notification_cache()
-                        if incidents and pusher_cache.should_notify(tenant, "incident-change"):
+                        if incidents and pusher_cache.should_notify(
+                            tenant, "incident-change"
+                        ):
                             pusher_client = get_pusher_client()
                             try:
                                 pusher_client.trigger(
@@ -287,7 +330,9 @@ class MaintenanceWindowsBl:
                                     {},
                                 )
                             except Exception:
-                                logger.exception("Failed to tell the client to pull incidents")
+                                logger.exception(
+                                    "Failed to tell the client to pull incidents"
+                                )
 
                     try:
                         presets = get_all_presets_dtos(tenant)
@@ -308,7 +353,8 @@ class MaintenanceWindowsBl:
                                     f"private-{tenant}",
                                     "poll-presets",
                                     json.dumps(
-                                        [p.name.lower() for p in presets_do_update], default=str
+                                        [p.name.lower() for p in presets_do_update],
+                                        default=str,
                                     ),
                                 )
                             except Exception:

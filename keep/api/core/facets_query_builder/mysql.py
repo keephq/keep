@@ -1,4 +1,5 @@
 from typing import Any
+
 from sqlalchemy import (
     Column,
     Integer,
@@ -22,12 +23,13 @@ from keep.api.core.facets_query_builder.base_facets_query_builder import (
 
 
 class MySqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
-
     def build_facet_subquery(
         self,
         facet_key: str,
         entity_id_column,
-        base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
+        base_query_factory: lambda facet_property_path, involved_fields, select_statement: (
+            Any
+        ),
         facet_property_path: str,
         facet_cel: str,
     ):

@@ -6,7 +6,7 @@ import dataclasses
 import enum
 import json
 import os
-from typing import Literal
+from typing import ClassVar, Literal
 
 import pydantic
 import requests
@@ -59,7 +59,7 @@ class IlertProvider(BaseProvider):
     """Create/Resolve incidents in ilert."""
 
     PROVIDER_DISPLAY_NAME = "ilert"
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="read_permission", description="Read permission", mandatory=True
         ),
@@ -67,9 +67,9 @@ class IlertProvider(BaseProvider):
             name="write_permission", description="Write permission", mandatory=False
         ),
     ]
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "MAJOR_OUTAGE": AlertSeverity.CRITICAL,
         "PARTIAL_OUTAGE": AlertSeverity.HIGH,
         "DEGRADED": AlertSeverity.WARNING,
@@ -77,7 +77,7 @@ class IlertProvider(BaseProvider):
         "OPERATIONAL": AlertSeverity.INFO,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "RESOLVED": AlertStatus.RESOLVED,
         "INVESTIGATING": AlertStatus.ACKNOWLEDGED,
         "MONITORING": AlertStatus.ACKNOWLEDGED,
@@ -93,7 +93,6 @@ class IlertProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -320,11 +319,17 @@ class IlertProvider(BaseProvider):
         details: str = "",
         alert_key: str = "",
         priority: Literal["HIGH", "LOW"] = "HIGH",
-        images: list = [],
-        links: list = [],
-        custom_details: dict = {},
+        images: list | None = None,
+        links: list | None = None,
+        custom_details: dict | None = None,
         routing_key: str = "",
     ):
+        if custom_details is None:
+            custom_details = {}
+        if links is None:
+            links = []
+        if images is None:
+            images = []
         payload = {
             "eventType": event_type,
             "summary": summary,
@@ -357,9 +362,9 @@ class IlertProvider(BaseProvider):
         details: str = "",
         alert_key: str = "",
         priority: Literal["HIGH", "LOW"] = "HIGH",
-        images: list = [],
-        links: list = [],
-        custom_details: dict = {},
+        images: list | None = None,
+        links: list | None = None,
+        custom_details: dict | None = None,
         **kwargs: dict,
     ):
         """
@@ -379,6 +384,12 @@ class IlertProvider(BaseProvider):
             links: List of related links to include with the event
             custom_details: Custom key-value pairs for additional context
         """
+        if custom_details is None:
+            custom_details = {}
+        if links is None:
+            links = []
+        if images is None:
+            images = []
         self.logger.info("Notifying ilert", extra=locals())
         if _type == "incident":
             return self.__create_or_update_incident(

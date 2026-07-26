@@ -3,7 +3,6 @@ import logging
 import logging.config
 import os
 import sys
-import typing
 import uuid
 from collections import OrderedDict
 from importlib import metadata
@@ -108,7 +107,6 @@ class Info:
             logger.debug(
                 "Configuration file could not be found. Running without configuration."
             )
-            pass
         self.api_key = self.config.get("api_key") or os.getenv("KEEP_API_KEY") or ""
         self.keep_api_url = (
             self.config.get("keep_api_url")
@@ -128,7 +126,6 @@ class Info:
                 logger.debug(
                     f"Error writing random user id to config file: {e}. Please set it manually."
                 )
-                pass
 
         arguments = sys.argv
 
@@ -228,7 +225,6 @@ def version():
 @pass_info
 def config(info: Info):
     """Manage the config."""
-    pass
 
 
 @config.command(name="show")
@@ -321,7 +317,7 @@ def whoami(info: Info):
     "--port",
     "-p",
     type=int,
-    default=int(os.environ.get("PORT", 8080)),
+    default=int(os.environ.get("PORT", "8080")),
     help="The port to run the API on",
 )
 @click.option(
@@ -356,7 +352,6 @@ def api(multi_tenant: bool, port: int, host: str):
 @pass_info
 def workflow(info: Info):
     """Manage workflows."""
-    pass
 
 
 @workflow.command(name="list")
@@ -489,7 +484,7 @@ def apply(info: Info, file: str, full_sync: bool, lookup_by_name: bool):
                     )
             click.echo(click.style("Deleted all workflows", bold=True))
         for filename in os.listdir(file):
-            if filename.endswith(".yml") or filename.endswith(".yaml"):
+            if filename.endswith((".yml", ".yaml")):
                 click.echo(click.style(f"Applying workflow {filename}", bold=True))
                 full_path = os.path.join(file, filename)
                 response = apply_workflow(
@@ -576,7 +571,6 @@ def run_workflow(info: Info, workflow_id: str, fingerprint: str):
 @pass_info
 def workflow_executions(info: Info):
     """Manage workflows executions."""
-    pass
 
 
 @workflow_executions.command(name="list")
@@ -671,7 +665,6 @@ def get_workflow_execution_logs(info: Info, workflow_execution_id: str):
 @pass_info
 def mappings(info: Info):
     """Manage mappings."""
-    pass
 
 
 @mappings.command(name="list")
@@ -847,7 +840,6 @@ def delete_mapping(info: Info, mapping_id: int):
 @pass_info
 def extraction(info: Info):
     """Manage extractions."""
-    pass
 
 
 @extraction.command(name="list")
@@ -1042,7 +1034,6 @@ def delete_extraction(info: Info, extraction_id: int):
 @pass_info
 def provider(info: Info):
     """Manage providers."""
-    pass
 
 
 @provider.command(name="build_cache", help="Output providers cache for future use")
@@ -1114,7 +1105,7 @@ def list_providers(info: Info, available: bool):
     print(table)
 
 
-@provider.command(context_settings=dict(ignore_unknown_options=True))
+@provider.command(context_settings={"ignore_unknown_options": True})
 @click.option(
     "--help",
     "-h",
@@ -1185,7 +1176,7 @@ def connect(ctx, help: bool, provider_name, provider_type, params):
         )
 
     # Connect the provider
-    ctx.args
+    # ctx.args
     options_dict = {params[i]: params[i + 1] for i in range(0, len(params), 2)}
     # Verify the provided options against the expected ones for the provider
 
@@ -1281,7 +1272,6 @@ def _get_alert_by_fingerprint(keep_url, api_key, fingerprint: str):
 @pass_info
 def alert(info: Info):
     """Manage alerts."""
-    pass
 
 
 @alert.command(name="get")
@@ -1313,7 +1303,7 @@ def get_alert(info: Info, fingerprint: str):
     "--export", type=click.Path(), help="Export alerts to a specified JSON file."
 )
 @pass_info
-def list_alerts(info: Info, filter: typing.List[str], export: bool):
+def list_alerts(info: Info, filter: list[str], export: bool):
     """List alerts."""
     resp = make_keep_request(
         "GET",
@@ -1485,7 +1475,6 @@ def simulate(info: Info, provider_type: str, params: list[str]):
 @pass_info
 def auth(info: Info):
     """Manage auth."""
-    pass
 
 
 # global token will be populated in the callback

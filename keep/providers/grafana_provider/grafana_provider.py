@@ -10,6 +10,7 @@ import logging
 import re
 import time
 import urllib.parse
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -69,9 +70,9 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     PROVIDER_DISPLAY_NAME = "Grafana"
     """Pull/Push alerts & Topology map from Grafana."""
 
-    PROVIDER_CATEGORY = ["Monitoring", "Developer Tools"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring", "Developer Tools"]
     KEEP_GRAFANA_WEBHOOK_INTEGRATION_NAME = "keep-grafana-webhook-integration"
-    FINGERPRINT_FIELDS = ["fingerprint"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["fingerprint"]
 
     webhook_description = ""
     webhook_template = ""
@@ -88,7 +89,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     9. Chose the webhook contact point you have just created under Contact point and click "Save Policy"
     """
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="alert.rules:read",
             description="Read Grafana alert rules in a folder and its subfolders.",
@@ -115,7 +116,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         ),
     ]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "critical": AlertSeverity.CRITICAL,
         "high": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
@@ -123,7 +124,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     }
 
     # https://grafana.com/docs/grafana/latest/alerting/manage-notifications/view-state-health/#alert-instance-state
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "ok": AlertStatus.RESOLVED,
         "resolved": AlertStatus.RESOLVED,
         "normal": AlertStatus.RESOLVED,
@@ -142,7 +143,6 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -199,9 +199,9 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             )
             error = response.json()
             if response.status_code == 403:
-                error[
-                    "message"
-                ] += f"\nYou can test your permissions with \n\tcurl -H 'Authorization: Bearer {{token}}' -X GET '{self.authentication_config.host}/api/access-control/user/permissions' | jq \nDocs: https://grafana.com/docs/grafana/latest/administration/service-accounts/#debug-the-permissions-of-a-service-account-token"
+                error["message"] += (
+                    f"\nYou can test your permissions with \n\tcurl -H 'Authorization: Bearer {{token}}' -X GET '{self.authentication_config.host}/api/access-control/user/permissions' | jq \nDocs: https://grafana.com/docs/grafana/latest/administration/service-accounts/#debug-the-permissions-of-a-service-account-token"
+                )
             raise GetAlertException(message=error, status_code=response.status_code)
         return response.json()
 
@@ -249,7 +249,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         if fingerprint:
             logger.debug("Fingerprint provided in alert")
             return fingerprint
-        
+
         labels = alert.get("labels", {})
         fingerprint = labels.get("fingerprint", "")
         if fingerprint:
@@ -439,7 +439,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 )
                 return "unknown"
         except Exception as e:
-            self.logger.error(f"Error getting Grafana version: {str(e)}")
+            self.logger.error(f"Error getting Grafana version: {e!s}")
             return "unknown"
 
     def setup_webhook(
@@ -488,12 +488,12 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 webhook["settings"]["authorization_scheme"] = "digest"
                 webhook["settings"]["authorization_credentials"] = api_key
                 requests.put(
-                    f'{contacts_api}/{webhook["uid"]}',
+                    f"{contacts_api}/{webhook['uid']}",
                     verify=False,
                     json=webhook,
                     headers=headers,
                 )
-                self.logger.info(f'Updated webhook {webhook["uid"]}')
+                self.logger.info(f"Updated webhook {webhook['uid']}")
             else:
                 self.logger.info('Creating webhook with name "{webhook_name}"')
                 webhook = {
@@ -522,12 +522,12 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 webhook = webhook_exists[0]
                 webhook["settings"]["url"] = f"{keep_api_url}&api_key={api_key}"
                 requests.put(
-                    f'{contacts_api}/{webhook["uid"]}',
+                    f"{contacts_api}/{webhook['uid']}",
                     verify=False,
                     json=webhook,
                     headers=headers,
                 )
-                self.logger.info(f'Updated webhook {webhook["uid"]}')
+                self.logger.info(f"Updated webhook {webhook['uid']}")
             else:
                 self.logger.info('Creating webhook with name "{webhook_name}"')
                 webhook = {
@@ -557,11 +557,9 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 policies_api, verify=False, headers=headers
             ).json()
             policy_exists = any(
-                [
-                    p
-                    for p in all_policies.get("routes", [])
-                    if p.get("receiver") == webhook_name
-                ]
+                p
+                for p in all_policies.get("routes", [])
+                if p.get("receiver") == webhook_name
             )
             if not policy_exists:
                 if all_policies["receiver"]:
@@ -570,11 +568,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                         "continue": True,
                     }
                     if not any(
-                        [
-                            p
-                            for p in all_policies.get("routes", [])
-                            if p == default_policy
-                        ]
+                        p for p in all_policies.get("routes", []) if p == default_policy
                     ):
                         # This is so we won't override the default receiver if customer has one.
                         if "routes" not in all_policies:
@@ -837,7 +831,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 )
 
         except Exception as e:
-            self.logger.exception(f"Failed to setup legacy alerting: {str(e)}")
+            self.logger.exception(f"Failed to setup legacy alerting: {e!s}")
             raise
 
     def __extract_rules(self, alerts: dict, source: list) -> list[AlertDto]:
@@ -919,7 +913,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 f"Successfully fetched datasources, got {len(datasources_resp.json())} datasources"
             )
         except Exception as e:
-            self.logger.error(f"Error fetching datasources list: {str(e)}")
+            self.logger.error(f"Error fetching datasources list: {e!s}")
             return []
 
         # Step 2: Extract relevant datasources (Prometheus, Loki, Mimir)
@@ -942,7 +936,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 f"Found {len(alert_datasources)} alert-capable datasources"
             )
         except Exception as e:
-            self.logger.error(f"Error parsing datasources: {str(e)}")
+            self.logger.error(f"Error parsing datasources: {e!s}")
             return []
 
         # Step 3: Query alerts from each datasource
@@ -1002,10 +996,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                         extra={"response": resp.text[:500]},  # Limit response log size
                     )
             except Exception as e:
-                self.logger.error(
-                    f"Error querying alerts for {ds.get('name')}: {str(e)}",
-                    exc_info=True,
-                )
+                self.logger.exception(f"Error querying alerts for {ds.get('name')}")
                 # Continue to the next datasource
                 continue
 
@@ -1089,7 +1080,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                     continue
             except Exception as e:
                 self.logger.error(
-                    f"Error formatting alert: {str(e)}", extra={"alert": alert}
+                    f"Error formatting alert: {e!s}", extra={"alert": alert}
                 )
 
         self.logger.info(
@@ -1112,9 +1103,11 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
 
         # Calculate time range (7 days ago to now)
         week_ago = int(
-            (datetime.datetime.now() - datetime.timedelta(days=7)).timestamp()
+            (
+                datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=7)
+            ).timestamp()
         )
-        now = int(datetime.datetime.now().timestamp())
+        now = int(datetime.datetime.now(tz=datetime.UTC).timestamp())
         self.logger.info(
             f"Using time range for alerts: from={week_ago} to={now}",
             extra={"from_timestamp": week_ago, "to_timestamp": now},
@@ -1148,7 +1141,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
 
                         self.logger.info(f"Found {len(events)} events in history API")
 
-                        for i in range(0, len(events)):
+                        for i in range(len(events)):
                             event = events[i]
                             try:
                                 event_labels = event.get("labels", {})
@@ -1196,7 +1189,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                                 history_alerts.append(alert_dto)
                             except Exception as e:
                                 self.logger.error(
-                                    f"Error processing event {i+1}",
+                                    f"Error processing event {i + 1}",
                                     extra={"event": event, "error": str(e)},
                                 )
 
@@ -1258,7 +1251,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                                                 f"Found {len(rule_events)} events for rule {rule_uid}"
                                             )
 
-                                            for i in range(0, len(rule_events)):
+                                            for i in range(len(rule_events)):
                                                 event = rule_events[i]
                                                 try:
                                                     event_labels = event.get(
@@ -1645,7 +1638,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
                 "Error while pulling topology data from Grafana",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
 
 if __name__ == "__main__":

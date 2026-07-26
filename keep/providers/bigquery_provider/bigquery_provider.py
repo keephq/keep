@@ -5,7 +5,7 @@ BigQuery provider.
 import dataclasses
 import json
 import os
-from typing import Optional
+from typing import ClassVar
 
 import pydantic
 from google.cloud import bigquery
@@ -31,7 +31,7 @@ class BigqueryProviderAuthConfig:
             "file_type": "application/json",
         },
     )
-    project_id: Optional[str] = dataclasses.field(
+    project_id: str | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
@@ -48,7 +48,7 @@ class BigqueryProvider(BaseProvider):
     config: ProviderConfig
 
     PROVIDER_DISPLAY_NAME = "BigQuery"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Database"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure", "Database"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -122,10 +122,10 @@ class BigqueryProvider(BaseProvider):
         results = list(query_job.result())
         return results
 
-    def get_alerts_configuration(self, alert_id: Optional[str] = None):
+    def get_alerts_configuration(self, alert_id: str | None = None):
         pass  # Define how to get alerts from BigQuery if applicable
 
-    def deploy_alert(self, alert: dict, alert_id: Optional[str] = None):
+    def deploy_alert(self, alert: dict, alert_id: str | None = None):
         pass  # Define how to deploy an alert to BigQuery if applicable
 
     @staticmethod
@@ -174,4 +174,4 @@ if __name__ == "__main__":
 
     # Print the results
     for row in results:
-        print("{}: {}".format(row.name, row.num))
+        print(f"{row.name}: {row.num}")

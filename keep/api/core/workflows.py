@@ -5,11 +5,12 @@ This module contains the CRUD database functions for Keep.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import TypedDict, Tuple
+from typing import TypedDict
 
 from sqlalchemy import and_, case, desc, func, literal_column, select, text
 from sqlmodel import Session
 
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
@@ -23,7 +24,6 @@ from keep.api.core.facets import get_facet_options, get_facets
 from keep.api.models.db.facet import FacetType
 from keep.api.models.db.workflow import Workflow, WorkflowExecution
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
-from keep.api.core.cel_to_sql.ast_nodes import DataType
 
 workflow_field_configurations = [
     FieldMappingConfiguration(
@@ -267,7 +267,7 @@ def get_workflows_with_last_executions_v2(
     sort_dir: str,
     fetch_last_executions: int = 15,
     session: Session = None,
-) -> Tuple[list[WorkflowWithLastExecutions], int]:
+) -> tuple[list[WorkflowWithLastExecutions], int]:
     with existed_or_new_session(session) as session:
         total_count_query = build_workflows_total_count_query(
             tenant_id=tenant_id, cel=cel
@@ -336,7 +336,7 @@ def get_workflows_with_last_executions_v2(
 
 
 def get_workflow_facets(
-    tenant_id: str, facet_ids_to_load: list[str] = None
+    tenant_id: str, facet_ids_to_load: list[str] | None = None
 ) -> list[FacetDto]:
     not_static_facet_ids = []
     facets = []

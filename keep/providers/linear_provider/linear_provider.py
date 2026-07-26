@@ -1,4 +1,5 @@
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -37,7 +38,7 @@ class LinearProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "Linear"
     LINEAR_GRAPHQL_URL = "https://api.linear.app/graphql"
-    PROVIDER_CATEGORY = ["Ticketing"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Ticketing"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -53,7 +54,6 @@ class LinearProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def __query_linear_projects(self, team_name=""):
         """Helper method to fetch the linear projects by team."""

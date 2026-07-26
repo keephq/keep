@@ -25,7 +25,11 @@ def upgrade() -> None:
         sa.Column("algorithm_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("tenant_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("settings", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("settings_proposed_by_algorithm", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column(
+            "settings_proposed_by_algorithm",
+            sqlmodel.sql.sqltypes.AutoString(),
+            nullable=True,
+        ),
         sa.Column("feedback_logs", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )

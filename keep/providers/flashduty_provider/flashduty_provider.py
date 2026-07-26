@@ -1,4 +1,6 @@
 import dataclasses
+from typing import ClassVar
+
 import pydantic
 import requests
 
@@ -7,12 +9,13 @@ from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 
+
 @pydantic.dataclasses.dataclass
 class FlashdutyProviderAuthConfig:
     """Flashduty authentication configuration."""
 
     integration_key: str = dataclasses.field(
-        metadata= {
+        metadata={
             "required": True,
             "description": "Flashduty integration key",
             "sensitive": True,
@@ -24,7 +27,7 @@ class FlashdutyProvider(BaseProvider):
     """Create incident in Flashduty."""
 
     PROVIDER_DISPLAY_NAME = "Flashduty"
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -40,7 +43,6 @@ class FlashdutyProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(
         self,
@@ -48,7 +50,7 @@ class FlashdutyProvider(BaseProvider):
         event_status: str = "",
         description: str = "",
         alert_key: str = "",
-        labels: dict = {}
+        labels: dict | None = None,
     ):
         """
         Create incident Flashduty using the Flashduty API
@@ -63,6 +65,8 @@ class FlashdutyProvider(BaseProvider):
             labels (dict): The labels of the incident
         """
 
+        if labels is None:
+            labels = {}
         self.logger.info("Notifying incident to Flashduty")
         if not title:
             raise ProviderException("Title is required")
@@ -81,7 +85,9 @@ class FlashdutyProvider(BaseProvider):
             "Content-Type": "application/json",
         }
         resp = requests.post(
-            url=f"https://api.flashcat.cloud/event/push/alert/standard?integration_key={self.authentication_config.integration_key}", json=body, headers=headers
+            url=f"https://api.flashcat.cloud/event/push/alert/standard?integration_key={self.authentication_config.integration_key}",
+            json=body,
+            headers=headers,
         )
         assert resp.status_code == 200
         self.logger.info("Alert message notified to Flashduty")
@@ -117,4 +123,3 @@ if __name__ == "__main__":
         alert_key="1234567890",
         labels={"service": "10.10.10.10"},
     )
-

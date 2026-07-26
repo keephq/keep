@@ -1,4 +1,5 @@
 import dataclasses
+from typing import ClassVar
 
 import json5
 import pydantic
@@ -28,7 +29,7 @@ class MattermostProvider(BaseProvider):
     """send alert message to Mattermost."""
 
     PROVIDER_DISPLAY_NAME = "Mattermost"
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -44,9 +45,8 @@ class MattermostProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
-    def _notify(self, message="", attachments=[], channel="", **kwargs: dict):
+    def _notify(self, message="", attachments=None, channel="", **kwargs: dict):
         """
         Notify alert message to Mattermost using the Mattermost Incoming Webhook API
         https://docs.mattermost.com/developer/webhooks-incoming.html
@@ -56,6 +56,8 @@ class MattermostProvider(BaseProvider):
             attachments (list): The attachments of the message.
             channel (str): The channel to send the message
         """
+        if attachments is None:
+            attachments = []
         self.logger.info("Notifying alert message to Mattermost")
         if not message:
             message = attachments[0].get("text")

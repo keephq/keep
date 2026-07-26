@@ -7,9 +7,7 @@ from tests.fixtures.client import client, test_app  # noqa: F401
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
-def test_get_alerts_batch_by_fingerprints(
-    db_session, client, test_app, create_alert
-):
+def test_get_alerts_batch_by_fingerprints(db_session, client, test_app, create_alert):
     timestamp = datetime.now(timezone.utc)
     create_alert("fp-batch-1", AlertStatus.FIRING, timestamp)
     create_alert("fp-batch-2", AlertStatus.FIRING, timestamp)

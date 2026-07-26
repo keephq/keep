@@ -127,7 +127,51 @@ build-backend = "poetry.core.masonry.api"
 keep = "keep.cli.cli:cli"
 
 [tool.ruff.lint]
-ignore = ["F405", "F811", "E712", "E711", "F403"]
+per-file-ignores = {"tests/test_provider_factory.py" = ["UP007", "UP045"]}
+
+ignore = [
+    "F405", "F811", "E712", "E711", "F403",
+    "B008",   # Function call in default args (FastAPI Depends() pattern)
+    "B017",   # Assert blind Exception (common in tests)
+    "B023",   # Function doesn't bind loop variable (common in test helpers)
+    "BLE001", # Catching blind Exception (pervasive in integration/provider code)
+    "TRY002", # Raising bare Exception (would require custom exceptions everywhere)
+    "PLR1704", # Redefining argument with local name
+    "S110",   # try-except-pass (sometimes intentional)
+    "LOG015", # Root logger calls
+    "SIM115", # File context manager (minor)
+    "PLC0206", # Extracting value without .items()
+    "SIM102", # Nested if statements
+    "TRY401", # Redundant exception in logging.exception
+    "B018",   # Useless expression
+    "UP035",  # Deprecated typing imports
+    "PLW1510", # subprocess.run without check
+    "PLW0127", # Self-assignment
+    "N999",   # Invalid module name
+    "B005",   # Strip with multi-character sequence
+    "DTZ003", # datetime.utcnow() used
+    "DTZ005", # datetime.now() without tz
+    "DTZ006", # datetime.fromtimestamp() without tz
+    "DTZ007", # Naive datetime via strptime
+    "DTZ004", # datetime.utcfromtimestamp() used
+    "DTZ001", # Datetime constructor without tzinfo
+    "DTZ901", # datetime.min without tz
+    "TRY004", # Exception type preference
+    "S112",   # Bare except
+    "PLE1205", # Logging extra argument
+    "G101",   # Password hardcoded (false positives)
+    "F841",   # Unused variable
+    "TRY203", # Exception immediately re-raised
+    "SIM117", # Combine with statements
+    "SIM113", # Use enumerate
+    "SIM103", # Return condition directly
+    "PLE1310", # W-style string formatting
+    "PIE796", # Class field annotation
+    "EXE001", # Shebang issues
+    "PLE0704", # Misleading exception catch
+    "B012",   # break/continue in finally
+    "ASYNC230", # Blocking open in async
+]
 
 [tool.semantic_release]
 assets = []

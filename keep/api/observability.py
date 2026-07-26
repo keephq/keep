@@ -44,7 +44,7 @@ def setup(app: FastAPI):
         "OTEL_SERVICE_NAME", os.environ.get("SERVICE_NAME", "keep-api")
     )
     otlp_collector_endpoint = os.environ.get(
-        "OTEL_EXPORTER_OTLP_ENDPOINT", os.environ.get("OTLP_ENDPOINT", False)
+        "OTEL_EXPORTER_OTLP_ENDPOINT", os.environ.get("OTLP_ENDPOINT", "")
     )
     otlp_traces_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", None)
     otlp_logs_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", None)
@@ -63,7 +63,6 @@ def setup(app: FastAPI):
     provider = TracerProvider(resource=resource)
 
     if otlp_collector_endpoint:
-
         logger.info(f"OTLP endpoint set to {otlp_collector_endpoint}")
 
         if otlp_traces_endpoint:

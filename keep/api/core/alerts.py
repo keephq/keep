@@ -2,7 +2,6 @@ import datetime
 import json
 import logging
 import os
-from typing import Tuple
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.exc import OperationalError
@@ -37,7 +36,7 @@ from keep.api.models.query import QueryDto, SortOptionsDto
 
 logger = logging.getLogger(__name__)
 
-alerts_hard_limit = int(os.environ.get("KEEP_LAST_ALERTS_LIMIT", 50000))
+alerts_hard_limit = int(os.environ.get("KEEP_LAST_ALERTS_LIMIT", "50000"))
 
 alert_field_configurations = [
     FieldMappingConfiguration(
@@ -71,7 +70,7 @@ alert_field_configurations = [
     FieldMappingConfiguration(
         map_from_pattern="startedAt",
         map_to="lastalert.first_timestamp",
-        data_type=DataType.DATETIME
+        data_type=DataType.DATETIME,
     ),
     FieldMappingConfiguration(
         map_from_pattern="incident.id",
@@ -279,12 +278,9 @@ def __build_query_for_filtering(
             select(LastAlert.fingerprint)
             .join(
                 LastAlertToIncident,
-                LastAlert.fingerprint == LastAlertToIncident.fingerprint
+                LastAlert.fingerprint == LastAlertToIncident.fingerprint,
             )
-            .join(
-                Incident,
-                LastAlertToIncident.incident_id == Incident.id
-            )
+            .join(Incident, LastAlertToIncident.incident_id == Incident.id)
             .where(Incident.status == IncidentStatus.FIRING.value)
             .distinct()
         ).subquery()
@@ -300,7 +296,7 @@ def __build_query_for_filtering(
             and_(
                 LastAlertToIncident.tenant_id == Incident.tenant_id,
                 LastAlertToIncident.incident_id == Incident.id,
-                LastAlert.fingerprint.in_(select(firing_subq.c.fingerprint))
+                LastAlert.fingerprint.in_(select(firing_subq.c.fingerprint)),
             ),
         )
 
@@ -377,7 +373,7 @@ def build_alerts_query(tenant_id, query: QueryDto):
     return sql_query
 
 
-def query_last_alerts(tenant_id, query: QueryDto) -> Tuple[list[Alert], int]:
+def query_last_alerts(tenant_id, query: QueryDto) -> tuple[list[Alert], int]:
     query_with_defaults = query.copy()
 
     # Shahar: this happens when the frontend query builder fails to build a query
@@ -479,7 +475,7 @@ def get_alert_facets_data(
 
 
 def get_alert_facets(
-    tenant_id: str, facet_ids_to_load: list[str] = None
+    tenant_id: str, facet_ids_to_load: list[str] | None = None
 ) -> list[FacetDto]:
     not_static_facet_ids = []
     facets = []

@@ -20,7 +20,12 @@ depends_on = None
 def upgrade() -> None:
     with op.batch_alter_table("rule", schema=None) as batch_op:
         batch_op.add_column(
-            sa.Column("timeunit", sqlmodel.sql.sqltypes.AutoString(), nullable=False, server_default="seconds")
+            sa.Column(
+                "timeunit",
+                sqlmodel.sql.sqltypes.AutoString(),
+                nullable=False,
+                server_default="seconds",
+            )
         )
 
 

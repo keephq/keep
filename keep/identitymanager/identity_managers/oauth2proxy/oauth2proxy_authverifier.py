@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
 
@@ -46,8 +44,8 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
         self,
         request: Request,
         api_key: str,
-        authorization: Optional[HTTPAuthorizationCredentials],
-        token: Optional[str],
+        authorization: HTTPAuthorizationCredentials | None,
+        token: str | None,
         *args,
         **kwargs,
     ) -> AuthenticatedEntity:
@@ -157,7 +155,6 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
                 self.logger.warning(
                     f"Failed to update last login for user: {user_name}"
                 )
-                pass
             # update role
             self.logger.debug(f"Updating role for user: {user_name}")
             try:
@@ -169,7 +166,6 @@ class Oauth2proxyAuthVerifier(AuthVerifierBase):
                 self.logger.debug(f"Role updated for user: {user_name}")
             except Exception:
                 self.logger.warning(f"Failed to update role for user: {user_name}")
-                pass
 
         self.logger.info(f"User {user_name} authenticated with role {mapped_role}")
         return AuthenticatedEntity(

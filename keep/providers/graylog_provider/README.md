@@ -25,75 +25,75 @@ import requests
 
 auth = ("YOUR_ACCESS_TOKEN", "token")  # from the previous step
 headers = {
- "Accept": "application/json",
- "X-Requested-By": "Keep",
- "Content-Type": "application/json",
+    "Accept": "application/json",
+    "X-Requested-By": "Keep",
+    "Content-Type": "application/json",
 }
 
 input_data = {
- 'type': 'org.graylog2.inputs.raw.tcp.RawTCPInput',
- 'configuration': {
-     'bind_address': '0.0.0.0',
-     'port': 5044,
-     'recv_buffer_size': 1048576,
-     'number_worker_threads': 3,
-     'tls_cert_file': '',
-     'tls_key_file': '',
-     'tls_enable': False,
-     'tls_key_password': '',
-     'tls_client_auth': 'disabled',
-     'tls_client_auth_cert_file': '',
-     'tcp_keepalive': False,
-     'use_null_delimiter': False,
-     'max_message_size': 2097152,
-     'override_source': None,
-     'charset_name': 'UTF-8',
- },
- 'title': 'Keep-Input',
- 'global': True,
+    "type": "org.graylog2.inputs.raw.tcp.RawTCPInput",
+    "configuration": {
+        "bind_address": "0.0.0.0",
+        "port": 5044,
+        "recv_buffer_size": 1048576,
+        "number_worker_threads": 3,
+        "tls_cert_file": "",
+        "tls_key_file": "",
+        "tls_enable": False,
+        "tls_key_password": "",
+        "tls_client_auth": "disabled",
+        "tls_client_auth_cert_file": "",
+        "tcp_keepalive": False,
+        "use_null_delimiter": False,
+        "max_message_size": 2097152,
+        "override_source": None,
+        "charset_name": "UTF-8",
+    },
+    "title": "Keep-Input",
+    "global": True,
 }
 
 input_response = requests.post(
- url="http://127.0.0.1:9000/api/system/inputs",
- headers=headers,
- json=input_data,
- auth=auth,
+    url="http://127.0.0.1:9000/api/system/inputs",
+    headers=headers,
+    json=input_data,
+    auth=auth,
 )
 
 print(input_response.text)
 
 event_data = {
- 'title': 'Keep-Event',
- 'description': 'This is an event for Keep',
- 'priority': 3,
- 'config': {
-     'query': 'source:*',
-     'query_parameters': [],
-     'streams': [],
-     'filters': [],
-     'search_within_ms': 86400000,
-     'execute_every_ms': 60000,
-     'event_limit': 100,
-     'group_by': [],
-     'series': [],
-     'conditions': {},
-     'type': 'aggregation-v1',
- },
- 'field_spec': {},
- 'key_spec': [],
- 'notification_settings': {
-     'grace_period_ms': 300000,
-     'backlog_size': None,
- },
- 'notifications': [],
- 'alert': True,
+    "title": "Keep-Event",
+    "description": "This is an event for Keep",
+    "priority": 3,
+    "config": {
+        "query": "source:*",
+        "query_parameters": [],
+        "streams": [],
+        "filters": [],
+        "search_within_ms": 86400000,
+        "execute_every_ms": 60000,
+        "event_limit": 100,
+        "group_by": [],
+        "series": [],
+        "conditions": {},
+        "type": "aggregation-v1",
+    },
+    "field_spec": {},
+    "key_spec": [],
+    "notification_settings": {
+        "grace_period_ms": 300000,
+        "backlog_size": None,
+    },
+    "notifications": [],
+    "alert": True,
 }
 
 event_response = requests.post(
- url="http://127.0.0.1:9000/api/events/definitions",
- headers=headers,
- json=event_data,
- auth=auth,
+    url="http://127.0.0.1:9000/api/events/definitions",
+    headers=headers,
+    json=event_data,
+    auth=auth,
 )
 
 print(event_response.text)

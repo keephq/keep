@@ -1,5 +1,4 @@
 import json
-from typing import Optional
 
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
@@ -45,7 +44,7 @@ class NoAuthVerifier(AuthVerifierBase):
         self,
         request: Request,
         api_key: str,
-        authorization: Optional[HTTPAuthorizationCredentials],
+        authorization: HTTPAuthorizationCredentials | None,
     ) -> AuthenticatedEntity:
 
         tenant_api_key = get_api_key(api_key)

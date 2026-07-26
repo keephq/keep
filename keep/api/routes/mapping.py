@@ -52,7 +52,7 @@ def get_rules(
                 # @tb: when we get the model without the rows, we have to save the attributes when creating the rule.
                 attributes = [
                     key
-                    for key in rule.rows[0].keys()
+                    for key in rule.rows[0]
                     if not any(key in matcher for matcher in rule.matchers)
                 ]
             elif rule_dto.type == "topology":
@@ -192,7 +192,7 @@ def update_rule(
     response = MappingRuleDtoOut(**existing_rule.dict())
     if rule.rows is not None:
         response.attributes = [
-            key for key in existing_rule.rows[0].keys() if key not in rule.matchers
+            key for key in existing_rule.rows[0] if key not in rule.matchers
         ]
     return response
 

@@ -3,6 +3,7 @@ TwilioProvider is a class that implements the BaseProvider interface for Twilio 
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 from twilio.base.exceptions import TwilioRestException
@@ -50,8 +51,8 @@ class TwilioProvider(BaseProvider):
     """Send SMS via Twilio."""
 
     PROVIDER_DISPLAY_NAME = "Twilio"
-    PROVIDER_CATEGORY = ["Collaboration"]
-    PROVIDER_SCOPES = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="send_sms",
             description="The API token has permission to send the SMS",
@@ -112,7 +113,6 @@ class TwilioProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(
         self, message_body: str = "", to_phone_number: str = "", **kwargs: dict

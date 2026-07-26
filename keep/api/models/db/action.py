@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Optional
+from typing import ClassVar
 
 from sqlalchemy import UniqueConstraint
-from sqlmodel import Column, Field, SQLModel, TEXT
+from sqlmodel import TEXT, Column, Field, SQLModel
 
 
 class Action(SQLModel, table=True):
@@ -12,11 +12,11 @@ class Action(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     use: str
     name: str
-    description: Optional[str]
+    description: str | None
     action_raw: str = Field(sa_column=Column(TEXT))
     installed_by: str
     installation_time: datetime
-   
+
     class Config:
         orm_mode = True
-        unique_together = ["tenant_id", "name", "use"]
+        unique_together: ClassVar[list[str]] = ["tenant_id", "name", "use"]

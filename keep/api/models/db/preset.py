@@ -1,5 +1,5 @@
 import enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, conint, constr
@@ -29,13 +29,13 @@ class Tag(SQLModel, table=True):
     id: str = Field(default_factory=generate_uuid, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     name: str = Field(unique=True, nullable=False)
-    presets: List["Preset"] = Relationship(
+    presets: list["Preset"] = Relationship(
         back_populates="tags", link_model=PresetTagLink
     )
 
 
 class TagDto(BaseModel):
-    id: Optional[str]  # for new tag from the frontend, the id would be None
+    id: str | None  # for new tag from the frontend, the id would be None
     name: str
 
 
@@ -43,13 +43,13 @@ class Preset(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("tenant_id", "name"),)
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id", index=True)
-    created_by: Optional[str] = Field(index=True, nullable=False)
-    is_private: Optional[bool] = Field(default=False)
-    is_noisy: Optional[bool] = Field(default=False)
-    counter_shows_firing_only: Optional[bool] = Field(default=False)
+    created_by: str | None = Field(index=True, nullable=False)
+    is_private: bool | None = Field(default=False)
+    is_noisy: bool | None = Field(default=False)
+    counter_shows_firing_only: bool | None = Field(default=False)
     name: str = Field(unique=True)
     options: list = Field(sa_column=Column(JSON))  # [{"label": "", "value": ""}]
-    tags: List[Tag] = Relationship(
+    tags: list[Tag] = Relationship(
         back_populates="presets",
         link_model=PresetTagLink,
         sa_relationship_kwargs={"lazy": "joined"},
@@ -65,7 +65,7 @@ class Preset(SQLModel, table=True):
 # datatype represents a query with CEL (str) and SQL (dict)
 class PresetSearchQuery(BaseModel):
     cel_query: constr(min_length=0)
-    sql_query: Dict[str, Any]
+    sql_query: dict[str, Any]
     limit: conint(ge=0) = 1000
     timeframe: conint(ge=0) = 0
 
@@ -77,21 +77,21 @@ class PresetDto(BaseModel, extra="ignore"):
     id: UUID
     name: str
     options: list = []
-    created_by: Optional[str] = None
-    is_private: Optional[bool] = Field(default=False)
-    is_noisy: Optional[bool] = Field(default=False)
+    created_by: str | None = None
+    is_private: bool | None = Field(default=False)
+    is_noisy: bool | None = Field(default=False)
     """Whether the preset is noisy or not"""
 
     # if true, the preset should do noise now
-    counter_shows_firing_only: Optional[bool] = Field(default=False)
+    counter_shows_firing_only: bool | None = Field(default=False)
     """Indicates whether counter in navbar displays only firing alerts"""
 
-    should_do_noise_now: Optional[bool] = Field(default=False)
+    should_do_noise_now: bool | None = Field(default=False)
     """Meaning is_noisy + at least one alert is doing noise"""
 
     # static presets
-    static: Optional[bool] = Field(default=False)
-    tags: List[TagDto] = []
+    static: bool | None = Field(default=False)
+    tags: list[TagDto] = []
 
     @property
     def cel_query(self) -> str:
@@ -124,7 +124,7 @@ class PresetDto(BaseModel, extra="ignore"):
         return query[0].get("value", "")
 
     @property
-    def column_visibility(self) -> Dict[str, bool]:
+    def column_visibility(self) -> dict[str, bool]:
         """Get column visibility configuration from preset options"""
         config = [
             option
@@ -136,7 +136,7 @@ class PresetDto(BaseModel, extra="ignore"):
         return config[0].get("value", {})
 
     @property
-    def column_order(self) -> List[str]:
+    def column_order(self) -> list[str]:
         """Get column order configuration from preset options"""
         config = [
             option
@@ -148,7 +148,7 @@ class PresetDto(BaseModel, extra="ignore"):
         return config[0].get("value", [])
 
     @property
-    def column_rename_mapping(self) -> Dict[str, str]:
+    def column_rename_mapping(self) -> dict[str, str]:
         """Get column rename mapping from preset options"""
         config = [
             option
@@ -160,7 +160,7 @@ class PresetDto(BaseModel, extra="ignore"):
         return config[0].get("value", {})
 
     @property
-    def column_time_formats(self) -> Dict[str, str]:
+    def column_time_formats(self) -> dict[str, str]:
         """Get column time formats from preset options"""
         config = [
             option
@@ -172,7 +172,7 @@ class PresetDto(BaseModel, extra="ignore"):
         return config[0].get("value", {})
 
     @property
-    def column_list_formats(self) -> Dict[str, str]:
+    def column_list_formats(self) -> dict[str, str]:
         """Get column list formats from preset options"""
         config = [
             option

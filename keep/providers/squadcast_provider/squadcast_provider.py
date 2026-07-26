@@ -4,6 +4,7 @@ SquadcastProvider is a class that implements the Squadcast API and allows creati
 
 import dataclasses
 import json
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -51,10 +52,10 @@ class SquadcastProvider(BaseProvider):
     """Create incidents and notes using the Squadcast API."""
 
     PROVIDER_DISPLAY_NAME = "Squadcast"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="The user can connect to the client",
@@ -119,12 +120,14 @@ class SquadcastProvider(BaseProvider):
         headers: dict,
         message: str,
         description: str,
-        tags: dict = {},
+        tags: dict | None = None,
         priority: str = "",
         status: str = "",
         event_id: str = "",
         additional_json: str = "",
     ):
+        if tags is None:
+            tags = {}
         body = json.dumps(
             {
                 "message": message,
@@ -143,8 +146,7 @@ class SquadcastProvider(BaseProvider):
             body = json.dumps({**additional_fields, **core_fields})
         except json.JSONDecodeError as e:
             raise ProviderConfigException(
-                f"Invalid additional_json format: {str(e)}",
-                provider_id=self.provider_id
+                f"Invalid additional_json format: {e!s}", provider_id=self.provider_id
             )
 
         return requests.post(
@@ -152,8 +154,14 @@ class SquadcastProvider(BaseProvider):
         )
 
     def _crete_notes(
-        self, headers: dict, message: str, incident_id: str, attachments: list = []
+        self,
+        headers: dict,
+        message: str,
+        incident_id: str,
+        attachments: list | None = None,
     ):
+        if attachments is None:
+            attachments = []
         body = json.dumps({"message": message, "attachments": attachments})
         return requests.post(
             f"{self.__get_endpoint('api')}/v3/incidents/{incident_id}/warroom",
@@ -168,10 +176,10 @@ class SquadcastProvider(BaseProvider):
         description: str = "",
         incident_id: str = "",
         priority: str = "",
-        tags: dict = {},
+        tags: dict | None = None,
         status: str = "",
         event_id: str = "",
-        attachments: list = [],
+        attachments: list | None = None,
         additional_json: str = "",
         **kwargs,
     ) -> dict:
@@ -179,6 +187,10 @@ class SquadcastProvider(BaseProvider):
         Create an incident or notes using the Squadcast API.
         """
 
+        if attachments is None:
+            attachments = []
+        if tags is None:
+            tags = {}
         self.logger.info(
             f"Creating {notify_type} using SquadcastProvider",
             extra={notify_type: notify_type},
@@ -228,13 +240,12 @@ class SquadcastProvider(BaseProvider):
             resp.raise_for_status()
             return resp.json()
         except HTTPError as e:
-            raise Exception(f"Failed to create issue: {str(e)}")
+            raise Exception(f"Failed to create issue: {e!s}")
 
     def dispose(self):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
 
 if __name__ == "__main__":

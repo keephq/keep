@@ -21,24 +21,29 @@ down_revision = "8176d7153747"
 branch_labels = None
 depends_on = None
 
+
 def populate_db():
     session = Session(op.get_bind())
 
-    dismissed_field = get_json_extract_field(session, AlertEnrichment.enrichments, "dismissed")
-    status_field = get_json_extract_field(session, AlertEnrichment.enrichments, "status")
+    dismissed_field = get_json_extract_field(
+        session, AlertEnrichment.enrichments, "dismissed"
+    )
+    status_field = get_json_extract_field(
+        session, AlertEnrichment.enrichments, "status"
+    )
 
-    enrichments = session.query(AlertEnrichment).filter(
-        and_(
-            dismissed_field.in_(['true', 'True']),
-            status_field.is_(null())
-        )
-    ).all()
+    enrichments = (
+        session.query(AlertEnrichment)
+        .filter(and_(dismissed_field.in_(["true", "True"]), status_field.is_(null())))
+        .all()
+    )
 
     for enrichment in enrichments:
-        enrichment.enrichments['status'] = AlertStatus.SUPPRESSED.value
+        enrichment.enrichments["status"] = AlertStatus.SUPPRESSED.value
         flag_modified(enrichment, "enrichments")
         session.add(enrichment)
     session.commit()
+
 
 def upgrade() -> None:
     populate_db()

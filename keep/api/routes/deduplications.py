@@ -74,8 +74,8 @@ def create_deduplication_rule(
         )
         logger.info("Created deduplication rule")
         return created_rule
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Error creating deduplication rule")
         raise HTTPException(status_code=400, detail=str(e))
@@ -133,10 +133,10 @@ def delete_deduplication_rule(
             return {"message": "Deduplication rule deleted successfully"}
         else:
             raise HTTPException(status_code=404, detail="Deduplication rule not found")
-    except HTTPException as e:
+    except HTTPException:
         logger.exception("Error deleting deduplication rule")
         # keep the same status code
-        raise e
+        raise
     except Exception as e:
         logger.exception("Error deleting deduplication rule")
         raise HTTPException(status_code=400, detail=str(e))

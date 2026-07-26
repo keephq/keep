@@ -3,6 +3,7 @@ S3 Provider for querying S3 buckets.
 """
 
 import dataclasses
+from typing import ClassVar
 
 import boto3
 import pydantic
@@ -34,7 +35,7 @@ class S3ProviderAuthConfig:
 
 class S3Provider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "AWS S3"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure"]
 
     def dispose(self):
         pass

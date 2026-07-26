@@ -1,21 +1,20 @@
 import json
-from typing import Optional
-
-from fastapi import Query, HTTPException
-from pydantic import BaseModel, Field
 from datetime import datetime
+
+from fastapi import HTTPException, Query
+from pydantic import BaseModel, Field
 
 
 class TimeStampFilter(BaseModel):
-    lower_timestamp: Optional[datetime] = Field(None, alias="start")
-    upper_timestamp: Optional[datetime] = Field(None, alias="end")
+    lower_timestamp: datetime | None = Field(None, alias="start")
+    upper_timestamp: datetime | None = Field(None, alias="end")
 
     class Config:
         allow_population_by_field_name = True
 
 
 # Function to handle the time_stamp query parameter and parse it
-def _get_time_stamp_filter(time_stamp: Optional[str] = Query(None)) -> TimeStampFilter:
+def _get_time_stamp_filter(time_stamp: str | None = Query(None)) -> TimeStampFilter:
     if time_stamp:
         try:
             # Parse the JSON string

@@ -1,6 +1,7 @@
 import dataclasses
 import json
 import logging
+from typing import ClassVar
 
 import pydantic
 from google.auth.transport import requests
@@ -60,9 +61,9 @@ class GkeProvider(BaseProvider):
     """Enrich alerts with data from GKE."""
 
     PROVIDER_DISPLAY_NAME = "Google Kubernetes Engine"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="roles/container.viewer",
             description="Read access to GKE resources",
@@ -106,7 +107,7 @@ class GkeProvider(BaseProvider):
         ),
     ]
 
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="List Pods",
             func_name="get_pods",
@@ -290,7 +291,7 @@ class GkeProvider(BaseProvider):
             self._client = self.__generate_client()
         return self._client
 
-    def get_pods(self, namespace: str = None) -> list:
+    def get_pods(self, namespace: str | None = None) -> list:
         """List all pods in a namespace or across all namespaces."""
         if namespace:
             self.logger.info(f"Listing pods in namespace {namespace}")
@@ -300,7 +301,7 @@ class GkeProvider(BaseProvider):
             pods = self.client.list_pod_for_all_namespaces()
         return [pod.to_dict() for pod in pods.items]
 
-    def get_pvc(self, namespace: str = None) -> list:
+    def get_pvc(self, namespace: str | None = None) -> list:
         """List all PVCs in a namespace or across all namespaces."""
         if namespace:
             self.logger.info(f"Listing PVCs in namespace {namespace}")
@@ -333,7 +334,7 @@ class GkeProvider(BaseProvider):
         return node_pressures
 
     def exec_command(
-        self, namespace: str, pod_name: str, command: str, container: str = None
+        self, namespace: str, pod_name: str, command: str, container: str | None = None
     ) -> str:
         """Execute a command in a pod."""
         if not all([namespace, pod_name]):
@@ -371,7 +372,7 @@ class GkeProvider(BaseProvider):
             return result
 
         except Exception as e:
-            raise ProviderException(f"Failed to execute command: {str(e)}")
+            raise ProviderException(f"Failed to execute command: {e!s}")
 
     def restart_pod(self, namespace: str, pod_name: str):
         """Restart a pod by deleting it."""
@@ -395,7 +396,7 @@ class GkeProvider(BaseProvider):
             )
             return deployment.to_dict()
         except Exception as e:
-            raise ProviderException(f"Failed to get deployment info: {str(e)}")
+            raise ProviderException(f"Failed to get deployment info: {e!s}")
 
     def scale_deployment(self, namespace: str, deployment_name: str, replicas: int):
         """Scale a deployment to specified replicas."""
@@ -418,7 +419,7 @@ class GkeProvider(BaseProvider):
         self,
         namespace: str,
         pod_name: str,
-        container: str = None,
+        container: str | None = None,
         tail_lines: int = 100,
     ):
         """Get logs from a pod."""

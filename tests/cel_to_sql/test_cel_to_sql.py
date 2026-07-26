@@ -1,5 +1,6 @@
 import json
 import os
+
 import pytest
 
 from keep.api.core.cel_to_sql.ast_nodes import DataType
@@ -80,8 +81,8 @@ with open(
         expected_sql_dialect_based: dict = item["expected_sql_dialect_based"]
         description_ = item["description"]
 
-        for dialect_ in ['sqlite', 'mysql', 'postgresql']:
-            expected_sql_ = expected_sql_dialect_based.get(dialect_, 'no_expected_sql')
+        for dialect_ in ["sqlite", "mysql", "postgresql"]:
+            expected_sql_ = expected_sql_dialect_based.get(dialect_, "no_expected_sql")
             dict_key = f"{dialect_}_{description_}"
             testcases_dict[dict_key] = [dialect_, input_cel_, expected_sql_]
 
@@ -90,7 +91,7 @@ with open(
 def test_cel_to_sql(testcase_key):
     dialect_name, input_cel, expected_sql = testcases_dict[testcase_key]
 
-    if expected_sql == 'no_expected_sql':
+    if expected_sql == "no_expected_sql":
         pytest.fail("No expected SQL for this dialect")
         pytest.skip("No expected SQL for this dialect")
 

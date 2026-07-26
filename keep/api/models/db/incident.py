@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
@@ -61,14 +61,14 @@ class IncidentStatus(enum.Enum):
     DELETED = "deleted"
 
     @classmethod
-    def get_active(cls, return_values=False) -> List[str | enum.Enum]:
+    def get_active(cls, return_values=False) -> list[str | enum.Enum]:
         statuses = [cls.FIRING, cls.ACKNOWLEDGED]
         if return_values:
             return [s.value for s in statuses]
         return statuses
 
     @classmethod
-    def get_closed(cls, return_values=False) -> List[str | enum.Enum]:
+    def get_closed(cls, return_values=False) -> list[str | enum.Enum]:
         statuses = [cls.RESOLVED, cls.MERGED, cls.DELETED]
         if return_values:
             return [s.value for s in statuses]
@@ -81,7 +81,7 @@ class Incident(SQLModel, table=True):
     tenant: Tenant = Relationship()
 
     # Auto-incrementing number per tenant
-    running_number: Optional[int] = Field(default=None)
+    running_number: int | None = Field(default=None)
 
     user_generated_name: str | None = Field(sa_column=Column(TEXT))
     ai_generated_name: str | None = Field(sa_column=Column(TEXT))
@@ -140,17 +140,17 @@ class Incident(SQLModel, table=True):
 
     same_incident_in_the_past: Optional["Incident"] = Relationship(
         back_populates="same_incidents_in_the_future",
-        sa_relationship_kwargs=dict(
-            remote_side="Incident.id",
-            foreign_keys="[Incident.same_incident_in_the_past_id]",
-        ),
+        sa_relationship_kwargs={
+            "remote_side": "Incident.id",
+            "foreign_keys": "[Incident.same_incident_in_the_past_id]",
+        },
     )
 
-    same_incidents_in_the_future: List["Incident"] = Relationship(
+    same_incidents_in_the_future: list["Incident"] = Relationship(
         back_populates="same_incident_in_the_past",
-        sa_relationship_kwargs=dict(
-            foreign_keys="[Incident.same_incident_in_the_past_id]",
-        ),
+        sa_relationship_kwargs={
+            "foreign_keys": "[Incident.same_incident_in_the_past_id]",
+        },
     )
 
     merged_into_incident_id: UUID | None = Field(
@@ -164,20 +164,20 @@ class Incident(SQLModel, table=True):
     merged_by: str | None = Field(default=None)
     merged_into: Optional["Incident"] = Relationship(
         back_populates="merged_incidents",
-        sa_relationship_kwargs=dict(
-            remote_side="Incident.id",
-            foreign_keys="[Incident.merged_into_incident_id]",
-        ),
+        sa_relationship_kwargs={
+            "remote_side": "Incident.id",
+            "foreign_keys": "[Incident.merged_into_incident_id]",
+        },
     )
-    merged_incidents: List["Incident"] = Relationship(
+    merged_incidents: list["Incident"] = Relationship(
         back_populates="merged_into",
-        sa_relationship_kwargs=dict(
-            foreign_keys="[Incident.merged_into_incident_id]",
-        ),
+        sa_relationship_kwargs={
+            "foreign_keys": "[Incident.merged_into_incident_id]",
+        },
     )
 
     # @tb: _alerts is Alert, not explicitly typed because of circular dependency
-    _alerts: List = PrivateAttr(default_factory=list)
+    _alerts: list = PrivateAttr(default_factory=list)
     _enrichments: dict = PrivateAttr(default={})
 
     class Config:

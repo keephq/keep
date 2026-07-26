@@ -3,7 +3,7 @@ PagetreeProvider is a class that provides a way to read get alerts from Pagetree
 """
 
 import dataclasses
-from typing import Literal
+from typing import ClassVar, Literal
 
 import pydantic
 import requests
@@ -30,9 +30,9 @@ class PagertreeProvider(BaseProvider):
     """Get all alerts from pagertree"""
 
     PROVIDER_DISPLAY_NAME = "PagerTree"
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="The user can connect to the server and is authenticated using their API_Key",
@@ -113,7 +113,7 @@ class PagertreeProvider(BaseProvider):
             self.logger.error(
                 "Error while getting PagerTree alerts", extra={"error": str(e)}
             )
-            raise e
+            raise
 
     def __send_alert(
         self,
@@ -217,9 +217,9 @@ class PagertreeProvider(BaseProvider):
         status: Literal[
             "queued", "open", "acknowledged", "resolved", "dropped"
         ] = "queued",
-        destination_team_ids: list[str] = [],
-        destination_router_ids: list[str] = [],
-        destination_account_user_ids: list[str] = [],
+        destination_team_ids: list[str] | None = None,
+        destination_router_ids: list[str] | None = None,
+        destination_account_user_ids: list[str] | None = None,
         **kwargs: dict,
     ):
         """
@@ -237,6 +237,12 @@ class PagertreeProvider(BaseProvider):
             destination_account_user_ids: destination account_users_ids to send alert to
             **kwargs: Additional parameters to be passed
         """
+        if destination_account_user_ids is None:
+            destination_account_user_ids = []
+        if destination_router_ids is None:
+            destination_router_ids = []
+        if destination_team_ids is None:
+            destination_team_ids = []
         if (
             len(destination_team_ids)
             + len(destination_router_ids)

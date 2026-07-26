@@ -2,8 +2,8 @@ import json
 import os
 
 import boto3
-import opentelemetry.trace as trace
 from botocore.exceptions import ClientError
+from opentelemetry import trace
 
 from keep.api.core.config import config
 from keep.secretmanager.secretmanager import BaseSecretManager

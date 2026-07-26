@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -24,6 +25,7 @@ class PingdomProviderAuthConfig:
 
 class PingdomProvider(BaseProvider):
     "Get alerts from Pingdom."
+
     webhook_description = """Install Keep as Pingdom webhook
     1. Go to Settings > Integrations.
     2. Click Add Integration.
@@ -34,8 +36,8 @@ class PingdomProvider(BaseProvider):
     4. Click Save Integration.
 """
     webhook_template = """"""
-    PROVIDER_CATEGORY = ["Monitoring"]
-    PROVIDER_SCOPES = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="read",
             description="Read alerts from Pingdom.",
@@ -43,8 +45,8 @@ class PingdomProvider(BaseProvider):
         ),
     ]
     # N/A
-    SEVERITIES_MAP = {}
-    STATUS_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {}
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "down": AlertStatus.FIRING,
         "up": AlertStatus.RESOLVED,
         "paused": AlertStatus.SUPPRESSED,
@@ -65,7 +67,6 @@ class PingdomProvider(BaseProvider):
         """
         Dispose provider resources.
         """
-        pass
 
     def _get_headers(self):
         """
@@ -118,7 +119,7 @@ class PingdomProvider(BaseProvider):
             # map severity and status to keep's format
             description = alert.get("messagefull")
             status = alert.get("messageshort")
-            if status not in PingdomProvider.STATUS_MAP.keys():
+            if status not in PingdomProvider.STATUS_MAP:
                 self.logger.warning(
                     f"Unknown status {status} for alert {alert.get('id')}"
                 )
@@ -143,7 +144,7 @@ class PingdomProvider(BaseProvider):
                     alert.get("time"), tz=datetime.timezone.utc
                 ).isoformat()
             else:
-                last_received = datetime.datetime.now().isoformat()
+                last_received = datetime.datetime.now(tz=datetime.UTC).isoformat()
 
             alert_dto = AlertDto(
                 id=alert.get("checkid"),
@@ -196,7 +197,7 @@ class PingdomProvider(BaseProvider):
                 event.get("time"), tz=datetime.timezone.utc
             ).isoformat()
         else:
-            last_received = datetime.datetime.now().isoformat()
+            last_received = datetime.datetime.now(tz=datetime.UTC).isoformat()
 
         alert = AlertDto(
             id=event.get("check_id"),

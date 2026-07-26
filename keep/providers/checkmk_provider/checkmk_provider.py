@@ -4,6 +4,7 @@ Checkmk is a monitoring tool for Infrastructure and Application Monitoring.
 
 import logging
 from datetime import datetime, timezone
+from typing import ClassVar
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -32,14 +33,14 @@ class CheckmkProvider(BaseProvider):
   10. Now Checkmk will be able to send alerts to Keep.
   """
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "OK": AlertSeverity.INFO,
         "WARN": AlertSeverity.WARNING,
         "CRIT": AlertSeverity.CRITICAL,
         "UNKNOWN": AlertSeverity.INFO,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "UP": AlertStatus.RESOLVED,
         "DOWN": AlertStatus.FIRING,
         "ACKNOWLEDGED": AlertStatus.ACKNOWLEDGED,
@@ -47,9 +48,9 @@ class CheckmkProvider(BaseProvider):
     }
 
     PROVIDER_DISPLAY_NAME = "Checkmk"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
-    FINGERPRINT_FIELDS = ["id"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["id"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -60,7 +61,6 @@ class CheckmkProvider(BaseProvider):
         """
         No validation required for Checkmk provider.
         """
-        pass
 
     @staticmethod
     def convert_to_utc_isoformat(long_date_time: str, default: str) -> str:
@@ -92,7 +92,9 @@ class CheckmkProvider(BaseProvider):
                         long_date_time = " ".join(parts[:-3] + [offset] + parts[-1:])
 
                 # Parse the datetime string
-                local_dt = datetime.strptime(long_date_time, date_format)
+                local_dt = datetime.strptime(long_date_time, date_format).replace(
+                    tzinfo=timezone.utc
+                )
 
                 # Convert to UTC if it has timezone info, otherwise assume UTC
                 if local_dt.tzinfo is None:
@@ -126,9 +128,7 @@ class CheckmkProvider(BaseProvider):
         def _set_severity(status):
             if status == "UP":
                 return AlertSeverity.INFO
-            elif status == "DOWN":
-                return AlertSeverity.CRITICAL
-            elif status == "UNREACH":
+            elif status == "DOWN" or status == "UNREACH":
                 return AlertSeverity.CRITICAL
 
         # https://forum.checkmk.com/t/convert-notify-shortdatetime-to-utc-timezone/20158/2

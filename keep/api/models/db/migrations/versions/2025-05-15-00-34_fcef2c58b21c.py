@@ -19,12 +19,18 @@ depends_on = None
 def upgrade() -> None:
 
     with op.batch_alter_table("rule", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("threshold", sa.Integer(), nullable=False, server_default="1"))
-        batch_op.create_check_constraint("rule_threshold_positive_int_constraint", "threshold>0")
+        batch_op.add_column(
+            sa.Column("threshold", sa.Integer(), nullable=False, server_default="1")
+        )
+        batch_op.create_check_constraint(
+            "rule_threshold_positive_int_constraint", "threshold>0"
+        )
 
 
 def downgrade() -> None:
 
     with op.batch_alter_table("rule", schema=None) as batch_op:
-        batch_op.drop_constraint("rule_threshold_positive_int_constraint",  type_="check")
+        batch_op.drop_constraint(
+            "rule_threshold_positive_int_constraint", type_="check"
+        )
         batch_op.drop_column("threshold")

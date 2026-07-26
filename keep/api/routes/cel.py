@@ -1,11 +1,11 @@
 import logging
 from typing import Any
 
+from celpy import CELParseError
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
-from celpy import CELParseError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

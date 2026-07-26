@@ -2,6 +2,8 @@
 NetBox combines IP address management (IPAM) and datacenter infrastructure management (DCIM) with powerful APIs and extensions, serving as the ideal "source of truth" for network automation. Thousands of organizations worldwide rely on NetBox for their infrastructure.
 """
 
+from typing import ClassVar
+
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -28,8 +30,8 @@ class NetboxProvider(BaseProvider):
   """
 
     PROVIDER_DISPLAY_NAME = "NetBox"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Monitoring"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure", "Monitoring"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -40,7 +42,6 @@ class NetboxProvider(BaseProvider):
         """
         Validates required configuration for NetBox's provider.
         """
-        pass
 
     @staticmethod
     def _format_alert(

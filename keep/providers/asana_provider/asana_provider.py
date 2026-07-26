@@ -3,7 +3,7 @@ Asana Provider is a class that provides a way to create tasks in Asana.
 """
 
 import dataclasses
-import typing
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -35,9 +35,13 @@ class AsanaProvider(BaseProvider):
     Asana Provider is a class that provides a way to create tasks in Asana.
     """
 
-    PROVIDER_CATEGORY = ["Collaboration", "Organizational Tools", "Ticketing"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = [
+        "Collaboration",
+        "Organizational Tools",
+        "Ticketing",
+    ]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is authenticated to Asana.",
@@ -45,7 +49,7 @@ class AsanaProvider(BaseProvider):
         )
     ]
 
-    PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["ticketing"]
     PROVIDER_DISPLAY_NAME = "Asana"
 
     def __init__(
@@ -97,7 +101,7 @@ class AsanaProvider(BaseProvider):
             "Accept": "application/json",
         }
 
-    def _create_task(self, name: str, projects: typing.List[str], **kwargs: dict):
+    def _create_task(self, name: str, projects: list[str], **kwargs: dict):
         """
         Create a task in Asana.
         """
@@ -149,7 +153,7 @@ class AsanaProvider(BaseProvider):
             self.logger.exception("Failed to update task", extra={"exception": e})
             raise ProviderException(str(e))
 
-    def _notify(self, name: str, projects: typing.List[str], **kwargs: dict):
+    def _notify(self, name: str, projects: list[str], **kwargs: dict):
         """
         Create task in Asana.
         Args:

@@ -1,9 +1,8 @@
 # builtins
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
-from sqlalchemy import DateTime, JSON
+from sqlalchemy import JSON, DateTime
 
 # third-parties
 from sqlmodel import Column, Field, Index, SQLModel, func
@@ -15,17 +14,18 @@ DEFAULT_ALERT_STATUSES_TO_IGNORE = [
     AlertStatus.ACKNOWLEDGED.value,
 ]
 
+
 class MaintenanceWindowRule(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     name: str
     tenant_id: str = Field(foreign_key="tenant.id")
-    description: Optional[str] = None
+    description: str | None = None
     created_by: str
     cel_query: str
     start_time: datetime
     end_time: datetime
-    duration_seconds: Optional[int] = None
-    updated_at: Optional[datetime] = Field(
+    duration_seconds: int | None = None
+    updated_at: datetime | None = Field(
         sa_column=Column(
             DateTime(timezone=True),
             name="updated_at",
@@ -45,10 +45,10 @@ class MaintenanceWindowRule(SQLModel, table=True):
 
 class MaintenanceRuleCreate(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     cel_query: str
     start_time: datetime
-    duration_seconds: Optional[int] = None
+    duration_seconds: int | None = None
     suppress: bool = False
     enabled: bool = True
     ignore_statuses: list[str] = DEFAULT_ALERT_STATUSES_TO_IGNORE
@@ -57,13 +57,13 @@ class MaintenanceRuleCreate(BaseModel):
 class MaintenanceRuleRead(BaseModel):
     id: int
     name: str
-    description: Optional[str]
+    description: str | None
     created_by: str
     cel_query: str
     start_time: datetime
     end_time: datetime
-    duration_seconds: Optional[int]
-    updated_at: Optional[datetime]
+    duration_seconds: int | None
+    updated_at: datetime | None
     suppress: bool = False
     enabled: bool = True
     ignore_statuses: list[str] = DEFAULT_ALERT_STATUSES_TO_IGNORE

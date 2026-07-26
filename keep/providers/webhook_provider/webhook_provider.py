@@ -7,6 +7,7 @@ import copy
 import dataclasses
 import json
 import typing
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -50,7 +51,7 @@ class WebhookProviderAuthConfig:
         },
     )
 
-    http_basic_authentication_username: typing.Optional[str] = dataclasses.field(
+    http_basic_authentication_username: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "HTTP basic authentication - Username",
@@ -59,7 +60,7 @@ class WebhookProviderAuthConfig:
         },
     )
 
-    http_basic_authentication_password: typing.Optional[str] = dataclasses.field(
+    http_basic_authentication_password: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "HTTP basic authentication - Password",
@@ -69,7 +70,7 @@ class WebhookProviderAuthConfig:
         },
     )
 
-    api_key: typing.Optional[str] = dataclasses.field(
+    api_key: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "API key",
@@ -79,7 +80,7 @@ class WebhookProviderAuthConfig:
         },
     )
 
-    headers: typing.Optional[list[dict[str, str]]] = dataclasses.field(
+    headers: list[dict[str, str]] | None = dataclasses.field(
         default=None,
         metadata={
             "description": "Headers",
@@ -91,16 +92,16 @@ class WebhookProviderAuthConfig:
 class WebhookProvider(BaseProvider):
     """Enrich alerts with data from Webhook."""
 
-    BLACKLISTED_ENDPOINTS = [
+    BLACKLISTED_ENDPOINTS: ClassVar[list[str]] = [
         "metadata.google.internal",
         "metadata.internal",
         "169.254.169.254",
         "localhost",
         "googleapis.com",
     ]
-    PROVIDER_CATEGORY = ["Developer Tools"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Developer Tools"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="send_webhook",
             mandatory=True,
@@ -108,7 +109,7 @@ class WebhookProvider(BaseProvider):
         )
     ]
 
-    PROVIDER_TAGS = ["messaging"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["messaging"]
     PROVIDER_DISPLAY_NAME = "Webhook"
 
     def __init__(
@@ -120,7 +121,6 @@ class WebhookProvider(BaseProvider):
         """
         Nothing to do here.
         """
-        pass
 
     def validate_scopes(self) -> dict[str, bool | str]:
         validated_scopes = {}
@@ -147,8 +147,8 @@ class WebhookProvider(BaseProvider):
 
     def _notify(
         self,
-        body: dict = None,
-        params: dict = None,
+        body: dict | None = None,
+        params: dict | None = None,
         **kwargs,
     ):
         """
@@ -170,12 +170,12 @@ class WebhookProvider(BaseProvider):
         self,
         url: str,
         method: typing.Literal["GET", "POST", "PUT", "DELETE"] = "POST",
-        http_basic_authentication_username: str = None,
-        http_basic_authentication_password: str = None,
-        api_key: str = None,
-        headers: str = None,
-        body: dict = None,
-        params: dict = None,
+        http_basic_authentication_username: str | None = None,
+        http_basic_authentication_password: str | None = None,
+        api_key: str | None = None,
+        headers: str | None = None,
+        body: dict | None = None,
+        params: dict | None = None,
         fail_on_error: bool = True,
         **kwargs: dict,
     ) -> dict:

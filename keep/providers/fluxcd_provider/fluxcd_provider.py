@@ -6,8 +6,10 @@ import dataclasses
 import logging
 import os
 import tempfile
+from datetime import datetime, timezone
 from typing import (  # noqa: F401 - Used for type hints
     Any,
+    ClassVar,
     Dict,
     List,
     Optional,
@@ -15,7 +17,6 @@ from typing import (  # noqa: F401 - Used for type hints
     Union,
 )
 from unittest.mock import MagicMock  # For testing
-from datetime import datetime, timezone
 
 import pydantic
 
@@ -30,16 +31,16 @@ try:
     from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 except ImportError as e:
     # For local testing or documentation generation
-    logging.warning(f"Import error in FluxCD provider: {str(e)}")
+    logging.warning(f"Import error in FluxCD provider: {e!s}")
 
     # Define fallback classes
-    client = None  # noqa: F811
-    config = None  # noqa: F811
-    ApiException = Exception  # noqa: F811
-    kube_config = None  # noqa: F811
+    client = None
+    config = None
+    ApiException = Exception
+    kube_config = None
 
     # Mock classes for documentation generation
-    class TopologyServiceInDto:  # noqa: F811
+    class TopologyServiceInDto:
         def __init__(
             self,
             source_provider_id=None,
@@ -53,15 +54,15 @@ except ImportError as e:
             self.repository = repository
             self.dependencies = {}
 
-    class ContextManager:  # noqa: F811
+    class ContextManager:
         def __init__(self, tenant_id=None):
             self.tenant_id = tenant_id
 
-    class BaseTopologyProvider:  # noqa: F811
-        PROVIDER_CATEGORY = []
+    class BaseTopologyProvider:
+        PROVIDER_CATEGORY: ClassVar[list[str]] = []
         PROVIDER_DISPLAY_NAME = ""
-        PROVIDER_TAGS = []
-        PROVIDER_SCOPES = []
+        PROVIDER_TAGS: ClassVar[list[str]] = []
+        PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = []
 
         def __init__(self, context_manager, provider_id, config):
             self.context_manager = context_manager
@@ -69,11 +70,11 @@ except ImportError as e:
             self.config = config
             self.logger = logging.getLogger(__name__)
 
-    class ProviderConfig:  # noqa: F811
+    class ProviderConfig:
         def __init__(self, authentication=None):
             self.authentication = authentication or {}
 
-    class ProviderScope:  # noqa: F811
+    class ProviderScope:
         def __init__(
             self,
             name,
@@ -151,11 +152,11 @@ class FluxcdProviderAuthConfig:
 class FluxcdProvider(BaseTopologyProvider):
     """Get topology and alerts from Flux CD."""
 
-    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure"]
 
     PROVIDER_DISPLAY_NAME = "Flux CD"
 
-    PROVIDER_TAGS = ["topology", "alert"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["topology", "alert"]
 
     PROVIDER_COMING_SOON = False
 
@@ -171,7 +172,7 @@ class FluxcdProvider(BaseTopologyProvider):
         """
         return True
 
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethodDTO]] = [
         ProviderMethodDTO(
             name="Get FluxCD Resources",
             description="Get resources from Flux CD",
@@ -180,7 +181,7 @@ class FluxcdProvider(BaseTopologyProvider):
         )
     ]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authorized",
@@ -191,7 +192,7 @@ class FluxcdProvider(BaseTopologyProvider):
     ]
 
     @staticmethod
-    def simulate_alert() -> Dict[str, Any]:
+    def simulate_alert() -> dict[str, Any]:
         """
         Simulate a Flux CD alert for testing purposes.
 
@@ -258,7 +259,7 @@ class FluxcdProvider(BaseTopologyProvider):
                         f"Minimum recommended version is 24.2.0."
                     )
         except (ImportError, ValueError, AttributeError) as e:
-            self.logger.warning(f"Could not check Kubernetes client version: {str(e)}")
+            self.logger.warning(f"Could not check Kubernetes client version: {e!s}")
 
     def dispose(self) -> None:
         """
@@ -271,7 +272,6 @@ class FluxcdProvider(BaseTopologyProvider):
         """
         self.logger.debug("Disposing FluxCD provider")
         # Nothing to clean up for now
-        pass
 
     def validate_config(self) -> None:
         """
@@ -411,13 +411,13 @@ class FluxcdProvider(BaseTopologyProvider):
                 # NOT that FluxCD is absent. Re-raise so validate_scopes can
                 # surface an actionable RBAC error instead of misleading the user.
                 raise
-            self.logger.warning(f"Flux CD does not appear to be installed: {str(e)}")
+            self.logger.warning(f"Flux CD does not appear to be installed: {e!s}")
             return False
         except Exception as e:
-            self.logger.warning(f"Flux CD does not appear to be installed: {str(e)}")
+            self.logger.warning(f"Flux CD does not appear to be installed: {e!s}")
             return False
 
-    def validate_scopes(self) -> Dict[str, Union[bool, str]]:
+    def validate_scopes(self) -> dict[str, bool | str]:
         """
         Validate the scopes for the FluxCD provider.
 
@@ -498,7 +498,9 @@ class FluxcdProvider(BaseTopologyProvider):
         else:
             raise NotImplementedError(f"Action {action} is not implemented")
 
-    def __trigger_reconcile(self, kind: str, name: str, namespace: str, force: bool = False, **kwargs):
+    def __trigger_reconcile(
+        self, kind: str, name: str, namespace: str, force: bool = False, **kwargs
+    ):
         """
         Trigger a reconciliation for a FluxCD resource by adding an annotation.
         Args:
@@ -507,36 +509,48 @@ class FluxcdProvider(BaseTopologyProvider):
             namespace (str): The namespace of the resource.
             force (bool): Whether to force the reconciliation to run immediately rather than waiting for the next update..
         """
-        self.logger.info(f"Triggering reconciliation for {kind}/{name} in namespace {namespace}")
+        self.logger.info(
+            f"Triggering reconciliation for {kind}/{name} in namespace {namespace}"
+        )
         if self.k8s_client is None:
             raise Exception("Kubernetes client is not available.")
 
         # Mapping from kind to the API group, version, and plural form
         kind_map = {
             "HelmRelease": ("helm.toolkit.fluxcd.io", "v2beta1", "helmreleases"),
-            "Kustomization": ("kustomize.toolkit.fluxcd.io", "v1beta2", "kustomizations"),
+            "Kustomization": (
+                "kustomize.toolkit.fluxcd.io",
+                "v1beta2",
+                "kustomizations",
+            ),
             "GitRepository": ("source.toolkit.fluxcd.io", "v1beta2", "gitrepositories"),
             "OCIRepository": ("source.toolkit.fluxcd.io", "v1beta2", "ocirepositories"),
-            "HelmRepository": ("source.toolkit.fluxcd.io", "v1beta2", "helmrepositories"),
+            "HelmRepository": (
+                "source.toolkit.fluxcd.io",
+                "v1beta2",
+                "helmrepositories",
+            ),
         }
 
         kind_lower = kind.lower()
         kind_map_lower = {k.lower(): v for k, v in kind_map.items()}
         if kind_lower not in kind_map_lower:
-            raise ValueError(f"Unsupported kind: {kind}. Supported kinds are: {list(kind_map.keys())}")
+            raise ValueError(
+                f"Unsupported kind: {kind}. Supported kinds are: {list(kind_map.keys())}"
+            )
 
         group, version, plural = kind_map_lower[kind_lower]
 
         # The annotation to trigger reconciliation
-        now = datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+        now = (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="microseconds")
+            .replace("+00:00", "Z")
+        )
         annotations = {"reconcile.fluxcd.io/requestedAt": now}
         if force:
             annotations["reconcile.fluxcd.io/forceAt"] = now
-        patch = {
-            "metadata": {
-            "annotations": annotations
-            }
-        }
+        patch = {"metadata": {"annotations": annotations}}
 
         try:
             self.k8s_client.patch_namespaced_custom_object(
@@ -548,12 +562,17 @@ class FluxcdProvider(BaseTopologyProvider):
                 body=patch,
             )
             self.logger.info(f"Successfully triggered reconciliation for {kind}/{name}")
-            return {"status": "success", "kind": kind, "name": name, "namespace": namespace}
+            return {
+                "status": "success",
+                "kind": kind,
+                "name": name,
+                "namespace": namespace,
+            }
         except ApiException as e:
             self.logger.error(f"Error triggering reconciliation for {kind}/{name}: {e}")
             raise
 
-    def __list_git_repositories(self) -> Dict[str, Any]:
+    def __list_git_repositories(self) -> dict[str, Any]:
         """
         List GitRepository resources from Flux CD.
 
@@ -723,7 +742,7 @@ class FluxcdProvider(BaseTopologyProvider):
 
     def __get_resource_events(
         self, resource_name: str, resource_kind: str
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         Get events for a specific resource.
 
@@ -755,7 +774,7 @@ class FluxcdProvider(BaseTopologyProvider):
             )
             return []
 
-    def __get_repository_url(self, resource: Dict[str, Any]) -> Optional[str]:
+    def __get_repository_url(self, resource: dict[str, Any]) -> str | None:
         """
         Extract repository URL from a resource.
 
@@ -767,11 +786,11 @@ class FluxcdProvider(BaseTopologyProvider):
         Returns:
             Optional[str]: The repository URL or None if not found
         """
-        if resource["kind"] == "GitRepository":
-            return resource["spec"].get("url")
-        elif resource["kind"] == "HelmRepository":
-            return resource["spec"].get("url")
-        elif resource["kind"] == "OCIRepository":
+        if (
+            resource["kind"] == "GitRepository"
+            or resource["kind"] == "HelmRepository"
+            or resource["kind"] == "OCIRepository"
+        ):
             return resource["spec"].get("url")
         elif resource["kind"] == "Bucket":
             endpoint = resource["spec"].get("endpoint")
@@ -781,8 +800,8 @@ class FluxcdProvider(BaseTopologyProvider):
         return None
 
     def __get_alerts_from_resource(
-        self, resource: Dict[str, Any], resource_kind: str
-    ) -> List[Dict[str, Any]]:
+        self, resource: dict[str, Any], resource_kind: str
+    ) -> list[dict[str, Any]]:
         """
         Get alerts from a resource's status and events.
 
@@ -803,9 +822,7 @@ class FluxcdProvider(BaseTopologyProvider):
         # Check resource status conditions
         conditions = resource.get("status", {}).get("conditions", [])
         for condition in conditions:
-            if (
-                condition.get("status") != "True" and condition.get("type") != "Ready"
-            ):  # noqa: E712
+            if condition.get("status") != "True" and condition.get("type") != "Ready":
                 alert = {
                     "id": f"{uid}-{condition.get('type')}",
                     "name": f"{resource_kind} {name} - {condition.get('type')}",
@@ -855,7 +872,7 @@ class FluxcdProvider(BaseTopologyProvider):
 
         return alerts
 
-    def check_flux_health(self) -> Dict[str, Any]:
+    def check_flux_health(self) -> dict[str, Any]:
         """
         Check the health of Flux CD components.
 
@@ -882,13 +899,13 @@ class FluxcdProvider(BaseTopologyProvider):
             # Create an Apps V1 API client
             try:
                 # Check if client is available (it might be None in tests)
-                if client is None:  # noqa: E711
+                if client is None:
                     raise ImportError("Kubernetes client is not available")
 
                 api_client = client.ApiClient()
                 apps_v1 = client.AppsV1Api(api_client)
             except Exception as api_error:
-                self.logger.warning(f"Failed to create API client: {str(api_error)}")
+                self.logger.warning(f"Failed to create API client: {api_error!s}")
                 # Create a mock AppsV1Api for testing
                 apps_v1 = MagicMock()
 
@@ -937,7 +954,7 @@ class FluxcdProvider(BaseTopologyProvider):
                 "error": f"{error_type}: {error_message}",
             }
 
-    def _get_alerts(self) -> List[Dict[str, Any]]:
+    def _get_alerts(self) -> list[dict[str, Any]]:
         """
         Get alerts from Flux CD resources.
 
@@ -1038,7 +1055,7 @@ class FluxcdProvider(BaseTopologyProvider):
 
         return alerts
 
-    def pull_topology(self) -> Tuple[List[Any], Dict[str, Any]]:
+    def pull_topology(self) -> tuple[list[Any], dict[str, Any]]:
         """
         Pull topology information from Flux CD.
 
@@ -1245,7 +1262,7 @@ class FluxcdProvider(BaseTopologyProvider):
             # Return empty topology to make the provider more robust
             return [], {"error": f"{error_type}: {error_message}"}
 
-    def _query(self, **_) -> Dict[str, Any]:
+    def _query(self, **_) -> dict[str, Any]:
         """
         Query Flux CD resources.
 
@@ -1260,7 +1277,7 @@ class FluxcdProvider(BaseTopologyProvider):
         """
         return self.get_fluxcd_resources()
 
-    def get_fluxcd_resources(self) -> Dict[str, Any]:
+    def get_fluxcd_resources(self) -> dict[str, Any]:
         """
         Get resources from Flux CD.
 

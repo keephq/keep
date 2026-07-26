@@ -4,6 +4,7 @@ import re
 import threading
 import typing
 import uuid
+from typing import ClassVar
 
 import celpy
 
@@ -16,17 +17,17 @@ from keep.api.core.db import (
 from keep.api.core.metrics import workflow_execution_duration
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.api.models.incident import IncidentDto
+from keep.api.utils.cel_utils import preprocess_cel_expression
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
 from keep.providers.providers_factory import ProviderConfigurationException
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowscheduler import WorkflowScheduler, timing_histogram
 from keep.workflowmanager.workflowstore import WorkflowStore
-from keep.api.utils.cel_utils import preprocess_cel_expression
 
 
 class WorkflowManager:
     # List of providers that are not allowed to be used in workflows in multi tenant mode.
-    PREMIUM_PROVIDERS = ["bash", "python", "llamacpp", "ollama"]
+    PREMIUM_PROVIDERS: ClassVar[list[str]] = ["bash", "python", "llamacpp", "ollama"]
     _lock = threading.Lock()
     _instance: typing.Optional["WorkflowManager"] = None
 
@@ -130,7 +131,6 @@ class WorkflowManager:
             },
         )
         for workflow_model in all_workflow_models:
-
             if workflow_model.is_disabled:
                 self.logger.debug(
                     f"Skipping the workflow: id={workflow_model.id}, name={workflow_model.name}, "
@@ -169,7 +169,7 @@ class WorkflowManager:
                         "workflow": workflow,
                         "workflow_id": workflow_model.id,
                         "tenant_id": tenant_id,
-                        "triggered_by": "incident:{}".format(trigger),
+                        "triggered_by": f"incident:{trigger}",
                         "event": incident,
                     }
                 )
@@ -284,7 +284,7 @@ class WorkflowManager:
             )
             raise
 
-    def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
+    def insert_events(self, tenant_id, events: list[AlertDto | IncidentDto]):
         if not events:
             return
 
@@ -315,7 +315,7 @@ class WorkflowManager:
             for workflow_model, workflow in parsed_workflows:
                 for trigger in workflow.workflow_triggers:
                     # If the trigger is not an alert, it's not relevant for this event.
-                    if not trigger.get("type") == "alert":
+                    if trigger.get("type") != "alert":
                         self.logger.debug(
                             "Trigger type is not alert, skipping",
                             extra={
@@ -337,7 +337,6 @@ class WorkflowManager:
                         )
                         should_run = True
                     else:
-
                         # By default, the workflow should not run. Only if the CEL evaluates to true, the workflow will run.
                         should_run = False
 
@@ -508,20 +507,18 @@ class WorkflowManager:
                                     should_run = False
                                     break
                             if should_run and severity_changed:
-                                setattr(event, "severity_changed", True)
-                                setattr(
-                                    event,
-                                    "previous_severity",
-                                    previous_alert.event.get("severity"),
+                                event.severity_changed = True
+                                event.previous_severity = previous_alert.event.get(
+                                    "severity"
                                 )
                                 previous_severity = AlertSeverity(
                                     previous_alert.event.get("severity")
                                 )
                                 current_severity = AlertSeverity(event.severity)
                                 if previous_severity < current_severity:
-                                    setattr(event, "severity_change", "increased")
+                                    event.severity_change = "increased"
                                 else:
-                                    setattr(event, "severity_change", "decreased")
+                                    event.severity_change = "decreased"
 
                     if not should_run:
                         continue
@@ -765,7 +762,7 @@ class WorkflowManager:
             raise
         self.logger.info(f"Workflow {workflow.workflow_id} results saved")
 
-    def _run_workflows_from_cli(self, workflows: typing.List[Workflow]):
+    def _run_workflows_from_cli(self, workflows: list[Workflow]):
         workflows_errors = []
         for workflow in workflows:
             try:

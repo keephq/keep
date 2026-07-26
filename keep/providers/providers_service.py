@@ -3,7 +3,7 @@ import logging
 import os
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -35,20 +35,20 @@ logger = logging.getLogger(__name__)
 
 class ProvidersService:
     @staticmethod
-    def get_all_providers() -> List[ProviderModel]:
+    def get_all_providers() -> list[ProviderModel]:
         return ProvidersFactory.get_all_providers()
 
     @staticmethod
     def get_installed_providers(
         tenant_id: str, include_details: bool = True
-    ) -> List[ProviderModel]:
+    ) -> list[ProviderModel]:
         all_providers = ProvidersService.get_all_providers()
         return ProvidersFactory.get_installed_providers(
             tenant_id, all_providers, include_details
         )
 
     @staticmethod
-    def get_linked_providers(tenant_id: str) -> List[ProviderModel]:
+    def get_linked_providers(tenant_id: str) -> list[ProviderModel]:
         return ProvidersFactory.get_linked_providers(tenant_id)
 
     @staticmethod
@@ -95,9 +95,9 @@ class ProvidersService:
         provider_id: str,
         provider_name: str,
         provider_type: str,
-        provider_config: Dict[str, Any],
+        provider_config: dict[str, Any],
         validate_scopes: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         provider_unique_id = uuid.uuid4().hex
         logger.info(
             "Installing provider",
@@ -137,7 +137,6 @@ class ProvidersService:
             logger.warning("Secret deleted")
         except Exception:
             logger.exception("Failed to delete the secret")
-            pass
 
         return provider
 
@@ -148,11 +147,11 @@ class ProvidersService:
         provider_id: str,
         provider_name: str,
         provider_type: str,
-        provider_config: Dict[str, Any],
+        provider_config: dict[str, Any],
         provisioned: bool = False,
         validate_scopes: bool = True,
         pulling_enabled: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         provider_unique_id = uuid.uuid4().hex
         logger.info(
             "Installing provider",
@@ -227,7 +226,6 @@ class ProvidersService:
                     logger.warning("Secret deleted")
                 except Exception:
                     logger.exception("Failed to delete the secret")
-                    pass
                 raise HTTPException(
                     status_code=409, detail="Provider already installed"
                 )
@@ -250,11 +248,11 @@ class ProvidersService:
     def update_provider(
         tenant_id: str,
         provider_id: str,
-        provider_info: Dict[str, Any],
+        provider_info: dict[str, Any],
         updated_by: str,
-        session: Optional[Session] = None,
+        session: Session | None = None,
         allow_provisioned=False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         with existed_or_new_session(session) as session:
             provider = session.exec(
                 select(Provider).where(
@@ -318,7 +316,7 @@ class ProvidersService:
     def delete_provider(
         tenant_id: str,
         provider_id: str,
-        session: Optional[Session] = None,
+        session: Session | None = None,
         allow_provisioned=False,
     ):
         with existed_or_new_session(session) as session:
@@ -371,7 +369,7 @@ class ProvidersService:
     @staticmethod
     def validate_provider_scopes(
         tenant_id: str, provider_id: str, session: Session
-    ) -> Dict[str, bool | str]:
+    ) -> dict[str, bool | str]:
         provider = session.exec(
             select(Provider).where(
                 (Provider.tenant_id == tenant_id) & (Provider.id == provider_id)
@@ -407,7 +405,7 @@ class ProvidersService:
         tenant_id: str,
         provider_type: str,
         provider_id: str,
-        session: Optional[Session] = None,
+        session: Session | None = None,
     ) -> bool:
         context_manager = ContextManager(
             tenant_id=tenant_id,
@@ -546,9 +544,10 @@ class ProvidersService:
 
             for provider_name, provider_config in env_providers.items():
                 provider_info = provider_config.get("authentication", {})
-                install_webhook_env = os.environ.get(
-                    "KEEP_PROVIDERS_INSTALL_WEBHOOKS", "true"
-                ).lower() == "true"
+                install_webhook_env = (
+                    os.environ.get("KEEP_PROVIDERS_INSTALL_WEBHOOKS", "true").lower()
+                    == "true"
+                )
                 install_webhook = provider_config.get(
                     "install_webhook", install_webhook_env
                 )
@@ -620,9 +619,12 @@ class ProvidersService:
                             provider_type = provider_yaml["type"]
                             provider_config = provider_yaml.get("authentication", {})
 
-                            install_webhook_env = os.environ.get(
-                                "KEEP_PROVIDERS_INSTALL_WEBHOOKS", "false"
-                            ).lower() == "true"
+                            install_webhook_env = (
+                                os.environ.get(
+                                    "KEEP_PROVIDERS_INSTALL_WEBHOOKS", "false"
+                                ).lower()
+                                == "true"
+                            )
                             install_webhook = provider_yaml.get(
                                 "install_webhook", install_webhook_env
                             )
@@ -668,11 +670,16 @@ class ProvidersService:
                                         provider_type=installed_provider["type"],
                                         provider_id=installed_provider["id"],
                                     )
-                                    logger.info(f"Webhook installed for {provider_name}")
+                                    logger.info(
+                                        f"Webhook installed for {provider_name}"
+                                    )
                                 except Exception as e:
                                     logger.error(
                                         "Error installing webhook for provider from directory",
-                                        extra={"provider_name": provider_name, "exception": e},
+                                        extra={
+                                            "provider_name": provider_name,
+                                            "exception": e,
+                                        },
                                     )
                             else:
                                 logger.info(
@@ -732,7 +739,7 @@ class ProvidersService:
     @staticmethod
     def get_provider_logs(
         tenant_id: str, provider_id: str
-    ) -> List[ProviderExecutionLog]:
+    ) -> list[ProviderExecutionLog]:
         if not config("KEEP_STORE_PROVIDER_LOGS", cast=bool, default=False):
             raise HTTPException(404, detail="Provider logs are not enabled")
 

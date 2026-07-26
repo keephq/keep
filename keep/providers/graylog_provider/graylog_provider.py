@@ -8,7 +8,7 @@ import dataclasses
 import math
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import List
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin, urlparse
 
 import pydantic
@@ -69,7 +69,7 @@ class GraylogProviderAuthConfig:
 class GraylogProvider(BaseProvider):
     """Install Webhooks and receive alerts from Graylog."""
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
     webhook_description = ""
     webhook_template = ""
     webhook_markdown = """
@@ -95,7 +95,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
 10. Click `Next` > `Update` event definition
 """
     PROVIDER_DISPLAY_NAME = "Graylog"
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="Mandatory for all operations, ensures the user is authenticated.",
@@ -111,7 +111,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             alias="Rules Reader",
         ),
     ]
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="Search",
             func_name="search",
@@ -130,7 +130,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
         About alerts: https://go2docs.graylog.org/current/interacting_with_your_log_data/alerts.html
         About event definitions: https://go2docs.graylog.org/current/interacting_with_your_log_data/event_definitions.html
     """
-    FINGERPRINT_FIELDS = ["id"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["id"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -143,7 +143,6 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -177,8 +176,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
 
         # Calculate offset based on page and per_page
         offset = page * per_page
-        if offset < 0:
-            offset = 0  # Extra protection against negative offsets
+        offset = max(offset, 0)  # Extra protection against negative offsets
 
         query_id = str(uuid.uuid4())
         search_type_id = str(uuid.uuid4())
@@ -211,7 +209,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
         }
 
         search_response = requests.post(
-            url=self.__get_url(paths=["views", "search","sync"]),
+            url=self.__get_url(paths=["views", "search", "sync"]),
             headers=self._headers,
             auth=self._auth,
             json=search_body,
@@ -232,7 +230,6 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             self.logger.info(f"message[{i}] type: {type(msg)}, content: {msg}")
 
         return messages
-
 
     @property
     def graylog_host(self):
@@ -282,10 +279,14 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
     def _auth(self):
         return self.authentication_config.graylog_access_token, "token"
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for Graylog api requests.
         """
+        if paths is None:
+            paths = []
         host = self.graylog_host.rstrip("/").rstrip() + "/api/"
         self.logger.info(f"Building URL with host: {host}")
         url = urljoin(
@@ -374,7 +375,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             self.logger.error(
                 "Error while fetching URL whitelist", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     def __update_url_whitelist(self, whitelist):
         try:
@@ -393,7 +394,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             self.logger.error(
                 "Error while updating URL whitelist", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     def __get_events(self, page: int, per_page: int):
         self.logger.info(
@@ -419,7 +420,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             self.logger.error(
                 "Error while fetching events", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     def __update_event(self, event):
         try:
@@ -443,7 +444,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 f"Error while updating event with ID: {event['id']}",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __get_notification(self, page: int, per_page: int, notification_name: str):
         try:
@@ -469,7 +470,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 f"Error while fetching notification {notification_name}",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __delete_notification(self, notification_id: str):
         try:
@@ -494,7 +495,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 f"Error while deleting notification with ID {notification_id}",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __create_notification(self, notification_name: str, notification_body):
         try:
@@ -517,7 +518,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 f"Error while creating notification {notification_name}",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __update_notification(self, notification_id: str, notification_body):
         try:
@@ -544,7 +545,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
                 f"Error while updating notification with ID {notification_id}",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
@@ -659,7 +660,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             self.logger.error(
                 "Error while setting up webhook", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     @staticmethod
     def __map_event_to_alert(event: dict) -> AlertDto:
@@ -775,7 +776,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
             self.logger.error(
                 "Error while fetching alerts", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     def _get_alerts(self) -> list[AlertDto]:
         self.logger.info("Getting alerts from Graylog")
@@ -817,11 +818,21 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
         if query:
             return self.search(
                 query=query,
-                query_type=kwargs.get("query_type", events_search_parameters.get("query_type", "elastic")),
-                timerange_seconds=kwargs.get("timerange_seconds", events_search_parameters.get("timerange_seconds", 300)),
-                timerange_type=kwargs.get("timerange_type", events_search_parameters.get("timerange_type", "relative")),
+                query_type=kwargs.get(
+                    "query_type", events_search_parameters.get("query_type", "elastic")
+                ),
+                timerange_seconds=kwargs.get(
+                    "timerange_seconds",
+                    events_search_parameters.get("timerange_seconds", 300),
+                ),
+                timerange_type=kwargs.get(
+                    "timerange_type",
+                    events_search_parameters.get("timerange_type", "relative"),
+                ),
                 page=kwargs.get("page", events_search_parameters.get("page", 0)),
-                per_page=kwargs.get("per_page", events_search_parameters.get("per_page", 150)),
+                per_page=kwargs.get(
+                    "per_page", events_search_parameters.get("per_page", 150)
+                ),
             )
 
         # If no query specified, then run the get_alerts method

@@ -3,7 +3,7 @@ Statuscake is a class that provides a way to read alerts from the Statuscake API
 """
 
 import dataclasses
-from typing import List
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -33,25 +33,25 @@ class StatuscakeProviderAuthConfig:
 
 class StatuscakeProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Statuscake"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
-    PROVIDER_SCOPES = [
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="alerts",
             description="Read alerts from Statuscake",
         )
     ]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "high": AlertSeverity.HIGH,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "Up": AlertStatus.RESOLVED,
         "Down": AlertStatus.FIRING,
     }
 
-    FINGERPRINT_FIELDS = ["test_id"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["test_id"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -61,10 +61,14 @@ class StatuscakeProvider(BaseProvider):
     def dispose(self):
         pass
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for StatucCake api requests.
         """
+        if paths is None:
+            paths = []
         host = "https://api.statuscake.com/v1/"
         url = urljoin(
             host,
@@ -123,7 +127,9 @@ class StatuscakeProvider(BaseProvider):
                 "Content-Type": "application/x-www-form-urlencoded",
             }
 
-    def __get_paginated_data(self, paths: list, query_params: dict = {}):
+    def __get_paginated_data(self, paths: list, query_params: dict | None = None):
+        if query_params is None:
+            query_params = {}
         data = []
         try:
             page = 1
@@ -155,7 +161,7 @@ class StatuscakeProvider(BaseProvider):
             self.logger.error(
                 f"Error while getting {paths}", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     def __update_contact_group(self, contact_group_id, keep_api_url):
         try:
@@ -174,7 +180,7 @@ class StatuscakeProvider(BaseProvider):
             self.logger.error(
                 "Error while updating contact group", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     def __create_contact_group(self, keep_api_url: str, contact_group_name: str):
         try:
@@ -195,7 +201,7 @@ class StatuscakeProvider(BaseProvider):
             self.logger.error(
                 "Error while creating contact group", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
@@ -262,14 +268,13 @@ class StatuscakeProvider(BaseProvider):
                     extra={"response": response.text, "data": data, "paths": paths},
                 )
                 # best effort
-                pass
             else:
                 self.logger.info(
                     "Successfully updated alert", extra={"data": data, "paths": paths}
                 )
         except Exception as e:
             self.logger.error("Error while updating alert", extra={"exception": str(e)})
-            raise e
+            raise
 
     def __get_heartbeat_alerts_dto(self) -> list[AlertDto]:
         self.logger.info("Getting heartbeat alerts from Statuscake")
@@ -340,7 +345,6 @@ class StatuscakeProvider(BaseProvider):
 
         alert_dtos = []
         for alert in response:
-
             if alert.get("status").lower() == "up":
                 status = AlertStatus.RESOLVED
             else:
@@ -447,7 +451,6 @@ class StatuscakeProvider(BaseProvider):
 
 
 if __name__ == "__main__":
-    pass
     import logging
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])

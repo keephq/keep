@@ -2,13 +2,13 @@
 Tests for the FluxCD provider.
 """
 
+import os
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
-import sys
-import os
 
 # Add the parent directory to sys.path to make imports work
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # Mock kubernetes module if it's not installed
 try:
@@ -23,17 +23,17 @@ except ImportError:
     kubernetes.config.kube_config = MagicMock()
 
     # Add the mock to sys.modules
-    sys.modules['kubernetes'] = kubernetes
-    sys.modules['kubernetes.client'] = kubernetes.client
-    sys.modules['kubernetes.config'] = kubernetes.config
-    sys.modules['kubernetes.client.rest'] = kubernetes.client.rest
+    sys.modules["kubernetes"] = kubernetes
+    sys.modules["kubernetes.client"] = kubernetes.client
+    sys.modules["kubernetes.config"] = kubernetes.config
+    sys.modules["kubernetes.client.rest"] = kubernetes.client.rest
 
 # Use relative imports to make testing easier
 try:
     from keep.providers.fluxcd_provider.fluxcd_provider import FluxcdProvider
     from keep.providers.models.provider_config import ProviderConfig
 except ImportError as e:
-    print(f"Import error: {str(e)}")
+    print(f"Import error: {e!s}")
     # For local testing
     try:
         from fluxcd_provider import FluxcdProvider
@@ -41,9 +41,12 @@ except ImportError as e:
         print("Could not import FluxcdProvider directly")
         # Try with a different path
         try:
-            import sys
             import os
-            sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+            import sys
+
+            sys.path.insert(
+                0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+            )
             from keep.providers.fluxcd_provider.fluxcd_provider import FluxcdProvider
             from keep.providers.models.provider_config import ProviderConfig
         except ImportError:
@@ -53,6 +56,7 @@ except ImportError as e:
     try:
         ProviderConfig
     except NameError:
+
         class ProviderConfig:
             def __init__(self, authentication=None):
                 self.authentication = authentication or {}
@@ -113,7 +117,9 @@ class TestFluxcdProvider(unittest.TestCase):
         )
 
         provider.validate_config()
-        self.assertEqual(provider.authentication_config.api_server, "https://kubernetes.example.com")
+        self.assertEqual(
+            provider.authentication_config.api_server, "https://kubernetes.example.com"
+        )
         self.assertEqual(provider.authentication_config.token, "test-token")
 
     def test_list_git_repositories(self):
@@ -233,8 +239,12 @@ class TestFluxcdProvider(unittest.TestCase):
             (s for s in services if s.service == "kustomization-uid"), None
         )
         self.assertIsNotNone(kustomization_service)
-        self.assertEqual(kustomization_service.display_name, "Kustomization/test-kustomization")
-        self.assertEqual(kustomization_service.dependencies.get("git-repo-uid"), "source")
+        self.assertEqual(
+            kustomization_service.display_name, "Kustomization/test-kustomization"
+        )
+        self.assertEqual(
+            kustomization_service.dependencies.get("git-repo-uid"), "source"
+        )
 
     def test_simulate_alert(self):
         """
@@ -320,8 +330,12 @@ class TestFluxcdProvider(unittest.TestCase):
         self.assertIn("kustomizations", resources)
         self.assertEqual(len(resources["git_repositories"]), 1)
         self.assertEqual(len(resources["kustomizations"]), 1)
-        self.assertEqual(resources["git_repositories"][0]["metadata"]["name"], "test-repo")
-        self.assertEqual(resources["kustomizations"][0]["metadata"]["name"], "test-kustomization")
+        self.assertEqual(
+            resources["git_repositories"][0]["metadata"]["name"], "test-repo"
+        )
+        self.assertEqual(
+            resources["kustomizations"][0]["metadata"]["name"], "test-kustomization"
+        )
 
     def test_no_kubernetes_cluster(self):
         """
@@ -350,15 +364,18 @@ class TestFluxcdProvider(unittest.TestCase):
 
         # Test get_fluxcd_resources
         resources = provider.get_fluxcd_resources()
-        self.assertEqual(resources, {
-            "git_repositories": [],
-            "helm_repositories": [],
-            "helm_charts": [],
-            "oci_repositories": [],
-            "buckets": [],
-            "kustomizations": [],
-            "helm_releases": []
-        })
+        self.assertEqual(
+            resources,
+            {
+                "git_repositories": [],
+                "helm_repositories": [],
+                "helm_charts": [],
+                "oci_repositories": [],
+                "buckets": [],
+                "kustomizations": [],
+                "helm_releases": [],
+            },
+        )
 
     def test_flux_not_installed(self):
         """
@@ -381,7 +398,9 @@ class TestFluxcdProvider(unittest.TestCase):
 
         # Test validate_scopes
         scopes = provider.validate_scopes()
-        self.assertEqual(scopes["authenticated"], "Flux CD is not installed in the cluster")
+        self.assertEqual(
+            scopes["authenticated"], "Flux CD is not installed in the cluster"
+        )
 
     def test_check_flux_health(self):
         """
@@ -429,16 +448,18 @@ class TestFluxcdProvider(unittest.TestCase):
             # Mock the AppsV1Api creation
             with patch("kubernetes.client.AppsV1Api", return_value=mock_apps_v1):
                 # Directly set the check_flux_health method to return a known result
-                provider.check_flux_health = MagicMock(return_value={
-                    "healthy": True,
-                    "components": {
-                        "source-controller": {
-                            "healthy": True,
-                            "desired_replicas": 1,
-                            "available_replicas": 1
-                        }
+                provider.check_flux_health = MagicMock(
+                    return_value={
+                        "healthy": True,
+                        "components": {
+                            "source-controller": {
+                                "healthy": True,
+                                "desired_replicas": 1,
+                                "available_replicas": 1,
+                            }
+                        },
                     }
-                })
+                )
 
                 # Test check_flux_health with a healthy deployment
                 health = provider.check_flux_health()
@@ -448,16 +469,18 @@ class TestFluxcdProvider(unittest.TestCase):
 
             # Test check_flux_health with an unhealthy deployment
             # Update the mock to return an unhealthy result
-            provider.check_flux_health = MagicMock(return_value={
-                "healthy": False,
-                "components": {
-                    "source-controller": {
-                        "healthy": False,
-                        "desired_replicas": 1,
-                        "available_replicas": 0
-                    }
+            provider.check_flux_health = MagicMock(
+                return_value={
+                    "healthy": False,
+                    "components": {
+                        "source-controller": {
+                            "healthy": False,
+                            "desired_replicas": 1,
+                            "available_replicas": 0,
+                        }
+                    },
                 }
-            })
+            )
 
             health = provider.check_flux_health()
             self.assertFalse(health["healthy"])

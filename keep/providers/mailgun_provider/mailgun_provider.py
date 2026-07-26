@@ -3,7 +3,7 @@ import datetime
 import logging
 import os
 import re
-import typing
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -46,7 +46,7 @@ class MailgunProviderAuthConfig:
         },
         default="",
     )
-    extraction: typing.Optional[list[dict[str, str]]] = dataclasses.field(
+    extraction: list[dict[str, str]] | None = dataclasses.field(
         default=None,
         metadata={
             "description": "Extraction Rules",
@@ -61,7 +61,7 @@ class MailgunProvider(BaseProvider):
     MAILGUN_API_KEY = os.environ.get("MAILGUN_API_KEY")
     MAILGUN_DOMAIN = os.environ.get("MAILGUN_DOMAIN", "mails.keephq.dev")
     WEBHOOK_INSTALLATION_REQUIRED = True
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -137,7 +137,9 @@ class MailgunProvider(BaseProvider):
                                     parsed_data["timestamp"] = str(dt.timestamp())
                                 except ValueError:
                                     parsed_data["timestamp"] = str(
-                                        datetime.datetime.now().timestamp()
+                                        datetime.datetime.now(
+                                            tz=datetime.UTC
+                                        ).timestamp()
                                     )
                             else:
                                 parsed_data[key.lower()] = value
@@ -175,7 +177,7 @@ class MailgunProvider(BaseProvider):
                 "subject": "Error Processing Alert",
                 "from": "system",
                 "stripped-text": "Error processing the alert content",
-                "timestamp": str(datetime.datetime.now().timestamp()),
+                "timestamp": str(datetime.datetime.now(tz=datetime.UTC).timestamp()),
             }
 
     def setup_webhook(
@@ -186,10 +188,9 @@ class MailgunProvider(BaseProvider):
 
         # Use custom domain from config, env var, or default
         email_domain = (
-            self.authentication_config.email_domain 
-            or MailgunProvider.MAILGUN_DOMAIN
+            self.authentication_config.email_domain or MailgunProvider.MAILGUN_DOMAIN
         )
-        
+
         email = f"{tenant_id}-{self.provider_id}@{email_domain}"
         expression = f'match_recipient("{email}")'
 
@@ -245,10 +246,7 @@ class MailgunProvider(BaseProvider):
         # We receive FormData here, convert it to simple dict.
         logger.info(
             "Received alert from mail",
-            extra={
-                "from": event["from"],
-                "subject": event.get("subject")
-            },
+            extra={"from": event["from"], "subject": event.get("subject")},
         )
         event = dict(event)
 
@@ -258,10 +256,12 @@ class MailgunProvider(BaseProvider):
         message = event.get("stripped-text", body_plain)
         raw_content = event.get("raw_content")
 
-        if isinstance(raw_content, bytes) and b"dmarc" in raw_content.lower():
-            logger.warning("DMARC alert detected, skipping")
-            return None
-        elif isinstance(raw_content, str) and "dmarc" in raw_content.lower():
+        if (
+            isinstance(raw_content, bytes)
+            and b"dmarc" in raw_content.lower()
+            or isinstance(raw_content, str)
+            and "dmarc" in raw_content.lower()
+        ):
             logger.warning("DMARC alert detected, skipping")
             return None
 
@@ -275,7 +275,7 @@ class MailgunProvider(BaseProvider):
                 float(event["timestamp"])
             ).isoformat()
         except Exception:
-            timestamp = datetime.datetime.now().isoformat()
+            timestamp = datetime.datetime.now(tz=datetime.UTC).isoformat()
         # default values
         severity = "info"
         status = "firing"

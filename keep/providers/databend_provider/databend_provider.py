@@ -2,17 +2,19 @@
 DatabendProvider is a class that provides a way to interact with Databend.
 """
 
-import os
 import base64
 import dataclasses
+import os
+from typing import ClassVar
+from urllib.parse import urljoin
 
 import pydantic
 import requests
-from urllib.parse import urljoin
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+
 
 @pydantic.dataclasses.dataclass
 class DatabendProviderAuthConfig:
@@ -26,18 +28,16 @@ class DatabendProviderAuthConfig:
         }
     )
     username: str = dataclasses.field(
-        metadata={
-            "required": True,
-            "description": "Databend username"
-        }
+        metadata={"required": True, "description": "Databend username"}
     )
     password: str = dataclasses.field(
         metadata={
             "required": True,
             "description": "Databend password",
-            "sensitive": True
+            "sensitive": True,
         }
     )
+
 
 class DatabendProvider(BaseProvider):
     """
@@ -45,9 +45,9 @@ class DatabendProvider(BaseProvider):
     """
 
     PROVIDER_DISPLAY_NAME = "Databend"
-    PROVIDER_CATEGORY = ["Database"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Database"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="connect_to_server",
             description="The user can connect to the server",
@@ -57,7 +57,7 @@ class DatabendProvider(BaseProvider):
     ]
 
     def __init__(
-            self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
+        self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
         super().__init__(context_manager, provider_id, config)
         self.client = None
@@ -76,19 +76,21 @@ class DatabendProvider(BaseProvider):
             if response.status_code != 200:
                 response.raise_for_status()
 
-            self.logger.info("Successfully validated scopes", extra={"response": response.json()})
+            self.logger.info(
+                "Successfully validated scopes", extra={"response": response.json()}
+            )
 
             return {"connect_to_server": True}
 
         except Exception as e:
             self.logger.exception("Failed to validate scopes", extra={"error": str(e)})
             return {"connect_to_server": str(e)}
-    
+
     def generate_auth_headers(self):
         """
         Generates authentication headers for Databend.
         """
-        credentials = f"{self.authentication_config.username}:{self.authentication_config.password}".encode("utf-8")
+        credentials = f"{self.authentication_config.username}:{self.authentication_config.password}".encode()
         encoded_credentials = base64.b64encode(credentials).decode("utf-8")
 
         return {
@@ -98,7 +100,7 @@ class DatabendProvider(BaseProvider):
 
     def dispose(self):
         pass
-    
+
     def validate_config(self):
         """
         Validates required configuration fields for Databend provider.
@@ -108,21 +110,22 @@ class DatabendProvider(BaseProvider):
         )
 
     def _query(self, query=""):
-      """
-      Executes a query on Databend.
-      """
-      response = requests.post(
-          urljoin(self.authentication_config.host_url, "/v1/query"),
-          headers=self.generate_auth_headers(),
-          json={"sql": query},
-      )
+        """
+        Executes a query on Databend.
+        """
+        response = requests.post(
+            urljoin(self.authentication_config.host_url, "/v1/query"),
+            headers=self.generate_auth_headers(),
+            json={"sql": query},
+        )
 
-      try:
-          response.raise_for_status()
-          return response.json()
-      except Exception as e:
-          self.logger.exception("Failed to execute query", extra={"error": str(e)})
-          raise Exception("Failed to execute query")
+        try:
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            self.logger.exception("Failed to execute query", extra={"error": str(e)})
+            raise Exception("Failed to execute query")
+
 
 if __name__ == "__main__":
     import logging
@@ -139,7 +142,7 @@ if __name__ == "__main__":
             "host_url": os.environ.get("DATABEND_HOST_URL"),
             "username": os.environ.get("DATABEND_USERNAME"),
             "password": os.environ.get("DATABEND_PASSWORD"),
-        }
+        },
     )
 
     databend_provider = DatabendProvider(context_manager, "databend", config)

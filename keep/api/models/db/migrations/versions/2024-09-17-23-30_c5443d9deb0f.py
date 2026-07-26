@@ -20,8 +20,13 @@ depends_on = None
 def upgrade() -> None:
     with op.batch_alter_table("incident", schema=None) as batch_op:
         batch_op.add_column(
-            sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False, default="firing",
-                      server_default="firing")
+            sa.Column(
+                "status",
+                sqlmodel.sql.sqltypes.AutoString(),
+                nullable=False,
+                default="firing",
+                server_default="firing",
+            )
         )
         batch_op.create_index(
             batch_op.f("ix_incident_status"), ["status"], unique=False

@@ -3,7 +3,7 @@ Site24x7Provider is a class that allows to install webhooks and get alerts in Si
 """
 
 import dataclasses
-from typing import List
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -63,7 +63,7 @@ class Site24X7ProviderAuthConfig:
 class Site24X7Provider(BaseProvider):
     """Install Webhooks and receive alerts from Site24x7."""
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authenticated",
@@ -79,19 +79,20 @@ class Site24X7Provider(BaseProvider):
             alias="Valid TLD",
         ),
     ]
-    PROVIDER_CATEGORY = ["Monitoring"]
-    SEVERITIES_MAP = {
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "DOWN": AlertSeverity.WARNING,
         "TROUBLE": AlertSeverity.HIGH,
         "UP": AlertSeverity.INFO,
         "CRITICAL": AlertSeverity.CRITICAL,
     }
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "DOWN": AlertStatus.FIRING,
         "TROUBLE": AlertStatus.FIRING,
         "CRITICAL": AlertStatus.FIRING,
         "UP": AlertStatus.RESOLVED,
     }
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -101,7 +102,6 @@ class Site24X7Provider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -111,7 +111,9 @@ class Site24X7Provider(BaseProvider):
             **self.config.authentication
         )
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for Site24x7 api requests.
 
@@ -124,6 +126,8 @@ class Site24X7Provider(BaseProvider):
         # url = https://site24x7.com/api/2/issue/createmeta?projectKeys=key1
         """
 
+        if paths is None:
+            paths = []
         url = urljoin(
             f"https://www.site24x7{self.authentication_config.zohoAccountTLD}/api/",
             "/".join(str(path) for path in paths),
@@ -150,12 +154,12 @@ class Site24X7Provider(BaseProvider):
             data=data,
         ).json()
         return {
-            "Authorization": f'Bearer {response["access_token"]}',
+            "Authorization": f"Bearer {response['access_token']}",
         }
 
     def validate_scopes(self) -> dict[str, bool | str]:
         response = requests.get(
-            f'{self.__get_url(paths=["monitors"])}', headers=self.__get_headers()
+            f"{self.__get_url(paths=['monitors'])}", headers=self.__get_headers()
         )
         if response.status_code == 401:
             authentication_scope = response.json()
@@ -174,10 +178,7 @@ class Site24X7Provider(BaseProvider):
                 "Error while authenticating user",
                 extra={"status_code": response.status_code},
             )
-        return {
-            "authenticated": authentication_scope,
-            "valid_tld": True
-        }
+        return {"authenticated": authentication_scope, "valid_tld": True}
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
@@ -246,7 +247,9 @@ class Site24X7Provider(BaseProvider):
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         status_raw = event.get("STATUS", "DOWN")
-        severity = Site24X7Provider.SEVERITIES_MAP.get(status_raw, AlertSeverity.WARNING)
+        severity = Site24X7Provider.SEVERITIES_MAP.get(
+            status_raw, AlertSeverity.WARNING
+        )
         status = Site24X7Provider.STATUS_MAP.get(status_raw, AlertStatus.FIRING)
 
         # Extract tags and labels from webhook payload

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import ClassVar
 
 from pydantic import BaseModel, SecretStr, validator
 
@@ -7,11 +7,11 @@ class SMTPSettings(BaseModel):
     host: str
     port: int
     from_email: str
-    username: Optional[str] = None
-    password: Optional[SecretStr] = None
+    username: str | None = None
+    password: SecretStr | None = None
     secure: bool = True
     # Only for testing
-    to_email: Optional[str] = "keep@example.com"
+    to_email: str | None = "keep@example.com"
 
     @validator("from_email", "to_email")
     def email_validator(cls, v):
@@ -20,7 +20,7 @@ class SMTPSettings(BaseModel):
         return v
 
     class Config:
-        schema_extra = {
+        schema_extra: ClassVar[dict[str, str]] = {
             "example": {
                 "host": "smtp.example.com",
                 "port": 587,

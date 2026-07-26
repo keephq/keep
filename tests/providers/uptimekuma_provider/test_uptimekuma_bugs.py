@@ -6,7 +6,8 @@ Bug 2: _format_datetime TypeError → string + int or datetime + string
 Bug 3: _format_alert KeyError → non-existent fields accessed without .get()
 Bug 4: Connection not closed on exception → missing try/finally
 """
-from datetime import datetime, timezone, timedelta
+
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -143,9 +144,39 @@ class TestGetHeartbeats:
 
         mock_api = MagicMock()
         mock_api.get_heartbeats.return_value = {
-            "monitor_1": [{"id": 10, "monitor_id": 1, "status": 1, "msg": "OK", "localDateTime": "2022-01-01 00:00:00", "timezoneOffset": 0, "ping": 5}],
-            "monitor_2": [{"id": 20, "monitor_id": 2, "status": 0, "msg": "Down", "localDateTime": "2022-01-01 00:00:00", "timezoneOffset": 0, "ping": None}],
-            "monitor_3": [{"id": 30, "monitor_id": 3, "status": 1, "msg": "OK", "localDateTime": "2022-01-01 00:00:00", "timezoneOffset": 0, "ping": 10}],
+            "monitor_1": [
+                {
+                    "id": 10,
+                    "monitor_id": 1,
+                    "status": 1,
+                    "msg": "OK",
+                    "localDateTime": "2022-01-01 00:00:00",
+                    "timezoneOffset": 0,
+                    "ping": 5,
+                }
+            ],
+            "monitor_2": [
+                {
+                    "id": 20,
+                    "monitor_id": 2,
+                    "status": 0,
+                    "msg": "Down",
+                    "localDateTime": "2022-01-01 00:00:00",
+                    "timezoneOffset": 0,
+                    "ping": None,
+                }
+            ],
+            "monitor_3": [
+                {
+                    "id": 30,
+                    "monitor_id": 3,
+                    "status": 1,
+                    "msg": "OK",
+                    "localDateTime": "2022-01-01 00:00:00",
+                    "timezoneOffset": 0,
+                    "ping": 10,
+                }
+            ],
         }
         mock_api.get_monitor.side_effect = lambda mid: {"name": f"Monitor {mid}"}
 
@@ -163,7 +194,17 @@ class TestGetHeartbeats:
 
         mock_api = MagicMock()
         mock_api.get_heartbeats.return_value = {
-            "monitor_1": [{"id": 1, "monitor_id": 1, "status": 1, "msg": "OK", "localDateTime": "2022-01-01 00:00:00", "timezoneOffset": 0, "ping": 5}],
+            "monitor_1": [
+                {
+                    "id": 1,
+                    "monitor_id": 1,
+                    "status": 1,
+                    "msg": "OK",
+                    "localDateTime": "2022-01-01 00:00:00",
+                    "timezoneOffset": 0,
+                    "ping": 5,
+                }
+            ],
         }
         mock_api.get_monitor.return_value = {"name": "Monitor 1"}
 

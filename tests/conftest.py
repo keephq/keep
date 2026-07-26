@@ -12,16 +12,15 @@ import mysql.connector
 import pytest
 import requests
 from dotenv import find_dotenv, load_dotenv
+from playwright.sync_api import Page
 from pytest_docker.plugin import get_docker_services
 from sqlalchemy import event, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 from starlette_context import context, request_cycle_context
-from playwright.sync_api import Page
 
 # This import is required to create the tables
-from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.alert import AlertStatus
@@ -36,12 +35,11 @@ from keep.api.tasks.process_event_task import process_event
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.contextmanager.contextmanager import ContextManager
 
-original_request = requests.Session.request  # noqa
+original_request = requests.Session.request
 load_dotenv(find_dotenv())
 
 
 class PusherMock:
-
     def __init__(self):
         self.triggers = []
 
@@ -50,7 +48,6 @@ class PusherMock:
 
 
 class WorkflowManagerMock:
-
     def __init__(self):
         self.events = []
 
@@ -62,7 +59,6 @@ class WorkflowManagerMock:
 
 
 class ElasticClientMock:
-
     def __init__(self):
         self.alerts = []
         self.tenant_id = None
@@ -171,7 +167,6 @@ def is_mysql_responsive(host, port, user, password, database):
 
     except Exception:
         print("Mysql still not up")
-        pass
 
     return False
 
@@ -363,7 +358,6 @@ def is_keycloak_responsive(host, port, user, password):
         import time
 
         print(f"Keycloak still not up [{e}] [{time.time()}]")
-        pass
 
     return False
 
@@ -402,10 +396,9 @@ def is_elastic_responsive(host, port, user, password):
         )
         info = elastic_client._client.info()
         print("Elastic still up now")
-        return True if info else False
+        return bool(info)
     except Exception:
         print("Elastic still not up")
-        pass
 
     return False
 
@@ -651,12 +644,8 @@ def setup_stress_alerts_no_elastic(db_session):
     def _setup_stress_alerts_no_elastic(num_alerts):
         alert_details = [
             {
-                "source": [
-                    "source_{}".format(i % 10)
-                ],  # Cycle through 10 different sources
-                "service": "service_{}".format(
-                    i % 10
-                ),  # Random of 10 different services
+                "source": [f"source_{i % 10}"],  # Cycle through 10 different sources
+                "service": f"service_{i % 10}",  # Random of 10 different services
                 "severity": random.choice(
                     ["info", "warning", "critical"]
                 ),  # Alternate between 'critical' and 'warning'
@@ -672,11 +661,9 @@ def setup_stress_alerts_no_elastic(db_session):
                     timestamp=random_timestamp,
                     tenant_id=SINGLE_TENANT_UUID,
                     provider_type=detail["source"][0],
-                    provider_id="test_{}".format(
-                        i % 5
-                    ),  # Cycle through 5 different provider_ids
+                    provider_id=f"test_{i % 5}",  # Cycle through 5 different provider_ids
                     event=_create_valid_event(detail, lastReceived=random_timestamp),
-                    fingerprint="fingerprint_{}".format(i),
+                    fingerprint=f"fingerprint_{i}",
                 )
             )
         db_session.add_all(alerts)
@@ -733,7 +720,7 @@ def create_alert(db_session):
         if fingerprint and "fingerprint" not in details:
             details["fingerprint"] = fingerprint
 
-        random_name = "test-{}".format(fingerprint)
+        random_name = f"test-{fingerprint}"
         process_event(
             ctx={"job_try": 1},
             trace_id="test",
@@ -758,6 +745,7 @@ def create_alert(db_session):
 
     return _create_alert
 
+
 @pytest.fixture
 def create_window_maintenance_active(db_session):
     def _create_window_maintenance_active(
@@ -780,14 +768,17 @@ def create_window_maintenance_active(db_session):
             cel_query=cel,
             enabled=True,
             suppress=True,
-            ignore_statuses=[AlertStatus.RESOLVED.value, AlertStatus.ACKNOWLEDGED.value],
-
+            ignore_statuses=[
+                AlertStatus.RESOLVED.value,
+                AlertStatus.ACKNOWLEDGED.value,
+            ],
         )
         db_session.add(window)
         db_session.commit()
         return window
 
     return _create_window_maintenance_active
+
 
 @pytest.fixture
 def finalize_window_maintenance(db_session):
@@ -807,6 +798,7 @@ def finalize_window_maintenance(db_session):
         db_session.refresh(rule)
 
     return _finalize_window_maintenance
+
 
 def pytest_addoption(parser):
     """
@@ -860,15 +852,15 @@ def pytest_runtest_setup(item):
 def pytest_collection_modifyitems(items):
     for item in items:
         fixturenames = getattr(item, "fixturenames", ())
-        if "elastic_client" in fixturenames:
-            item.add_marker("integration")
-        elif "keycloak_client" in fixturenames:
-            item.add_marker("integration")
-        elif (
-            hasattr(item, "callspec")
-            and "db_session" in item.callspec.params
-            and item.callspec.params["db_session"]
-            and "db" in item.callspec.params["db_session"]
+        if (
+            "elastic_client" in fixturenames
+            or "keycloak_client" in fixturenames
+            or (
+                hasattr(item, "callspec")
+                and "db_session" in item.callspec.params
+                and item.callspec.params["db_session"]
+                and "db" in item.callspec.params["db_session"]
+            )
         ):
             item.add_marker("integration")
 
@@ -886,39 +878,31 @@ def setup_page_logging(browser, console_logs):
     # Console logging
     browser.on(
         "console",
-        lambda msg: (
-            console_logs.append(
-                f"{datetime.now()}: {msg.text}, location: {msg.location}"
-            )
+        lambda msg: console_logs.append(
+            f"{datetime.now()}: {msg.text}, location: {msg.location}"
         ),
     )
 
     # Request logging
     browser.on(
         "request",
-        lambda request: (
-            console_logs.append(
-                f"{datetime.now()}: REQUEST: {request.method} {request.url}"
-            )
+        lambda request: console_logs.append(
+            f"{datetime.now()}: REQUEST: {request.method} {request.url}"
         ),
     )
 
     # Response logging
     browser.on(
         "response",
-        lambda response: (
-            console_logs.append(
-                f"{datetime.now()}: RESPONSE: {response.status} {response.url}"
-            )
+        lambda response: console_logs.append(
+            f"{datetime.now()}: RESPONSE: {response.status} {response.url}"
         ),
     )
 
     browser.on(
         "requestfailed",
-        lambda request: (
-            console_logs.append(
-                f"{datetime.now()}: REQUEST FAILED: {request.method} {request.url}"
-            )
+        lambda request: console_logs.append(
+            f"{datetime.now()}: REQUEST FAILED: {request.method} {request.url}"
         ),
     )
 
@@ -948,7 +932,7 @@ def failure_artifacts(browser, console_logs, request):
             browser.screenshot(path=test_name + ".png")
             artifacts_saved.append("screenshot")
         except Exception as e:
-            artifacts_failed.append(f"screenshot: {str(e)}")
+            artifacts_failed.append(f"screenshot: {e!s}")
 
         # Try to save HTML content
         try:
@@ -956,7 +940,7 @@ def failure_artifacts(browser, console_logs, request):
                 f.write(browser.content())
             artifacts_saved.append("html")
         except Exception as e:
-            artifacts_failed.append(f"html: {str(e)}")
+            artifacts_failed.append(f"html: {e!s}")
 
         # Try to save console logs
         try:
@@ -969,7 +953,7 @@ def failure_artifacts(browser, console_logs, request):
             else:
                 artifacts_failed.append("console logs: No logs were captured")
         except Exception as e:
-            artifacts_failed.append(f"console logs: {str(e)}")
+            artifacts_failed.append(f"console logs: {e!s}")
 
         # Try to save cookies
         try:
@@ -982,7 +966,7 @@ def failure_artifacts(browser, console_logs, request):
             else:
                 artifacts_failed.append("cookies: No cookies were present")
         except Exception as e:
-            artifacts_failed.append(f"cookies: {str(e)}")
+            artifacts_failed.append(f"cookies: {e!s}")
 
         # Log summary of what was saved and what failed
         print(f"\nFailure artifacts for {test_name}:")

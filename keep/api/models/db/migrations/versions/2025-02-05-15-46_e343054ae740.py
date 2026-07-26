@@ -16,6 +16,7 @@ down_revision = "d359baaf0836"
 branch_labels = None
 depends_on = None
 
+
 def populate_db():
     session = Session(op.get_bind())
 
@@ -24,21 +25,25 @@ def populate_db():
             UPDATE rule
             SET resolve_on = 'all_resolved'
             WHERE resolve_on = 'all'
-        """))
+        """)
+    )
 
     session.execute(
         text("""
             UPDATE rule
             SET resolve_on = 'first_resolved'
             WHERE resolve_on = 'first'
-        """))
+        """)
+    )
 
     session.execute(
         text("""
             UPDATE rule
             SET resolve_on = 'last_resolved'
             WHERE resolve_on = 'last'
-        """))
+        """)
+    )
+
 
 def upgrade() -> None:
     populate_db()

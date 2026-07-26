@@ -782,9 +782,9 @@ def test_make_sure_two_different_workflows_have_different_fingerprints(
     assert len(result1) == 3
     assert len(result2) == 3
 
-    assert set([alert.fingerprint for alert in result1]) != set(
-        [alert.fingerprint for alert in result2]
-    )
+    assert {alert.fingerprint for alert in result1} != {
+        alert.fingerprint for alert in result2
+    }
 
 
 def test_state_alerts_staggered_resolution(db_session):
@@ -893,11 +893,11 @@ def test_state_alerts_flapping(db_session):
         # now let's advance time by 30 seconds (still pending)
         frozen_time.tick(delta=timedelta(seconds=30))
         # and remove 1 alert
-        removed_alert = [
+        removed_alert = next(
             alert
             for alert in context1["steps"]["this"]["results"]
             if alert["metric"]["job"] == "vmagentflapping"
-        ][0]
+        )
         context1["steps"]["this"]["results"] = [
             alert
             for alert in context1["steps"]["this"]["results"]
@@ -1001,9 +1001,9 @@ def test_check_if_rule_apply_int_str_type_coercion(db_session):
     alert1 = AlertDto(id="a1", name="test", field=2, fingerprint="fp1", source=["test"])
     matched_rules1 = engine._check_if_rule_apply(rule, alert1)
     print(f"Case 1 - field=2, CEL='field == \"2\"': matched_rules={matched_rules1}")
-    assert (
-        len(matched_rules1) == 1
-    ), "Rule with 'field == \"2\"' should match alert with field=2"
+    assert len(matched_rules1) == 1, (
+        "Rule with 'field == \"2\"' should match alert with field=2"
+    )
 
     # Case 2: field is string ("2"), CEL checks for int (2) - should match
     rule2 = Rule(
@@ -1025,9 +1025,9 @@ def test_check_if_rule_apply_int_str_type_coercion(db_session):
     )
     matched_rules2 = engine._check_if_rule_apply(rule2, alert2)
     print(f"Case 2 - field='2', CEL='field == 2': matched_rules={matched_rules2}")
-    assert (
-        len(matched_rules2) == 1
-    ), "Rule with 'field == 2' should match alert with field='2'"
+    assert len(matched_rules2) == 1, (
+        "Rule with 'field == 2' should match alert with field='2'"
+    )
 
     # Case 3: field is int (2), CEL checks for int (2) - should match
     rule3 = Rule(
@@ -1047,9 +1047,9 @@ def test_check_if_rule_apply_int_str_type_coercion(db_session):
     alert3 = AlertDto(id="a3", name="test", field=2, fingerprint="fp3", source=["test"])
     matched_rules3 = engine._check_if_rule_apply(rule3, alert3)
     print(f"Case 3 - field=2, CEL='field == 2': matched_rules={matched_rules3}")
-    assert (
-        len(matched_rules3) == 1
-    ), "Rule with 'field == 2' should match alert with field=2"
+    assert len(matched_rules3) == 1, (
+        "Rule with 'field == 2' should match alert with field=2"
+    )
 
     # Case 4: field is string ("2"), CEL checks for string ("2") - should match
     rule4 = Rule(
@@ -1071,6 +1071,6 @@ def test_check_if_rule_apply_int_str_type_coercion(db_session):
     )
     matched_rules4 = engine._check_if_rule_apply(rule4, alert4)
     print(f"Case 4 - field='2', CEL='field == \"2\"': matched_rules={matched_rules4}")
-    assert (
-        len(matched_rules4) == 1
-    ), "Rule with 'field == \"2\"' should match alert with field='2'"
+    assert len(matched_rules4) == 1, (
+        "Rule with 'field == \"2\"' should match alert with field='2'"
+    )

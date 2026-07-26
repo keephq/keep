@@ -4,7 +4,6 @@ import os
 import pathlib
 import sys
 from datetime import datetime, timezone
-from typing import List, Optional
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -42,7 +41,7 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.workflowmanager.workflowmanager import WorkflowManager
 
 MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION = int(
-    os.environ.get("MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION", 5)
+    os.environ.get("MIN_INCIDENT_ALERTS_FOR_SUMMARY_GENERATION", "5")
 )
 
 ee_enabled = os.environ.get("EE_ENABLED", "false") == "true"
@@ -56,13 +55,12 @@ else:
 
 
 class IncidentBl:
-
     def __init__(
         self,
         tenant_id: str,
         session: Session,
-        pusher_client: Optional[Pusher] = None,
-        user: str = None,
+        pusher_client: Pusher | None = None,
+        user: str | None = None,
     ):
         self.tenant_id = tenant_id
         self.user = user
@@ -127,7 +125,7 @@ class IncidentBl:
     async def add_alerts_to_incident(
         self,
         incident_id: UUID,
-        alert_fingerprints: List[str],
+        alert_fingerprints: list[str],
         is_created_by_ai: bool = False,
         override_count: bool = False,
     ) -> None:
@@ -169,7 +167,7 @@ class IncidentBl:
             },
         )
 
-    def __update_elastic(self, alert_fingerprints: List[str]):
+    def __update_elastic(self, alert_fingerprints: list[str]):
         try:
             elastic_client = ElasticClient(self.tenant_id)
             if elastic_client.enabled:
@@ -189,7 +187,7 @@ class IncidentBl:
             self.logger.exception("Failed to push alert to elasticsearch")
             raise
 
-    def update_client_on_incident_change(self, incident_id: Optional[UUID] = None):
+    def update_client_on_incident_change(self, incident_id: UUID | None = None):
         if self.pusher_client is not None:
             self.logger.info(
                 "Pushing incident change to client",
@@ -252,7 +250,7 @@ class IncidentBl:
             )
 
     def delete_alerts_from_incident(
-        self, incident_id: UUID, alert_fingerprints: List[str]
+        self, incident_id: UUID, alert_fingerprints: list[str]
     ) -> None:
         self.logger.info(
             "Fetching incident",
@@ -294,7 +292,7 @@ class IncidentBl:
         self.update_client_on_incident_change()
         self.send_workflow_event(incident_dto, "deleted")
 
-    def bulk_delete_incidents(self, incident_ids: List[UUID]) -> None:
+    def bulk_delete_incidents(self, incident_ids: list[UUID]) -> None:
         for incident_id in incident_ids:
             self.delete_incident(incident_id)
 
@@ -348,7 +346,7 @@ class IncidentBl:
         self,
         incident_id: UUID,
         severity: IncidentSeverity,
-        comment: Optional[str] = None,
+        comment: str | None = None,
     ) -> IncidentDto:
         self.logger.info(
             "Fetching incident",
@@ -397,15 +395,15 @@ class IncidentBl:
         tenant_id: str,
         limit: int = 25,
         offset: int = 0,
-        timeframe: int = None,
-        upper_timestamp: datetime = None,
-        lower_timestamp: datetime = None,
+        timeframe: int | None = None,
+        upper_timestamp: datetime | None = None,
+        lower_timestamp: datetime | None = None,
         is_candidate: bool = False,
-        sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
+        sorting: IncidentSorting | None = IncidentSorting.creation_time,
         with_alerts: bool = False,
-        is_predicted: bool = None,
-        cel: str = None,
-        allowed_incident_ids: Optional[List[str]] = None,
+        is_predicted: bool | None = None,
+        cel: str | None = None,
+        allowed_incident_ids: list[str] | None = None,
     ):
         incidents, total_count = get_last_incidents_by_cel(
             tenant_id=tenant_id,
@@ -435,20 +433,17 @@ class IncidentBl:
 
         should_resolve = False
 
-        if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
-            incident=incident, session=self.session
-        ):
-            should_resolve = True
-
-        elif (
-            incident.resolve_on == ResolveOn.FIRST.value
-            and is_first_incident_alert_resolved(incident, session=self.session)
-        ):
-            should_resolve = True
-
-        elif (
-            incident.resolve_on == ResolveOn.LAST.value
-            and is_last_incident_alert_resolved(incident, session=self.session)
+        if (
+            incident.resolve_on == ResolveOn.ALL.value
+            and is_all_alerts_resolved(incident=incident, session=self.session)
+            or (
+                incident.resolve_on == ResolveOn.FIRST.value
+                and is_first_incident_alert_resolved(incident, session=self.session)
+            )
+            or (
+                incident.resolve_on == ResolveOn.LAST.value
+                and is_last_incident_alert_resolved(incident, session=self.session)
+            )
         ):
             should_resolve = True
 
@@ -508,8 +503,8 @@ class IncidentBl:
             (
                 action_type,
                 action_description,
-                should_run_workflow,
-                should_check_incidents_resolution,
+                _should_run_workflow,
+                _should_check_incidents_resolution,
             ) = enrichments_bl.get_enrichment_metadata(enrichments, change_by)
             enrichments_bl.batch_enrich(
                 fingerprints,

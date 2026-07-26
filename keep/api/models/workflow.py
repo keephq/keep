@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, validator
 
@@ -24,22 +24,22 @@ class ProviderDTO(BaseModel):
 
 class WorkflowDTO(BaseModel):
     id: str
-    name: Optional[str] = "Workflow file doesn't contain name"
-    description: Optional[str] = "Workflow file doesn't contain description"
+    name: str | None = "Workflow file doesn't contain name"
+    description: str | None = "Workflow file doesn't contain description"
     created_by: str
     creation_time: datetime
-    triggers: List[dict] = None
+    triggers: list[dict] = None
     interval: int | None = None
     disabled: bool = False
     last_execution_time: datetime = None
     last_execution_status: str = None
-    providers: List[ProviderDTO]
+    providers: list[ProviderDTO]
     workflow_raw: str
     revision: int = 1
     last_updated: datetime = None
     last_updated_by: str = None
     invalid: bool = False  # whether the workflow is invalid or not (for UI purposes)
-    last_executions: List[dict] = None
+    last_executions: list[dict] = None
     last_execution_started: datetime = None
     provisioned: bool = False
     provisioned_file: str = None
@@ -96,7 +96,7 @@ class WorkflowExecutionLogsDTO(BaseModel):
     id: int
     timestamp: datetime
     message: str
-    context: Optional[dict]
+    context: dict | None
 
 
 class WorkflowToAlertExecutionDTO(BaseModel):
@@ -115,13 +115,13 @@ class WorkflowExecutionDTO(BaseModel):
     started: datetime
     triggered_by: str
     status: str
-    workflow_name: Optional[str]  # for UI purposes
-    logs: Optional[List[WorkflowExecutionLogsDTO]]
-    error: Optional[str]
-    execution_time: Optional[float]
-    results: Optional[dict]
-    event_id: Optional[str]
-    event_type: Optional[str]
+    workflow_name: str | None  # for UI purposes
+    logs: list[WorkflowExecutionLogsDTO] | None
+    error: str | None
+    execution_time: float | None
+    results: dict | None
+    event_id: str | None
+    event_type: str | None
 
 
 class WorkflowCreateOrUpdateDTO(BaseModel):
@@ -145,12 +145,12 @@ class WorkflowVersionDTO(BaseModel):
 
 
 class WorkflowVersionListDTO(BaseModel):
-    versions: List[WorkflowVersionDTO]
+    versions: list[WorkflowVersionDTO]
 
 
 class PreparsedWorkflowDTO(BaseModel):
     id: str
     name: str
-    description: Optional[str] = "Workflow file doesn't contain description"
+    description: str | None = "Workflow file doesn't contain description"
     interval: int | None = None
     disabled: bool = False

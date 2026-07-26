@@ -16,15 +16,23 @@ branch_labels = None
 depends_on = None
 
 
-
 def upgrade() -> None:
     with op.batch_alter_table("incident", schema=None) as batch_op:
-        batch_op.add_column(sa.Column("is_candidate", sa.Boolean(), server_default=sa.false(), nullable=False))
-        batch_op.add_column(sa.Column("is_visible", sa.Boolean(), server_default=sa.true(), nullable=False))
+        batch_op.add_column(
+            sa.Column(
+                "is_candidate", sa.Boolean(), server_default=sa.false(), nullable=False
+            )
+        )
+        batch_op.add_column(
+            sa.Column(
+                "is_visible", sa.Boolean(), server_default=sa.true(), nullable=False
+            )
+        )
 
     with op.batch_alter_table("incident", schema=None) as batch_op:
         batch_op.execute("""UPDATE incident SET is_candidate = not is_confirmed""")
         batch_op.drop_column("is_confirmed")
+
 
 def downgrade() -> None:
 

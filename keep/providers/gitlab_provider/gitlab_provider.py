@@ -4,6 +4,7 @@ GitlabProvider is a class that implements the BaseProvider interface for GitLab 
 
 import dataclasses
 import urllib.parse
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -24,7 +25,7 @@ class GitlabProviderAuthConfig:
             "description": "GitLab Host",
             "sensitive": False,
             "hint": "http://example.gitlab.com",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         }
     )
 
@@ -41,7 +42,7 @@ class GitlabProviderAuthConfig:
 class GitlabProvider(BaseProvider):
     """Enrich alerts with GitLab tickets."""
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="api",
             description="Authenticated with api scope",
@@ -49,9 +50,9 @@ class GitlabProvider(BaseProvider):
             alias="GitLab PAT with api scope",
         ),
     ]
-    PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["ticketing"]
     PROVIDER_DISPLAY_NAME = "GitLab"
-    PROVIDER_CATEGORY = ["Developer Tools"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Developer Tools"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -123,7 +124,6 @@ class GitlabProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def __get_auth_header(self):
         """
@@ -135,7 +135,7 @@ class GitlabProvider(BaseProvider):
 
     # @staticmethod
     def __build_params_from_kwargs(self, kwargs: dict):
-        params = dict()
+        params = {}
         for param in kwargs:
             if isinstance(kwargs[param], list):
                 params[param] = ",".join(kwargs[param])
@@ -172,7 +172,7 @@ class GitlabProvider(BaseProvider):
         try:
             resp.raise_for_status()
         except HTTPError as e:
-            raise Exception(f"Failed to create issue: {str(e)}")
+            raise Exception(f"Failed to create issue: {e!s}")
         return resp.json()
 
 

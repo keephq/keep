@@ -2,6 +2,8 @@
 Netdata is a cloud-based monitoring tool that provides real-time monitoring of servers, applications, and devices.
 """
 
+from typing import ClassVar
+
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -30,20 +32,20 @@ To send alerts from Netdata to Keep, Use the following webhook url to configure 
 12. Save the configuration.
 """
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "warning": AlertSeverity.WARNING,
         "info": AlertSeverity.INFO,
         "critical": AlertSeverity.CRITICAL,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "reachable": AlertStatus.RESOLVED,
         "unreachable": AlertStatus.FIRING,
     }
 
     PROVIDER_DISPLAY_NAME = "Netdata"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -55,15 +57,14 @@ To send alerts from Netdata to Keep, Use the following webhook url to configure 
         Validates required configuration for Prometheus's provider.
         """
         # no config
-        pass
 
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         alert = AlertDto(
-            id=event["id"] if "id" in event else None,
-            name=event["name"] if "name" in event else None,
+            id=event.get("id", None),
+            name=event.get("name", None),
             host=event["host"],
             message=event["message"],
             severity=NetdataProvider.SEVERITIES_MAP.get(
@@ -76,26 +77,22 @@ To send alerts from Netdata to Keep, Use the following webhook url to configure 
                 if "status" in event
                 else AlertStatus.FIRING
             ),
-            alert=event["alert"] if "alert" in event else None,
+            alert=event.get("alert", None),
             url=(
                 event["alert_url"] or event["url"]
                 if "alert_url" in event or "url" in event
                 else None
             ),
-            chart=event["chart"] if "chart" in event else None,
-            alert_class=event["class"] if "class" in event else None,
-            context=event["context"] if "context" in event else None,
-            lastReceived=event["date"] if "date" in event else None,
-            duration=event["duration"] if "duration" in event else None,
-            info=event["info"] if "info" in event else None,
-            space=event["space"] if "space" in event else None,
-            total_critical=(
-                event["total_critical"] if "total_critical" in event else None
-            ),
-            total_warnings=(
-                event["total_warnings"] if "total_warnings" in event else None
-            ),
-            value=event["value"] if "value" in event else None,
+            chart=event.get("chart", None),
+            alert_class=event.get("class", None),
+            context=event.get("context", None),
+            lastReceived=event.get("date", None),
+            duration=event.get("duration", None),
+            info=event.get("info", None),
+            space=event.get("space", None),
+            total_critical=(event.get("total_critical", None)),
+            total_warnings=(event.get("total_warnings", None)),
+            value=event.get("value", None),
         )
 
         return alert

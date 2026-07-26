@@ -1,10 +1,9 @@
 import json
 import logging
-from typing import List, Optional
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import and_, or_, exists
+from sqlalchemy import and_, exists, or_
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, select
 
@@ -15,13 +14,13 @@ from keep.api.models.db.topology import (
     TopologyApplicationDtoOut,
     TopologyService,
     TopologyServiceApplication,
-    TopologyServiceDependency,
-    TopologyServiceDtoOut,
     TopologyServiceCreateRequestDTO,
-    TopologyServiceUpdateRequestDTO,
+    TopologyServiceDependency,
     TopologyServiceDependencyCreateRequestDto,
-    TopologyServiceDependencyUpdateRequestDto,
     TopologyServiceDependencyDto,
+    TopologyServiceDependencyUpdateRequestDto,
+    TopologyServiceDtoOut,
+    TopologyServiceUpdateRequestDTO,
     TopologyServiceYAML,
 )
 
@@ -57,8 +56,8 @@ class DependencyNotFoundException(TopologyException):
 
 
 def get_service_application_ids_dict(
-    session: Session, service_ids: List[int]
-) -> dict[int, List[UUID]]:
+    session: Session, service_ids: list[int]
+) -> dict[int, list[UUID]]:
     # TODO: add proper types
     query = (
         select(
@@ -117,9 +116,9 @@ class TopologiesService:
     def get_topology_services(
         tenant_id: str,
         session: Session,
-        provider_ids: Optional[str] = None,
-        services: Optional[str] = None,
-        environment: Optional[str] = None,
+        provider_ids: str | None = None,
+        services: str | None = None,
+        environment: str | None = None,
     ) -> list[TopologyService]:
         query = select(TopologyService).where(TopologyService.tenant_id == tenant_id)
 
@@ -157,11 +156,11 @@ class TopologiesService:
     def get_all_topology_data(
         tenant_id: str,
         session: Session,
-        provider_ids: Optional[str] = None,
-        services: Optional[str] = None,
-        environment: Optional[str] = None,
-        include_empty_deps: Optional[bool] = False,
-    ) -> List[TopologyServiceDtoOut]:
+        provider_ids: str | None = None,
+        services: str | None = None,
+        environment: str | None = None,
+        include_empty_deps: bool | None = False,
+    ) -> list[TopologyServiceDtoOut]:
         services = TopologiesService.get_topology_services(
             tenant_id, session, provider_ids, services, environment
         )
@@ -185,7 +184,7 @@ class TopologiesService:
     @staticmethod
     def get_applications_by_tenant_id(
         tenant_id: str, session: Session
-    ) -> List[TopologyApplicationDtoOut]:
+    ) -> list[TopologyApplicationDtoOut]:
         applications = session.exec(
             select(TopologyApplication).where(
                 TopologyApplication.tenant_id == tenant_id
@@ -255,7 +254,7 @@ class TopologiesService:
 
     @staticmethod
     def create_applications_by_tenant_id(
-        tenant_id: str, applications: List[TopologyApplicationDtoIn], session: Session
+        tenant_id: str, applications: list[TopologyApplicationDtoIn], session: Session
     ) -> None:
         """Creates multiple applications for a given tenant in a single transaction."""
 
@@ -311,7 +310,7 @@ class TopologiesService:
         except Exception as e:
             session.rollback()
             logger.error(f"Error while creating applications: {e}")
-            raise e
+            raise
         finally:
             session.close()
 
@@ -321,7 +320,7 @@ class TopologiesService:
         application_id: UUID,
         application: TopologyApplicationDtoIn,
         session: Session,
-        existing_application: Optional[TopologyApplication] = None,
+        existing_application: TopologyApplication | None = None,
     ) -> TopologyApplicationDtoOut:
         if existing_application:
             application_db = existing_application
@@ -340,7 +339,7 @@ class TopologiesService:
         application_db.description = application.description
         application_db.repository = application.repository
 
-        new_service_ids = set(service.id for service in application.services)
+        new_service_ids = {service.id for service in application.services}
 
         # Remove existing links not in the update request
         session.query(TopologyServiceApplication).where(
@@ -426,7 +425,6 @@ class TopologiesService:
             )
         session.delete(application)
         session.commit()
-        return None
 
     @staticmethod
     def get_service_by_id(
@@ -462,13 +460,13 @@ class TopologiesService:
         except Exception as e:
             session.rollback()
             logger.error(f"Error while creating/updating the services manually: {e}")
-            raise e
+            raise
         finally:
             session.close()
 
     @staticmethod
     def create_services(
-        services: List[TopologyServiceYAML],
+        services: list[TopologyServiceYAML],
         tenant_id: str,
         session: Session,
     ) -> None:
@@ -484,7 +482,7 @@ class TopologiesService:
         except Exception as e:
             session.rollback()
             logger.error(f"Error while creating services: {e}")
-            raise e
+            raise
         finally:
             session.close()
 
@@ -517,14 +515,13 @@ class TopologiesService:
         except Exception as e:
             session.rollback()
             logger.error(f"Error while updating the services manually: {e}")
-            raise e
+            raise
         finally:
             session.close()
 
     @staticmethod
     def delete_services(service_ids: list[int], tenant_id: str, session: Session):
         try:
-
             # Asserting that all the services that we are trying to delete were created manually, if this assertion
             # fails we do not proceed with deletion at all
             if validate_non_manual_exists(
@@ -565,7 +562,7 @@ class TopologiesService:
         except Exception as e:
             session.rollback()
             logger.error(f"Error while deleting services: {e}")
-            raise e
+            raise
         finally:
             session.close()
 
@@ -593,13 +590,13 @@ class TopologiesService:
         except Exception as e:
             session.rollback()
             logger.error(f"Error while creating/updating the Dependency manually: {e}")
-            raise e
+            raise
         finally:
             session.close()
 
     @staticmethod
     def create_dependencies(
-        dependencies: List[TopologyServiceDependencyCreateRequestDto],
+        dependencies: list[TopologyServiceDependencyCreateRequestDto],
         tenant_id: str,
         session: Session,
         enforce_manual: bool = True,
@@ -630,7 +627,7 @@ class TopologiesService:
         except Exception as e:
             session.rollback()
             logger.error(f"Error while creating dependencies: {e}")
-            raise e
+            raise
         finally:
             session.close()
 
@@ -670,7 +667,7 @@ class TopologiesService:
         except Exception as e:
             session.rollback()
             logger.error(f"Error while updating the Dependency manually: {e}")
-            raise e
+            raise
         finally:
             session.close()
 
@@ -697,11 +694,11 @@ class TopologiesService:
                 raise DependencyNotFoundException()
             session.delete(db_dependency)
             session.commit()
-            return None
+            return
         except Exception as e:
             session.rollback()
             logger.error(f"Error while updating the Dependency manually: {e}")
-            raise e
+            raise
         finally:
             session.close()
 
@@ -715,30 +712,29 @@ class TopologiesService:
                     TopologyService.tenant_id == tenant_id
                 )
             ).delete(synchronize_session=False)
-    
+
             # Delete all service-application links for this tenant
             session.query(TopologyServiceApplication).filter(
                 TopologyServiceApplication.service.has(
                     TopologyService.tenant_id == tenant_id
                 )
             ).delete(synchronize_session=False)
-    
+
             # Delete all applications for this tenant
             session.query(TopologyApplication).filter(
                 TopologyApplication.tenant_id == tenant_id
             ).delete(synchronize_session=False)
-    
+
             # Delete all services for this tenant
             session.query(TopologyService).filter(
                 TopologyService.tenant_id == tenant_id
             ).delete(synchronize_session=False)
-    
+
             session.commit()
         except Exception as e:
             session.rollback()
             logger.error(f"Error during cleanup before import: {e}")
-            raise e
-        
+            raise
 
     @staticmethod
     def import_to_db(topology_data: dict, session: Session, tenant_id: str):
@@ -785,4 +781,4 @@ class TopologiesService:
         except Exception as e:
             logger.error(f"Error while importing topology: {e}")
             session.rollback()
-            raise e
+            raise

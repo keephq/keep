@@ -4,7 +4,7 @@ SshProvider is a class that provides a way to execute SSH commands and get the o
 
 import dataclasses
 import io
-import typing
+from typing import ClassVar
 
 import pydantic
 from paramiko import AutoAddPolicy, RSAKey, SSHClient
@@ -34,7 +34,7 @@ class SshProviderAuthConfig:
         default=22,
         metadata={"required": False, "description": "SSH port", "validation": "port"},
     )
-    pkey: typing.Optional[str] = dataclasses.field(
+    pkey: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "SSH private key",
@@ -47,7 +47,7 @@ class SshProviderAuthConfig:
             "config_main_group": "authentication",
         },
     )
-    password: typing.Optional[str] = dataclasses.field(
+    password: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "SSH password",
@@ -69,9 +69,9 @@ class SshProvider(BaseProvider):
     """Enrich alerts with data from SSH."""
 
     PROVIDER_DISPLAY_NAME = "SSH"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Developer Tools"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure", "Developer Tools"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="ssh_access",
             description="The provided credentials grant access to the SSH server",
@@ -161,7 +161,7 @@ class SshProvider(BaseProvider):
         Returns:
             list: of the results for the executed command.
         """
-        stdin, stdout, stderr = self.client.exec_command(command.format(**kwargs))
+        _stdin, stdout, _stderr = self.client.exec_command(command.format(**kwargs))
         stdout.channel.set_combine_stderr(True)
         return stdout.readlines()
 

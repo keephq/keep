@@ -22,8 +22,7 @@ class NotRequiredIf(click.Option):
         if other_present is False:
             if we_are_present is False:
                 raise click.UsageError(
-                    "Illegal usage: `%s` is required when `%s` is not provided"
-                    % (self.name, self.not_required_if)
+                    f"Illegal usage: `{self.name}` is required when `{self.not_required_if}` is not provided"
                 )
             else:
                 self.prompt = None

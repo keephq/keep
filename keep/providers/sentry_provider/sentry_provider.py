@@ -5,6 +5,7 @@ SentryProvider is a class that provides a way to read data from Sentry.
 import dataclasses
 import datetime
 import logging
+from typing import ClassVar
 from urllib.parse import urlparse
 
 import pydantic
@@ -58,7 +59,7 @@ class SentryProvider(BaseProvider):
     """Enrich alerts with data from Sentry."""
 
     SENTRY_DEFAULT_API = "https://sentry.io/api/0"
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             "event:read",
             description="Read events and issues",
@@ -79,8 +80,8 @@ class SentryProvider(BaseProvider):
         ),
     ]
     DEFAULT_TIMEOUT = 600
-    PROVIDER_CATEGORY = ["Monitoring"]
-    SEVERITIES_MAP = {
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "fatal": AlertSeverity.CRITICAL,
         "error": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
@@ -88,7 +89,7 @@ class SentryProvider(BaseProvider):
         "debug": AlertSeverity.LOW,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "resolved": AlertStatus.RESOLVED,
         "unresolved": AlertStatus.FIRING,
         "ignored": AlertStatus.SUPPRESSED,

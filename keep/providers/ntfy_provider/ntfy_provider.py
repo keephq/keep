@@ -4,6 +4,7 @@ NtfyProvider is a class that provides a way to send notifications to the user.
 
 import base64
 import dataclasses
+from typing import ClassVar
 from urllib.parse import urljoin
 
 import pydantic
@@ -62,9 +63,9 @@ class NtfyProviderAuthConfig:
 
 class NtfyProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Ntfy.sh"
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="send_alert",
             mandatory=True,
@@ -109,9 +110,7 @@ class NtfyProvider(BaseProvider):
         else:
             username = self.authentication_config.username
             password = self.authentication_config.password
-            token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode(
-                "utf-8"
-            )
+            token = base64.b64encode(f"{username}:{password}".encode()).decode("utf-8")
 
             return {"Authorization": f"Basic {token}"}
 

@@ -16,9 +16,8 @@ from sqlalchemy_utils import UUIDType
 from sqlmodel import Session, select
 
 from keep.api.core.config import config
-from keep.api.core.db import batch_enrich
-from keep.api.core.db import enrich_entity as enrich_alert_db
 from keep.api.core.db import (
+    batch_enrich,
     get_alert_by_event_id,
     get_enrichment_with_session,
     get_extraction_rule_by_id,
@@ -29,6 +28,7 @@ from keep.api.core.db import (
     get_topology_data_by_dynamic_matcher,
     is_all_alerts_resolved,
 )
+from keep.api.core.db import enrich_entity as enrich_alert_db
 from keep.api.core.elastic import ElasticClient
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto
@@ -89,7 +89,6 @@ def get_nested_attribute(obj: AlertDto, attr_path: str):
 
 
 class EnrichmentsBl:
-
     ENRICHMENT_DISABLED = config("KEEP_ENRICHMENT_DISABLED", default="false", cast=bool)
 
     def __init__(self, tenant_id: str, db: Session | None = None):
@@ -128,7 +127,10 @@ class EnrichmentsBl:
         return self.run_extraction_rules(alert.event, pre=False, rules=[rule])
 
     def run_extraction_rules(
-        self, event: AlertDto | dict, pre=False, rules: list[ExtractionRule] = None
+        self,
+        event: AlertDto | dict,
+        pre=False,
+        rules: list[ExtractionRule] | None = None,
     ) -> AlertDto | dict:
         """
         Run the extraction rules for the event
@@ -623,7 +625,7 @@ class EnrichmentsBl:
             should_run_workflow = True
             if enrichments["status"] == "resolved":
                 should_check_incidents_resolution = True
-        elif "note" in enrichments and enrichments["note"]:
+        elif enrichments.get("note"):
             action_type = ActionType.COMMENT
             action_description = (
                 f"Comment added by {authenticated_entity.email} - {enrichments['note']}"

@@ -110,7 +110,9 @@ def assert_scope_text_count(browser, contains_text, count):
     ).to_have_count(count)
 
 
-def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=0):
+def init_e2e_test(
+    browser: Page, tenant_id: str | None = None, next_url="/", wait_time=0
+):
     # Store all requests for debugging
     page = browser if hasattr(browser, "goto") else browser.page
     requests_log = []
@@ -221,7 +223,6 @@ def init_e2e_test(browser: Page, tenant_id: str = None, next_url="/", wait_time=
         take_screenshot(browser)
     except Exception as e:
         print("Error taking screenshot: ", e)
-        pass
 
 
 def take_screenshot(page):
@@ -249,9 +250,11 @@ def get_token(tenant_id=None):
     )
 
 
-def save_failure_artifacts(page, log_entries=[], prefix=""):
+def save_failure_artifacts(page, log_entries=None, prefix=""):
     """Save screenshots, HTML content, and console logs on test failure."""
 
+    if log_entries is None:
+        log_entries = []
     current_test_name = get_current_test_name()
 
     if prefix:
@@ -317,9 +320,7 @@ def setup_console_listener(page, log_entries):
     """Set up console listener to capture logs."""
     page.on(
         "console",
-        lambda msg: (
-            log_entries.append(
-                f"{datetime.now()}: {msg.text}, location: {msg.location}"
-            )
+        lambda msg: log_entries.append(
+            f"{datetime.now()}: {msg.text}, location: {msg.location}"
         ),
     )

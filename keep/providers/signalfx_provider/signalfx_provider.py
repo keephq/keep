@@ -1,6 +1,7 @@
 import base64
 import dataclasses
 import datetime
+from typing import ClassVar
 from urllib.parse import quote, urlparse
 
 import pydantic
@@ -13,6 +14,7 @@ from keep.providers.base.base_provider import (
     ProviderConfig,
     ProviderScope,
 )
+from keep.providers.models.provider_method import ProviderMethod
 from keep.providers.providers_factory import ProvidersFactory
 
 
@@ -74,9 +76,9 @@ class SignalfxProviderAuthConfig:
 class SignalfxProvider(BaseProvider):
     """Get alerts from SignalFx into Keep."""
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="API",
             description="API authScope - read permission for SignalFx API",
@@ -86,12 +88,12 @@ class SignalfxProvider(BaseProvider):
             alias="API Read",
         ),
     ]
-    PROVIDER_METHODS = []
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = []
 
-    FINGERPRINT_FIELDS = ["detectorId", "incidentId"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["detectorId", "incidentId"]
     PROVIDER_DISPLAY_NAME = "SignalFx"
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "Critical": AlertSeverity.CRITICAL,
         "Major": AlertSeverity.HIGH,
         "Warning": AlertSeverity.WARNING,
@@ -101,7 +103,7 @@ class SignalfxProvider(BaseProvider):
 
     # https://docs.splunk.com/observability/en/admin/notif-services/webhook.html#observability-cloud-webhook-request-body-fields
     #   search for "statusExtended"
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "ok": AlertStatus.RESOLVED,
         "anomalous": AlertStatus.FIRING,
         "manually resolved": AlertStatus.RESOLVED,
@@ -159,7 +161,6 @@ class SignalfxProvider(BaseProvider):
                 alerts.append(self._format_alert_get_alert(incident))
             except Exception as e:
                 self.logger.error(f"Failed to format SignalFx alert: {e}")
-                pass
 
         return alerts
 
@@ -228,7 +229,9 @@ class SignalfxProvider(BaseProvider):
         message = event.pop("messageBody", "")
         description = event.pop("description", "")
         name = event.pop("messageTitle", "")
-        lastReceived = event.pop("timestamp", datetime.datetime.utcnow().isoformat())
+        lastReceived = event.pop(
+            "timestamp", datetime.datetime.now(tz=datetime.UTC).isoformat()
+        )
         inputs: dict = event.pop("inputs", {})
         new_inputs = []
         for key, value in inputs.items():
@@ -268,7 +271,7 @@ class SignalfxProvider(BaseProvider):
             self.logger.error(
                 "SignalFx email, password and organization ID are required for webhook setup"
             )
-            return None
+            return
         # 1. First - get session token becuase to set up webhook
         #            you must have User API access token and you can use the Org access token
         #            https://dev.splunk.com/observability/reference/api/sessiontokens/latest
@@ -290,7 +293,7 @@ class SignalfxProvider(BaseProvider):
             self.logger.error(
                 f"Failed to get SignalFx session token: {e.response.text}"
             )
-            return None
+            return
         # this is the token we need to setup the webhook
         # see: https://dev.splunk.com/observability/reference/api/sessiontokens/latest
         session_access_token = response.json().get("accessToken")
@@ -303,7 +306,7 @@ class SignalfxProvider(BaseProvider):
             self.logger.error(
                 f"Failed to get SignalFx webhook integration: {e.response.text}"
             )
-            return None
+            return
 
         integration_id = None
         integrations = response.json().get("results", [])
@@ -356,7 +359,7 @@ class SignalfxProvider(BaseProvider):
             self.logger.error(
                 f"Failed to create SignalFx webhook integration: {e.response.text}"
             )
-            return None
+            return
         self.logger.info("SignalFx webhook integration setup complete")
         # 3. Now subscribe webhook to all detectors
         #    https://docs.splunk.com/observability/en/admin/notif-services/webhook.html
@@ -366,7 +369,7 @@ class SignalfxProvider(BaseProvider):
         # catch any HTTP errors
         except requests.exceptions.HTTPError as e:
             self.logger.error(f"Failed to get SignalFx detectors: {e.response.text}")
-            return None
+            return
         detectors = response.json().get("results", [])
         # subscribe the webhook to all detectors
         for detector in detectors:
@@ -431,7 +434,7 @@ class SignalfxProvider(BaseProvider):
                     self.logger.error(
                         f"Failed to subscribe SignalFx detector {detector_id} to webhook: {e.response.text}"
                     )
-                    return None
+                    return
         self.logger.info("SignalFx webhook integration setup complete")
 
 

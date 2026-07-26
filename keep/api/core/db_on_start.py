@@ -152,7 +152,6 @@ def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
                         logger.exception(
                             f"Failed to write secret for api key {api_key_name}"
                         )
-                        pass
                     logger.info(f"Api key {api_key_name} provisioned")
                 logger.info("Api keys provisioned")
 
@@ -165,7 +164,6 @@ def try_create_single_tenant(tenant_id: str, create_default_user=True) -> None:
             raise
         except Exception:
             logger.exception("Failed to create single tenant")
-            pass
 
 
 def migrate_db():
@@ -174,7 +172,7 @@ def migrate_db():
     """
     if os.environ.get("SKIP_DB_CREATION", "false") == "true":
         logger.info("Skipping running migrations...")
-        return None
+        return
 
     logger.info("Running migrations...")
     config_path = os.path.dirname(os.path.abspath(__file__)) + "/../../" + "alembic.ini"

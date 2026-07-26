@@ -1,5 +1,6 @@
 import dataclasses
 import os
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -29,7 +30,7 @@ class PushoverProvider(BaseProvider):
     """Send alert message to Pushover."""
 
     PROVIDER_DISPLAY_NAME = "Pushover"
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -45,7 +46,6 @@ class PushoverProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(
         self,
@@ -75,7 +75,7 @@ class PushoverProvider(BaseProvider):
         retry = int(kwargs.get("retry", retry))
         expire = int(kwargs.get("expire", expire))
         title = kwargs.get("title", title)
-        
+
         if isinstance(message, str):
             message = message.replace("<p>", "").replace("</p>", "")
 

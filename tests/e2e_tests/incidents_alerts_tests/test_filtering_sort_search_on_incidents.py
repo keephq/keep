@@ -1,7 +1,9 @@
-from datetime import datetime, timedelta, timezone
 import re
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from playwright.sync_api import expect, Page
+from playwright.sync_api import Page, expect
+
 from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
     query_incidents,
     setup_incidents_alerts,
@@ -23,14 +25,14 @@ def init_test(browser: Page, incidents, max_retries=3):
             # (since we might get redirected automatically)
             browser.wait_for_load_state("networkidle")
             browser.wait_for_url(lambda url: url.startswith(base_url), timeout=10000)
-            print("Page loaded successfully. [try: %d]" % (i + 1))
+            print(f"Page loaded successfully. [try: {i + 1}]")
             break
         except Exception as e:
             if i < max_retries - 1:
                 print("Failed to load alerts page. Retrying... - ", e)
                 continue
             else:
-                raise e
+                raise
 
     browser.get_by_role("main").locator("[data-testid='facet-value']").first.wait_for(
         timeout=30000
@@ -137,7 +139,7 @@ def test_initial_loading(browser, setup_test_data):
         incidents = setup_test_data["incidents"]
         # verify intial loading of incidents page
         init_test(browser, incidents)
-        filter_predicate = lambda alert: (alert["status"] in ["firing", "acknowledged"])
+        filter_predicate = lambda alert: alert["status"] in ["firing", "acknowledged"]
 
         assert_incidents_by_column(
             browser,
@@ -203,11 +205,13 @@ def test_filter_by_static_facet(browser, facet_test_case, setup_test_data):
         assert_incidents_by_column(
             browser,
             incidents,
-            lambda alert: value
-            in (
-                alert[incident_property_name]
-                if isinstance(alert[incident_property_name], list)
-                else [alert[incident_property_name]]
+            lambda alert: (
+                value
+                in (
+                    alert[incident_property_name]
+                    if isinstance(alert[incident_property_name], list)
+                    else [alert[incident_property_name]]
+                )
             ),
             incident_property_name,
             column_index,
@@ -280,16 +284,19 @@ def test_adding_custom_facet_for_alert_field(browser, setup_test_data):
         assert_incidents_by_column(
             browser,
             current_incidents[:20],
-            lambda incident: len(
-                list(
-                    filter(
-                        lambda alert: alert.get("custom_tags", {}).get("env", None)
-                        == value,
-                        incidents_alert.get(incident["id"], []),
+            lambda incident: (
+                len(
+                    list(
+                        filter(
+                            lambda alert: (
+                                alert.get("custom_tags", {}).get("env", None) == value
+                            ),
+                            incidents_alert.get(incident["id"], []),
+                        )
                     )
                 )
-            )
-            > 0,
+                > 0
+            ),
             alert_property_name,
             None,
         )
@@ -370,7 +377,7 @@ def test_sort_asc_dsc(
                     save_failure_artifacts(browser, log_entries=[])
                     number_of_missmatches += 1
                     if number_of_missmatches > 2:
-                        raise e
+                        raise
                     else:
                         print(
                             f"Expected: {incident['user_generated_name']} but got: {column_locator.text_content()}"

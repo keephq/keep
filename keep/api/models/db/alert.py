@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from typing import List
 from uuid import UUID, uuid4
 
 from pydantic import PrivateAttr
@@ -41,7 +40,6 @@ class AlertToIncident(SQLModel, table=True):
 
 
 class LastAlert(SQLModel, table=True):
-
     tenant_id: str = Field(foreign_key="tenant.id", nullable=False, primary_key=True)
     fingerprint: str = Field(primary_key=True, index=True)
     alert_id: UUID = Field(foreign_key="alert.id")
@@ -144,7 +142,7 @@ class Alert(SQLModel, table=True):
         },
     )
 
-    _incidents: List[Incident] = PrivateAttr(default_factory=list)
+    _incidents: list[Incident] = PrivateAttr(default_factory=list)
 
     __table_args__ = (
         Index(
@@ -320,10 +318,9 @@ class AlertAudit(SQLModel, table=True):
     # what
     action: str = Field(nullable=False)
     description: str = Field(sa_column=Column(TEXT))
-    
+
     mentions: list["CommentMention"] = Relationship(
-        back_populates="alert_audit",
-        sa_relationship_kwargs={"lazy": "selectin"}
+        back_populates="alert_audit", sa_relationship_kwargs={"lazy": "selectin"}
     )
 
     __table_args__ = (
@@ -336,21 +333,21 @@ class AlertAudit(SQLModel, table=True):
 
 class CommentMention(SQLModel, table=True):
     """Many-to-many relationship table for users mentioned in comments."""
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     comment_id: UUID = Field(
         sa_column=Column(
             UUIDType(binary=False),
             ForeignKey("alertaudit.id", ondelete="CASCADE"),
-            nullable=False
+            nullable=False,
         )
     )
     mentioned_user_id: str = Field(nullable=False)
     tenant_id: str = Field(foreign_key="tenant.id", nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    
+
     alert_audit: AlertAudit = Relationship(
-        back_populates="mentions",
-        sa_relationship_kwargs={"lazy": "selectin"}
+        back_populates="mentions", sa_relationship_kwargs={"lazy": "selectin"}
     )
 
     __table_args__ = (

@@ -6,6 +6,7 @@ import dataclasses
 import datetime
 import os
 import uuid as uuid_module
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -73,7 +74,7 @@ receivers:
         username: api_key
         password: {api_key}"""
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "critical": AlertSeverity.CRITICAL,
         "error": AlertSeverity.HIGH,
         "high": AlertSeverity.HIGH,
@@ -82,19 +83,19 @@ receivers:
         "info": AlertSeverity.INFO,
         "low": AlertSeverity.LOW,
     }
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "firing": AlertStatus.FIRING,
         "resolved": AlertStatus.RESOLVED,
     }
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="connectivity", description="Connectivity Test", mandatory=True
         )
     ]
-    FINGERPRINT_FIELDS = ["fingerprint"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["fingerprint"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -289,9 +290,7 @@ receivers:
             tz=datetime.timezone.utc
         ).isoformat()
         alert_payload["endsAt"] = "0001-01-01T00:00:00Z"
-        alert_payload["generatorURL"] = "http://example.com/graph?g0.expr={}".format(
-            alert_type
-        )
+        alert_payload["generatorURL"] = f"http://example.com/graph?g0.expr={alert_type}"
         # TODO: use BaseProvider's get_alert_fingerprint
         fingerprint_src = json.dumps(alert_payload["labels"], sort_keys=True)
         fingerprint = hashlib.md5(fingerprint_src.encode()).hexdigest()

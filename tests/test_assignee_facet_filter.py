@@ -1,7 +1,6 @@
 """Tests for the flat assignee enrichment field used by the facet/filter system."""
-from unittest.mock import MagicMock, patch
 
-import pytest
+from unittest.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
 # Unit tests — flat assignee field logic (no DB required)
@@ -111,7 +110,9 @@ def test_no_error_when_assignee_not_in_enriched_fields():
 # ---------------------------------------------------------------------------
 
 
-def _call_assign_alert(fingerprint, last_received, user_email, existing_enrichments=None, unassign=False):
+def _call_assign_alert(
+    fingerprint, last_received, user_email, existing_enrichments=None, unassign=False
+):
     """Call the core assign logic and return the enrichments dict passed to enrich_entity."""
     from keep.api.routes.alerts import assign_alert
 

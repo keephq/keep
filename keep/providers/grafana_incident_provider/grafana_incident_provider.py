@@ -3,15 +3,16 @@ Grafana Incident Provider is a class that allows to query all incidents from Gra
 """
 
 import dataclasses
-from datetime import datetime
 import hashlib
-from urllib.parse import urljoin
 import uuid
+from datetime import datetime, timezone
+from typing import ClassVar
+from urllib.parse import urljoin
 
 import pydantic
 import requests
 
-from keep.api.models.incident import IncidentDto, IncidentStatus, IncidentSeverity
+from keep.api.models.incident import IncidentDto, IncidentSeverity, IncidentStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseIncidentProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
@@ -47,28 +48,31 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
     """
     GrafanaIncidentProvider is a class that allows to query all incidents from Grafana Incident.
     """
-    PROVIDER_DISPLAY_NAME = "Grafana Incident"
-    PROVIDER_TAGS = ["alert"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_DISPLAY_NAME = "Grafana Incident"
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authenticated",
         ),
     ]
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "Pending": IncidentSeverity.INFO,
         "Critical": IncidentSeverity.CRITICAL,
         "Major": IncidentSeverity.HIGH,
         "Minor": IncidentSeverity.LOW,
         "Moderate": IncidentSeverity.WARNING,
-        "Cosmetic": IncidentSeverity.INFO
+        "Cosmetic": IncidentSeverity.INFO,
     }
 
-    STATUS_MAP = {"active": IncidentStatus.FIRING,
-                  "resolved": IncidentStatus.RESOLVED}
+    STATUS_MAP: ClassVar[dict[str, str]] = {
+        "active": IncidentStatus.FIRING,
+        "resolved": IncidentStatus.RESOLVED,
+    }
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -118,8 +122,7 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
             if response.status_code == 200:
                 return {"authenticated": True}
             else:
-                self.logger.error(
-                    f"Failed to validate scopes: {response.status_code}")
+                self.logger.error(f"Failed to validate scopes: {response.status_code}")
                 scopes = {
                     "authenticated": f"Unable to query incidents: {response.status_code}"
                 }
@@ -194,11 +197,9 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
                     break
 
             except Exception as e:
-                self.logger.exception(
-                    "Failed to get incidents from Grafana Incident")
-                raise Exception(
-                    f"Failed to get incidents from Grafana Incident: {e}")
-            
+                self.logger.exception("Failed to get incidents from Grafana Incident")
+                raise Exception(f"Failed to get incidents from Grafana Incident: {e}")
+
         self.logger.info(f"Total incidents: {len(incidents)}")
 
         alertDtos = []
@@ -206,10 +207,14 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
         def parse_grafana_timestamp(timestamp):
             try:
                 # Try parsing with milliseconds
-                return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+                return datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+                    tzinfo=timezone.utc
+                )
             except ValueError:
                 # Fallback if milliseconds are not present
-                return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
+                return datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(
+                    tzinfo=timezone.utc
+                )
 
         for incident in incidents:
             id = self._get_incident_id(incident.get("incidentID"))
@@ -269,7 +274,7 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
                 services=["incidentPreviews"],
                 alert_sources=["grafana_incident"],
                 alerts_count=alerts_count,
-                fingerprint=incident.get("incidentID")
+                fingerprint=incident.get("incidentID"),
             )
             alertDtos.append(alertDto)
 
@@ -280,17 +285,19 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
         self,
         title: str = "",
         severity: str = "",
-        labels=[],
+        labels=None,
         roomPrefix: str = "",
         isDrill: bool | None = None,
         status: str = "",
         attachCaption: str = "",
-        attachURL: str = ""
+        attachURL: str = "",
     ) -> dict:
         """
         Create an incident in Grafana Incident with the given parameters.
         """
 
+        if labels is None:
+            labels = []
         self.logger.info("Creating incident in Grafana Incident")
 
         try:
@@ -325,17 +332,11 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
             return response.json()
 
         except Exception as e:
-            self.logger.exception(
-                "Failed to create incident in Grafana Incident")
-            raise Exception(
-                f"Failed to create incident in Grafana Incident: {e}")
+            self.logger.exception("Failed to create incident in Grafana Incident")
+            raise Exception(f"Failed to create incident in Grafana Incident: {e}")
 
     # https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/incident/api/reference/#removelabel
-    def _remove_label(
-        self,
-        incident_id: str,
-        label: str
-    ) -> dict:
+    def _remove_label(self, incident_id: str, label: str) -> dict:
         """
         Remove the incident label in Grafana Incident with the given parameters.
         """
@@ -368,18 +369,11 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
             return response.json()
 
         except Exception as e:
-            self.logger.exception(
-                "Failed to remove incident label in Grafana Incident")
-            raise Exception(
-                f"Failed to remove incident label in Grafana Incident: {e}")
+            self.logger.exception("Failed to remove incident label in Grafana Incident")
+            raise Exception(f"Failed to remove incident label in Grafana Incident: {e}")
 
     # https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/incident/api/reference/#unassignlabel
-    def _unassign_label(
-        self,
-        incident_id: str,
-        key: str,
-        value: str
-    ) -> dict:
+    def _unassign_label(self, incident_id: str, key: str, value: str) -> dict:
         """
         Unassign the label in Grafana Incident with the given parameters.
         """
@@ -413,17 +407,12 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
             return response.json()
 
         except Exception as e:
-            self.logger.exception(
-                "Failed to unassign label in Grafana Incident")
-            raise Exception(
-                f"Failed to unassign label in Grafana Incident: {e}")
+            self.logger.exception("Failed to unassign label in Grafana Incident")
+            raise Exception(f"Failed to unassign label in Grafana Incident: {e}")
 
     # https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/incident/api/reference/#unassignlabelbyuuid
     def _unassign_label_by_uuid(
-        self,
-        incident_id: str,
-        key_uuid: str,
-        value_uuid: str
+        self, incident_id: str, key_uuid: str, value_uuid: str
     ) -> dict:
         """
         Unassign the label by UUID in Grafana Incident with the given parameters.
@@ -459,17 +448,14 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
 
         except Exception as e:
             self.logger.exception(
-                "Failed to unassign label by UUID in Grafana Incident")
+                "Failed to unassign label by UUID in Grafana Incident"
+            )
             raise Exception(
-                f"Failed to unassign label by UUID in Grafana Incident: {e}")
+                f"Failed to unassign label by UUID in Grafana Incident: {e}"
+            )
 
     # https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/incident/api/reference/#unassignrole
-    def _unassign_role(
-        self,
-        incident_id: str,
-        role: str,
-        user_id: str
-    ) -> dict:
+    def _unassign_role(self, incident_id: str, role: str, user_id: str) -> dict:
         """
         Unassign the role in Grafana Incident with the given parameters.
         """
@@ -503,17 +489,12 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
             return response.json()
 
         except Exception as e:
-            self.logger.exception(
-                "Failed to unassign role in Grafana Incident")
-            raise Exception(
-                f"Failed to unassign role in Grafana Incident: {e}")
+            self.logger.exception("Failed to unassign role in Grafana Incident")
+            raise Exception(f"Failed to unassign role in Grafana Incident: {e}")
 
     # https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/incident/api/reference/#updateincidenteventtime
     def _update_incident_event_time(
-        self,
-        incident_id: str,
-        event_time: str,
-        event_name: str
+        self, incident_id: str, event_time: str, event_name: str
     ) -> dict:
         """
         Update the incident event time in Grafana Incident with the given parameters.
@@ -550,16 +531,14 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
 
         except Exception as e:
             self.logger.exception(
-                "Failed to update incident event time in Grafana Incident")
+                "Failed to update incident event time in Grafana Incident"
+            )
             raise Exception(
-                f"Failed to update incident event time in Grafana Incident: {e}")
+                f"Failed to update incident event time in Grafana Incident: {e}"
+            )
 
     # https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/incident/api/reference/#updateincidentisdrill
-    def _update_incident_isDrill(
-        self,
-        incident_id: str,
-        isDrill: bool
-    ) -> dict:
+    def _update_incident_isDrill(self, incident_id: str, isDrill: bool) -> dict:
         """
         Update the incident isDrill in Grafana Incident with the given parameters.
         """
@@ -593,16 +572,14 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
 
         except Exception as e:
             self.logger.exception(
-                "Failed to update incident isDrill in Grafana Incident")
+                "Failed to update incident isDrill in Grafana Incident"
+            )
             raise Exception(
-                f"Failed to update incident isDrill in Grafana Incident: {e}")
+                f"Failed to update incident isDrill in Grafana Incident: {e}"
+            )
 
     # https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/incident/api/reference/#updateseverity
-    def _update_incident_severity(
-        self,
-        incident_id: str,
-        severity: str
-    ) -> dict:
+    def _update_incident_severity(self, incident_id: str, severity: str) -> dict:
         """
         Update the incident severity in Grafana Incident with the given parameters.
         """
@@ -636,16 +613,14 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
 
         except Exception as e:
             self.logger.exception(
-                "Failed to update incident severity in Grafana Incident")
+                "Failed to update incident severity in Grafana Incident"
+            )
             raise Exception(
-                f"Failed to update incident severity in Grafana Incident: {e}")
+                f"Failed to update incident severity in Grafana Incident: {e}"
+            )
 
     # https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/incident/api/reference/#updatestatus
-    def _update_incident_status(
-        self,
-        incident_id: str,
-        status: str
-    ) -> dict:
+    def _update_incident_status(self, incident_id: str, status: str) -> dict:
         """
         Update the incident status in Grafana Incident with the given parameters.
         """
@@ -679,16 +654,14 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
 
         except Exception as e:
             self.logger.exception(
-                "Failed to update incident status in Grafana Incident")
+                "Failed to update incident status in Grafana Incident"
+            )
             raise Exception(
-                f"Failed to update incident status in Grafana Incident: {e}")
+                f"Failed to update incident status in Grafana Incident: {e}"
+            )
 
     # https://grafana.com/docs/grafana-cloud/alerting-and-irm/irm/incident/api/reference/#updatetitle
-    def _update_incident_title(
-        self,
-        incident_id: str,
-        title: str
-    ) -> dict:
+    def _update_incident_title(self, incident_id: str, title: str) -> dict:
         """
         Update the incident title in Grafana Incident with the given parameters.
         """
@@ -721,10 +694,8 @@ class GrafanaIncidentProvider(BaseIncidentProvider):
             return response.json()
 
         except Exception as e:
-            self.logger.exception(
-                "Failed to update incident title in Grafana Incident")
-            raise Exception(
-                f"Failed to update incident title in Grafana Incident: {e}")
+            self.logger.exception("Failed to update incident title in Grafana Incident")
+            raise Exception(f"Failed to update incident title in Grafana Incident: {e}")
 
     def _notify(self, operationType: str = "", updateType: str = "", **kwargs):
         if operationType == "create":

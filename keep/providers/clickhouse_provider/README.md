@@ -130,8 +130,8 @@ This guide will help you set up a ClickHouse server with a self-signed SSL certi
    from clickhouse_driver import connect
 
    connection = connect(
-       'clickhouses://secure_user:strong_password@localhost:9440/default',
-       verify='/path/to/your/ca-cert.pem'  # Optional: Path to CA certificate if needed
+       "clickhouses://secure_user:strong_password@localhost:9440/default",
+       verify="/path/to/your/ca-cert.pem",  # Optional: Path to CA certificate if needed
    )
    ```
 

@@ -7,7 +7,7 @@ import json
 import logging
 import uuid
 from pathlib import Path
-from typing import List
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -51,7 +51,7 @@ class OpenobserveProviderAuthConfig:
             "required": True,
             "description": "OpenObserve host url",
             "hint": "e.g. http://localhost",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         },
     )
 
@@ -60,7 +60,7 @@ class OpenobserveProviderAuthConfig:
             "required": True,
             "description": "OpenObserve Port",
             "hint": "e.g. 5080",
-            "validation": "port"
+            "validation": "port",
         },
     )
     organisationID: str = dataclasses.field(
@@ -76,8 +76,8 @@ class OpenobserveProvider(BaseProvider):
     """Install Webhooks and receive alerts from OpenObserve."""
 
     PROVIDER_DISPLAY_NAME = "OpenObserve"
-    PROVIDER_CATEGORY = ["Monitoring"]
-    PROVIDER_SCOPES = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authorized",
@@ -87,7 +87,7 @@ class OpenobserveProvider(BaseProvider):
         ),
     ]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "ERROR": AlertSeverity.CRITICAL,
         "WARN": AlertSeverity.WARNING,
         "INFO": AlertSeverity.INFO,
@@ -102,23 +102,28 @@ class OpenobserveProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
         Validates required configuration for OpenObserve provider.
         """
         if self.is_installed or self.is_provisioned:
-            host = self.config.authentication['openObserveHost']
-            if not (host.startswith("http://") or host.startswith("https://")):
-                scheme = "http://" if ("localhost" in host or "127.0.0.1" in host) else "https://"
-                self.config.authentication['openObserveHost'] = scheme + host
+            host = self.config.authentication["openObserveHost"]
+            if not (host.startswith(("http://", "https://"))):
+                scheme = (
+                    "http://"
+                    if ("localhost" in host or "127.0.0.1" in host)
+                    else "https://"
+                )
+                self.config.authentication["openObserveHost"] = scheme + host
 
         self.authentication_config = OpenobserveProviderAuthConfig(
             **self.config.authentication
         )
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for OpenObserve api requests.
 
@@ -131,6 +136,8 @@ class OpenobserveProvider(BaseProvider):
         # url = https://baseballxyz.saas.openobserve.com/rest/api/2/issue/createmeta?projectKeys=key1
         """
 
+        if paths is None:
+            paths = []
         url = urljoin(
             f"{self.authentication_config.openObserveHost}:{self.authentication_config.openObservePort}",
             "/".join(str(path) for path in paths),
@@ -203,7 +210,6 @@ class OpenobserveProvider(BaseProvider):
             if res["code"] == 200:
                 self.logger.info("Alert template Updated Successfully")
             else:
-
                 self.logger.error(
                     "Failed to update Alert Template",
                     extra={"code": res["code"], "error": res["message"]},
@@ -373,7 +379,7 @@ class OpenobserveProvider(BaseProvider):
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
-    ) -> AlertDto | List[AlertDto]:
+    ) -> AlertDto | list[AlertDto]:
         logger = logging.getLogger(__name__)
         alert_name = event.pop("alert_name", "")
         # openoboserve does not provide severity
@@ -437,7 +443,7 @@ class OpenobserveProvider(BaseProvider):
                             continue
                     row_name = row_data.pop("name", "")
                     if row_name:
-                        row_data['row_name'] = row_name
+                        row_data["row_name"] = row_name
                     group_by_keys = list(row_data.keys())
                     logger.info(
                         "Formatting aggregated alert with group by keys",
@@ -457,7 +463,9 @@ class OpenobserveProvider(BaseProvider):
 
                     alert_dto = AlertDto(
                         id=f"{alert_id}",
-                        name=f"{alert_name}: {row_name}" if row_name else f"{alert_name}",
+                        name=f"{alert_name}: {row_name}"
+                        if row_name
+                        else f"{alert_name}",
                         severity=severity,
                         environment=environment,
                         startedAt=startedAt,
@@ -469,7 +477,7 @@ class OpenobserveProvider(BaseProvider):
                         value=value,
                         alert_url=alert_url,  # I'm not putting on URL since sometimes it doesn't return full URL so pydantic will throw an error
                         **event,
-                        **row_data
+                        **row_data,
                     )
                     # calculate the fingerprint based on name + group_by_value
                     alert_dto.fingerprint = OpenobserveProvider.get_alert_fingerprint(

@@ -366,6 +366,7 @@ def test_update_user_not_found(db_session, client, test_app):
 
         # Mock the Auth0 client to simulate a 404 response
         from unittest.mock import patch
+
         from fastapi import HTTPException
 
         def mock_update_user(*args, **kwargs):

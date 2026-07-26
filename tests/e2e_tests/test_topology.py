@@ -141,7 +141,7 @@ def test_topology_manual(browser):
                     browser.wait_for_timeout(1000)
 
                 except Exception as e:
-                    print(f"Attempt {attempt+1} failed: {str(e)}")
+                    print(f"Attempt {attempt + 1} failed: {e!s}")
                     browser.wait_for_timeout(1000)
 
             return False
@@ -284,7 +284,7 @@ def test_topology_manual(browser):
 
     except Exception as e:
         # Enhanced error capturing
-        print(f"Test failed with error: {str(e)}")
+        print(f"Test failed with error: {e!s}")
 
         # Capture screenshots and HTML dumps on test failure
         test_name = (

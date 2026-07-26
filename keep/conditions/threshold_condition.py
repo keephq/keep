@@ -77,15 +77,11 @@ class ThresholdCondition(BaseCondition):
         # validate they are both the same type
         if not isinstance(compare_value, type(compare_to)):
             raise Exception(
-                "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
-                    compare_to, compare_value
-                )
+                f"Invalid threshold value, currently support only numeric and percentage values but got {compare_to} and {compare_value}"
             )
         if self._is_percentage(compare_to) and not self._is_percentage(compare_value):
             raise Exception(
-                "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
-                    compare_to, compare_value
-                )
+                f"Invalid threshold value, currently support only numeric and percentage values but got {compare_to} and {compare_value}"
             )
         if self._is_percentage(compare_to) and self._is_percentage(compare_value):
             return float(compare_to.strip("%")), float(compare_value.strip("%"))
@@ -105,16 +101,14 @@ class ThresholdCondition(BaseCondition):
         return self._apply_threshold(compare_value, compare_to)
 
     def _is_percentage(self, a):
-        if isinstance(a, int) or isinstance(a, float):
+        if isinstance(a, (int, float)):
             return False
 
         if not a.endswith("%"):
             return False
         a = a.strip("%")
         # 0.1 is ok and 99.9 is ok
-        if float(a) < 0 or float(a) > 100:
-            return False
-        return True
+        return not (float(a) < 0 or float(a) > 100)
 
     def _apply_threshold(self, step_output, threshold):
         """Just compare the step output with the threshold.

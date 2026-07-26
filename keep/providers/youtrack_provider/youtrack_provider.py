@@ -1,7 +1,9 @@
 """
 YoutrackProvider is a class that provides a way to create new issues in Youtrack.
 """
+
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -9,6 +11,7 @@ import requests
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+
 
 @pydantic.dataclasses.dataclass
 class YoutrackProviderAuthConfig:
@@ -53,12 +56,13 @@ class YoutrackProviderAuthConfig:
         default="",
     )
 
+
 class YoutrackProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "YouTrack"
-    PROVIDER_TAGS = ["ticketing"]
-    PROVIDER_CATEGORY = ["Ticketing"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["ticketing"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Ticketing"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="create_issue",
             mandatory=True,
@@ -73,7 +77,7 @@ class YoutrackProvider(BaseProvider):
 
     def dispose(self):
         pass
-    
+
     def validate_config(self):
         """
         Validates required configuration for Youtrack provider.
@@ -96,7 +100,7 @@ class YoutrackProvider(BaseProvider):
             self.logger.exception("Failed to validate scopes")
             return {"create_issue": str(e)}
         return {"create_issue": True}
-    
+
     def _create_issue(self, summary="", description=""):
         """
         Create an issue in Youtrack.
@@ -112,7 +116,10 @@ class YoutrackProvider(BaseProvider):
             }
             response = requests.post(url, headers=headers, json=data)
             response.raise_for_status()
-            self.logger.info("Successfully created issue in Youtrack", extra={"response": response.json()})
+            self.logger.info(
+                "Successfully created issue in Youtrack",
+                extra={"response": response.json()},
+            )
         except Exception as e:
             self.logger.exception("Error creating issue in Youtrack")
             raise Exception(f"Error creating issue in Youtrack: {e}")
@@ -120,7 +127,7 @@ class YoutrackProvider(BaseProvider):
 
     def _get_url(self, endpoint: str):
         return f"{self.authentication_config.host_url}/api/{endpoint}"
-    
+
     def _get_auth_headers(self):
         """
         Get authentication headers for Youtrack.
@@ -128,13 +135,14 @@ class YoutrackProvider(BaseProvider):
         return {
             "Authorization": f"Bearer {self.authentication_config.permanent_token}",
             "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Accept": "application/json",
         }
-    
+
     def _notify(self, summary="", description=""):
         self.logger.info("Creating issue in Youtrack")
         return self._create_issue(summary=summary, description=description)
-    
+
+
 if __name__ == "__main__":
     import logging
 

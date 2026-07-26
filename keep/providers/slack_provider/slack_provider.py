@@ -5,7 +5,8 @@ Slack provider is an interface for Slack messages.
 import dataclasses
 import json
 import os
-from typing import OrderedDict
+from collections import OrderedDict
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -48,7 +49,7 @@ class SlackProvider(BaseProvider):
     SLACK_CLIENT_ID = os.environ.get("SLACK_CLIENT_ID")
     SLACK_CLIENT_SECRET = os.environ.get("SLACK_CLIENT_SECRET")
     SLACK_API = "https://slack.com/api"
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -69,7 +70,6 @@ class SlackProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     @staticmethod
     def oauth2_logic(**payload) -> dict:
@@ -140,11 +140,11 @@ class SlackProvider(BaseProvider):
     def _notify(
         self,
         message="",
-        blocks=[],
+        blocks=None,
         channel="",
         slack_timestamp="",
         thread_timestamp="",
-        attachments=[],
+        attachments=None,
         username="",
         notification_type="message",
         **kwargs: dict,
@@ -163,6 +163,10 @@ class SlackProvider(BaseProvider):
             username (str): The username of the message.
             notification_type (str): The type of notification.
         """
+        if attachments is None:
+            attachments = []
+        if blocks is None:
+            blocks = []
         if notification_type == "reaction":
             return self._notify_reaction(
                 channel=channel,
@@ -193,14 +197,12 @@ class SlackProvider(BaseProvider):
             payload["text"] = message
         if blocks:
             payload["blocks"] = (
-                json.dumps(blocks)
-                if isinstance(blocks, dict) or isinstance(blocks, list)
-                else blocks
+                json.dumps(blocks) if isinstance(blocks, (dict, list)) else blocks
             )
         if attachments:
             payload["attachments"] = (
                 json.dumps(attachments)
-                if isinstance(attachments, dict) or isinstance(attachments, list)
+                if isinstance(attachments, (dict, list))
                 else blocks
             )
         if username:
@@ -269,10 +271,11 @@ class SlackProvider(BaseProvider):
                     payload["token"] = self.authentication_config.access_token
 
             response = requests.post(
-                f"{SlackProvider.SLACK_API}/{method}", json=payload,
+                f"{SlackProvider.SLACK_API}/{method}",
+                json=payload,
                 headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {self.authentication_config.access_token}",
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.authentication_config.access_token}",
                 },
             )
 

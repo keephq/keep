@@ -19,8 +19,8 @@ from keep.api.models.db.maintenance_window import *
 from keep.api.models.db.mapping import *
 from keep.api.models.db.preset import *
 from keep.api.models.db.provider import *
-from keep.api.models.db.secret import *
 from keep.api.models.db.rule import *
+from keep.api.models.db.secret import *
 from keep.api.models.db.statistics import *
 from keep.api.models.db.tenant import *
 from keep.api.models.db.topology import *
@@ -91,10 +91,10 @@ async def run_migrations_online() -> None:
     connectable = create_db_engine()
     try:
         do_run_migrations(connectable.connect())
-    except Exception as e:
+    except Exception:
         # print all migrations so we will know what failed
         list_migrations(connectable)
-        raise e
+        raise
 
 
 def list_migrations(connectable):

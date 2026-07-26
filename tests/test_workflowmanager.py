@@ -5,10 +5,10 @@ import pytest
 from fastapi import HTTPException
 
 from keep.api.routes.workflows import get_event_from_body
-from keep.parser.parser import Parser
 
 # Assuming WorkflowParser is the class containing the get_workflow_from_dict method
 from keep.exceptions.action_error import ActionError
+from keep.parser.parser import Parser
 from keep.step.step import StepError
 from keep.workflowmanager.workflow import Workflow
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -205,7 +205,14 @@ def _make_workflow(steps=None, actions=None):
     )
 
 
-def _mock_step(step_id, *, continue_on_error=False, continue_to_next_step=True, run_return=True, run_raises=None):
+def _mock_step(
+    step_id,
+    *,
+    continue_on_error=False,
+    continue_to_next_step=True,
+    run_return=True,
+    run_raises=None,
+):
     step = Mock()
     step.step_id = step_id
     step.continue_on_error = continue_on_error
@@ -235,7 +242,9 @@ def _mock_action(name, *, continue_on_error=False, run_raises=None):
 
 def test_run_steps_continue_on_error_swallows_failure_and_continues():
     """A failing step with continue_on_error=True should not raise and the next step should run."""
-    failing = _mock_step("failing", continue_on_error=True, run_raises=StepError("boom"))
+    failing = _mock_step(
+        "failing", continue_on_error=True, run_raises=StepError("boom")
+    )
     next_step = _mock_step("next")
 
     _make_workflow(steps=[failing, next_step]).run_steps()
@@ -245,7 +254,9 @@ def test_run_steps_continue_on_error_swallows_failure_and_continues():
 
 def test_run_steps_continue_on_error_swallows_action_error():
     """step.run() raises ActionError in practice — continue_on_error must catch it too."""
-    failing = _mock_step("failing", continue_on_error=True, run_raises=ActionError("boom"))
+    failing = _mock_step(
+        "failing", continue_on_error=True, run_raises=ActionError("boom")
+    )
     next_step = _mock_step("next")
 
     _make_workflow(steps=[failing, next_step]).run_steps()
@@ -255,7 +266,9 @@ def test_run_steps_continue_on_error_swallows_action_error():
 
 def test_run_steps_without_continue_on_error_raises_step_error():
     """A failing step without continue_on_error should propagate StepError and stop execution."""
-    failing = _mock_step("failing", continue_on_error=False, run_raises=StepError("boom"))
+    failing = _mock_step(
+        "failing", continue_on_error=False, run_raises=StepError("boom")
+    )
     next_step = _mock_step("next")
 
     with pytest.raises(StepError):
@@ -266,7 +279,9 @@ def test_run_steps_without_continue_on_error_raises_step_error():
 
 def test_run_steps_without_continue_on_error_raises_action_error():
     """A failing step without continue_on_error should propagate ActionError and stop execution."""
-    failing = _mock_step("failing", continue_on_error=False, run_raises=ActionError("boom"))
+    failing = _mock_step(
+        "failing", continue_on_error=False, run_raises=ActionError("boom")
+    )
     next_step = _mock_step("next")
 
     with pytest.raises(ActionError):
@@ -278,7 +293,9 @@ def test_run_steps_without_continue_on_error_raises_action_error():
 def test_run_steps_only_failed_step_is_skipped():
     """With continue_on_error, only the failing step is skipped; subsequent steps still run."""
     step1 = _mock_step("step1")
-    step2 = _mock_step("step2", continue_on_error=True, run_raises=ActionError("mid-fail"))
+    step2 = _mock_step(
+        "step2", continue_on_error=True, run_raises=ActionError("mid-fail")
+    )
     step3 = _mock_step("step3")
 
     _make_workflow(steps=[step1, step2, step3]).run_steps()
@@ -292,7 +309,9 @@ def test_run_steps_only_failed_step_is_skipped():
 
 def test_run_actions_continue_on_error_swallows_error():
     """A failing action with continue_on_error=True should not appear in actions_errors."""
-    failing = _mock_action("failing", continue_on_error=True, run_raises=Exception("boom"))
+    failing = _mock_action(
+        "failing", continue_on_error=True, run_raises=Exception("boom")
+    )
 
     _, actions_errors = _make_workflow(actions=[failing]).run_actions()
 
@@ -301,7 +320,9 @@ def test_run_actions_continue_on_error_swallows_error():
 
 def test_run_actions_without_continue_on_error_records_error():
     """A failing action without continue_on_error should appear in actions_errors."""
-    failing = _mock_action("failing", continue_on_error=False, run_raises=Exception("boom"))
+    failing = _mock_action(
+        "failing", continue_on_error=False, run_raises=Exception("boom")
+    )
 
     _, actions_errors = _make_workflow(actions=[failing]).run_actions()
 
@@ -311,7 +332,9 @@ def test_run_actions_without_continue_on_error_records_error():
 
 def test_run_actions_continue_on_error_next_action_still_runs():
     """After a continue_on_error action failure, the next action should still execute."""
-    failing = _mock_action("failing", continue_on_error=True, run_raises=Exception("boom"))
+    failing = _mock_action(
+        "failing", continue_on_error=True, run_raises=Exception("boom")
+    )
     next_action = _mock_action("next")
 
     _make_workflow(actions=[failing, next_action]).run_actions()

@@ -43,7 +43,6 @@ def _extract_identity(request: Request, attribute="email") -> str:
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
-
     async def dispatch(self, request: Request, call_next):
         identity = _extract_identity(request, attribute="keep_tenant_id")
         logger.info(

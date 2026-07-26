@@ -1,8 +1,9 @@
-import json
 import dataclasses
+import json
+from typing import Any, ClassVar
+
 import pydantic
 import requests
-from typing import Optional, Dict, Any, List
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
@@ -31,7 +32,7 @@ class LitellmProviderAuthConfig:
 
 class LitellmProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "LiteLLM"
-    PROVIDER_CATEGORY = ["AI"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["AI"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -50,13 +51,13 @@ class LitellmProvider(BaseProvider):
         scopes = {}
         return scopes
 
-    def _prepare_headers(self) -> Dict[str, str]:
+    def _prepare_headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
         if self.authentication_config.api_key:
             headers["Authorization"] = f"Bearer {self.authentication_config.api_key}"
         return headers
 
-    def _format_messages(self, prompt: str) -> List[Dict[str, str]]:
+    def _format_messages(self, prompt: str) -> list[dict[str, str]]:
         """Format the prompt as a chat message."""
         return [{"role": "user", "content": prompt}]
 
@@ -66,8 +67,8 @@ class LitellmProvider(BaseProvider):
         temperature: float = 0.7,
         model: str = "gpt-3.5-turbo",
         max_tokens: int = 1024,
-        structured_output_format: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        structured_output_format: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         headers = self._prepare_headers()
         formatted_messages = self._format_messages(prompt)
 
@@ -119,12 +120,12 @@ class LitellmProvider(BaseProvider):
             }
 
         except requests.exceptions.RequestException as e:
-            raise ProviderException(f"Error querying LiteLLM API: {str(e)}")
+            raise ProviderException(f"Error querying LiteLLM API: {e!s}")
 
 
 if __name__ == "__main__":
-    import os
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(

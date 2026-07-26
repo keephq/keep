@@ -3,12 +3,12 @@ import logging
 import os
 import random
 import uuid
-from typing import Tuple
 
 import celpy
 import requests
 import validators
 from fastapi import HTTPException
+from sqlalchemy.exc import NoResultFound
 
 from keep.api.core.db import (
     add_or_update_workflow,
@@ -29,7 +29,6 @@ from keep.functions import cyaml
 from keep.parser.parser import Parser
 from keep.providers.providers_factory import ProvidersFactory
 from keep.workflowmanager.workflow import Workflow
-from sqlalchemy.exc import NoResultFound
 
 
 class WorkflowStore:
@@ -115,7 +114,7 @@ class WorkflowStore:
         try:
             delete_workflow(tenant_id, workflow_id)
         except Exception as e:
-            self.logger.exception(f"Error deleting workflow {workflow_id}: {str(e)}")
+            self.logger.exception(f"Error deleting workflow {workflow_id}: {e!s}")
             raise HTTPException(
                 status_code=500, detail=f"Failed to delete workflow {workflow_id}"
             )
@@ -198,11 +197,11 @@ class WorkflowStore:
     def get_all_workflows_with_last_execution(
         self,
         tenant_id: str,
-        cel: str = None,
-        limit: int = None,
-        offset: int = None,
-        sort_by: str = None,
-        sort_dir: str = None,
+        cel: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        sort_by: str | None = None,
+        sort_dir: str | None = None,
         session=None,
     ):
         # list all tenant's workflows
@@ -225,8 +224,8 @@ class WorkflowStore:
         self,
         tenant_id,
         workflow_path: str | tuple[str],
-        providers_file: str = None,
-        actions_file: str = None,
+        providers_file: str | None = None,
+        actions_file: str | None = None,
     ) -> list[Workflow]:
         """Backward compatibility method to get workflows from a path.
 
@@ -266,8 +265,8 @@ class WorkflowStore:
         self,
         tenant_id,
         workflows_dir: str,
-        providers_file: str = None,
-        actions_file: str = None,
+        providers_file: str | None = None,
+        actions_file: str | None = None,
     ) -> list[Workflow]:
         """
         Run workflows from a directory.
@@ -278,7 +277,7 @@ class WorkflowStore:
         """
         workflows = []
         for file in os.listdir(workflows_dir):
-            if file.endswith(".yaml") or file.endswith(".yml"):
+            if file.endswith((".yaml", ".yml")):
                 self.logger.info(f"Getting workflows from {file}")
                 parsed_workflow_yaml = self._parse_workflow_to_dict(
                     os.path.join(workflows_dir, file)
@@ -408,7 +407,7 @@ class WorkflowStore:
                 for workflow in provisioned_workflows:
                     if (
                         not pre_parsed_workflow
-                        or not workflow.name == pre_parsed_workflow.name
+                        or workflow.name != pre_parsed_workflow.name
                     ):
                         if not pre_parsed_workflow:
                             logger.info(
@@ -454,7 +453,6 @@ class WorkflowStore:
 
         ### Provisioning from the directory
         if provisioned_workflows_dir is not None:
-
             logger.info(
                 f"Provisioning workflows from directory {provisioned_workflows_dir}"
             )
@@ -533,7 +531,7 @@ class WorkflowStore:
             workflow = cyaml.safe_load(stream)
         except cyaml.YAMLError as e:
             self.logger.error(f"Error parsing workflow: {e}")
-            raise e
+            raise
         return workflow
 
     def get_random_workflow_templates(
@@ -583,7 +581,7 @@ class WorkflowStore:
 
     def query_workflow_templates(
         self, tenant_id: str, workflows_dir: str, query: QueryDto
-    ) -> Tuple[list[dict], int]:
+    ) -> tuple[list[dict], int]:
         """
         Get random workflows from a directory.
         Args:

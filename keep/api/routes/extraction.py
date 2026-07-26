@@ -50,7 +50,7 @@ def create_extraction_rule(
     new_rule = ExtractionRule(
         **rule_dto.dict(),
         created_by=authenticated_entity.email,
-        tenant_id=authenticated_entity.tenant_id
+        tenant_id=authenticated_entity.tenant_id,
     )
     session.add(new_rule)
     session.commit()

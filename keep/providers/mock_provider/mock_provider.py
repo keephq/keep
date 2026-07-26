@@ -39,4 +39,3 @@ class MockProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass

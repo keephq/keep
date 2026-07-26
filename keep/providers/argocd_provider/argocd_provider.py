@@ -4,7 +4,7 @@ Argocd Provider is a class that allows to get Applications and ApplicationSets f
 
 import dataclasses
 import uuid
-from typing import List
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -43,11 +43,11 @@ class ArgocdProviderAuthConfig:
 class ArgocdProvider(BaseTopologyProvider):
     """Install Webhooks and receive alerts from Argocd."""
 
-    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure"]
 
     PROVIDER_DISPLAY_NAME = "ArgoCD"
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authorized",
@@ -67,7 +67,6 @@ class ArgocdProvider(BaseTopologyProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -121,10 +120,14 @@ class ArgocdProvider(BaseTopologyProvider):
             "Authorization": f"Bearer {self.authentication_config.argocd_access_token}",
         }
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for Argocd api requests.
         """
+        if paths is None:
+            paths = []
         host = self.argocd_host.rstrip("/").rstrip() + "/api/v1/"
         self.logger.info(f"Building URL with host: {host}")
         url = urljoin(
@@ -172,7 +175,7 @@ class ArgocdProvider(BaseTopologyProvider):
                 "Error while getting applications from ArgoCD",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     def __get_relation(self, name: str, namespace: str):
         try:
@@ -224,19 +227,21 @@ class ArgocdProvider(BaseTopologyProvider):
                         )
 
                 if len(applications) > 0:
-                    service_topology[metadata["uid"]].application_relations = (
-                        applications
-                    )
+                    service_topology[
+                        metadata["uid"]
+                    ].application_relations = applications
 
             for node in nodes:
                 if node["kind"] == "Application":
                     uid = node.get("uid")
                     if not uid:
-                        self.logger.warning("Skipping node with missing 'uid': %s", node)
-                        continue                    
-                    service_topology[metadata["uid"]].dependencies[
-                        node["uid"]
-                    ] = "unknown"
+                        self.logger.warning(
+                            "Skipping node with missing 'uid': %s", node
+                        )
+                        continue
+                    service_topology[metadata["uid"]].dependencies[node["uid"]] = (
+                        "unknown"
+                    )
 
         return list(service_topology.values()), {}
 
@@ -248,9 +253,13 @@ class ArgocdProvider(BaseTopologyProvider):
         repos = []
         if "sources" in spec:
             # Handle multiple sources
-            repos.extend(source.get("repoURL") for source in spec["sources"] if source.get("repoURL"))
+            repos.extend(
+                source.get("repoURL")
+                for source in spec["sources"]
+                if source.get("repoURL")
+            )
         elif "source" in spec and spec["source"].get("repoURL"):
             # Handle single source
             repos.append(spec["source"]["repoURL"])
-        
+
         return ", ".join(repos) if repos else None

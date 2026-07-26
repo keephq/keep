@@ -3,6 +3,7 @@ TrelloOutput is a class that implements the BaseOutputProvider interface for Tre
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -33,7 +34,7 @@ class TrelloProvider(BaseProvider):
     """Enrich alerts with data from Trello."""
 
     PROVIDER_DISPLAY_NAME = "Trello"
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -49,7 +50,6 @@ class TrelloProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _query(self, board_id: str = "", filter: str = "createCard", **kwargs: dict):
         """

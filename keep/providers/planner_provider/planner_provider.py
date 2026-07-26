@@ -2,6 +2,7 @@
 PlannerProvider is a class that provides a way to read data from Microsoft Planner
 and create tasks in planner.
 """
+
 import dataclasses
 from urllib.parse import urljoin
 
@@ -45,7 +46,7 @@ class PlannerProvider(BaseProvider):
     """
     Create tasks in Microsoft Planner.
     """
-    
+
     PROVIDER_DISPLAY_NAME = "Microsoft Planner"
     MS_GRAPH_BASE_URL = "https://graph.microsoft.com"
     MS_PLANS_URL = urljoin(base=MS_GRAPH_BASE_URL, url="/v1.0/planner/plans")

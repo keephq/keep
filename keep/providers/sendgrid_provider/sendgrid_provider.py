@@ -4,6 +4,7 @@ SendGridProvider is a class that implements the SendGrid API and allows email se
 
 import dataclasses
 import logging
+from typing import ClassVar
 
 import pydantic
 from python_http_client.exceptions import ForbiddenError, UnauthorizedError
@@ -46,8 +47,8 @@ class SendgridProvider(BaseProvider):
     """Send email using the SendGrid API."""
 
     PROVIDER_DISPLAY_NAME = "SendGrid"
-    PROVIDER_CATEGORY = ["Collaboration"]
-    PROVIDER_SCOPES = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="email.send",
             description="Send emails using SendGrid",
@@ -181,13 +182,12 @@ class SendgridProvider(BaseProvider):
             )
         except Exception as e:
             self.logger.error(f"Exception occurred: {e}")
-            raise Exception(f"Failed to send email: {str(e)}")
+            raise Exception(f"Failed to send email: {e!s}")
 
     def dispose(self):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
 
 if __name__ == "__main__":

@@ -37,7 +37,6 @@ class EnrichmentEvent(SQLModel, table=True):
             nullable=False,
         )
     )
-    enriched_fields: dict = Field(sa_column=Column(JSON), default_factory=dict)
     date_hour: datetime = Field(
         sa_column=Column(DATETIME_COLUMN_TYPE),
         default_factory=lambda: datetime.now(tz=timezone.utc).replace(

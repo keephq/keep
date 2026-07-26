@@ -3,6 +3,7 @@ GithubWorkflowProvider is a provider that interacts with Github Workflows API.
 """
 
 import dataclasses
+
 import pydantic
 import requests
 from requests.exceptions import JSONDecodeError
@@ -42,14 +43,8 @@ class GithubWorkflowsProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
-    def _notify(
-            self,
-            github_url: str = "",
-            github_method: str = "",
-            **kwargs
-            ):
+    def _notify(self, github_url: str = "", github_method: str = "", **kwargs):
         url = github_url
         method = github_method.upper()
 

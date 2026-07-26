@@ -1,12 +1,12 @@
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Tuple
 
 from sqlalchemy import String, and_, case, cast, func, select
+from sqlalchemy.orm import aliased, foreign
 from sqlmodel import Session, col, text
-from sqlalchemy.orm import foreign, aliased
 
 from keep.api.core.alerts import get_alert_potential_facet_fields
+from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_mapper import (
     PropertiesMappingException,
 )
@@ -32,7 +32,6 @@ from keep.api.models.db.facet import FacetType
 from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.models.incident import IncidentSorting
 from keep.api.models.query import SortOptionsDto
-from keep.api.core.cel_to_sql.ast_nodes import DataType
 
 logger = logging.getLogger(__name__)
 
@@ -224,11 +223,7 @@ def __build_base_incident_query(
             False,
         )
         is_visible_filter_present = next(
-            (
-                True
-                for field in involved_fields
-                if field.field_name == "is_visible"
-            ),
+            (True for field in involved_fields if field.field_name == "is_visible"),
             False,
         )
 
@@ -293,9 +288,7 @@ def __build_base_incident_query(
 
     sql_query = sql_query.filter(Incident.tenant_id == tenant_id)
     if not is_visible_filter_present:
-        sql_query = sql_query.filter(
-            Incident.is_visible == True
-        )
+        sql_query = sql_query.filter(Incident.is_visible == True)
     if sql_filter:
         sql_query = sql_query.where(text(sql_filter))
 
@@ -308,13 +301,13 @@ def __build_base_incident_query(
 
 def __build_last_incidents_total_count_query(
     tenant_id: str,
-    timeframe: int = None,
-    upper_timestamp: datetime = None,
-    lower_timestamp: datetime = None,
+    timeframe: int | None = None,
+    upper_timestamp: datetime | None = None,
+    lower_timestamp: datetime | None = None,
     is_candidate: bool = False,
-    is_predicted: bool = None,
-    cel: str = None,
-    allowed_incident_ids: Optional[List[str]] = None,
+    is_predicted: bool | None = None,
+    cel: str | None = None,
+    allowed_incident_ids: list[str] | None = None,
 ):
     """
     Builds a SQL query to retrieve the last incidents based on various filters and sorting options.
@@ -378,14 +371,14 @@ def __build_last_incidents_query(
     tenant_id: str,
     limit: int = 25,
     offset: int = 0,
-    timeframe: int = None,
-    upper_timestamp: datetime = None,
-    lower_timestamp: datetime = None,
+    timeframe: int | None = None,
+    upper_timestamp: datetime | None = None,
+    lower_timestamp: datetime | None = None,
     is_candidate: bool = False,
-    sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
-    is_predicted: bool = None,
-    cel: str = None,
-    allowed_incident_ids: Optional[List[str]] = None,
+    sorting: IncidentSorting | None = IncidentSorting.creation_time,
+    is_predicted: bool | None = None,
+    cel: str | None = None,
+    allowed_incident_ids: list[str] | None = None,
 ):
     """
     Builds a SQL query to retrieve the last incidents based on various filters and sorting options.
@@ -465,16 +458,16 @@ def get_last_incidents_by_cel(
     tenant_id: str,
     limit: int = 25,
     offset: int = 0,
-    timeframe: int = None,
-    upper_timestamp: datetime = None,
-    lower_timestamp: datetime = None,
+    timeframe: int | None = None,
+    upper_timestamp: datetime | None = None,
+    lower_timestamp: datetime | None = None,
     is_candidate: bool = False,
-    sorting: Optional[IncidentSorting] = IncidentSorting.creation_time,
+    sorting: IncidentSorting | None = IncidentSorting.creation_time,
     with_alerts: bool = False,
-    is_predicted: bool = None,
-    cel: str = None,
-    allowed_incident_ids: Optional[List[str]] = None,
-) -> Tuple[list[Incident], int]:
+    is_predicted: bool | None = None,
+    cel: str | None = None,
+    allowed_incident_ids: list[str] | None = None,
+) -> tuple[list[Incident], int]:
     """
     Retrieve the last incidents for a given tenant based on various filters and criteria.
     Args:
@@ -522,9 +515,9 @@ def get_last_incidents_by_cel(
         except CelToSqlException as e:
             if isinstance(e.__cause__, PropertiesMappingException):
                 # if there is an error in mapping properties, return empty list
-                logger.error(f"Error mapping properties: {str(e)}")
+                logger.error(f"Error mapping properties: {e!s}")
                 return [], 0
-            raise e
+            raise
 
         total_count = session.exec(total_count_query).one()[0]
         all_records = session.exec(sql_query).all()
@@ -607,7 +600,7 @@ def get_incident_facets_data(
 
 
 def get_incident_facets(
-    tenant_id: str, facet_ids_to_load: list[str] = None
+    tenant_id: str, facet_ids_to_load: list[str] | None = None
 ) -> list[FacetDto]:
     """
     Retrieve incident facets for a given tenant.

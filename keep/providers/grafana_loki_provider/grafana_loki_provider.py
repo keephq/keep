@@ -5,6 +5,7 @@ GrafanaLokiProvider is a class that allows you to query logs from Grafana Loki.
 import base64
 import dataclasses
 import typing
+from typing import ClassVar
 from urllib.parse import urljoin
 
 import pydantic
@@ -56,7 +57,7 @@ class GrafanaLokiProviderAuthConfig:
         )
     )
 
-    username: typing.Optional[str] = dataclasses.field(
+    username: str | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
@@ -67,7 +68,7 @@ class GrafanaLokiProviderAuthConfig:
         },
     )
 
-    password: typing.Optional[str] = dataclasses.field(
+    password: str | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
@@ -78,7 +79,7 @@ class GrafanaLokiProviderAuthConfig:
         },
     )
 
-    x_scope_orgid: typing.Optional[str] = dataclasses.field(
+    x_scope_orgid: str | None = dataclasses.field(
         default=None,
         metadata={
             "required": False,
@@ -92,16 +93,16 @@ class GrafanaLokiProviderAuthConfig:
 
 class GrafanaLokiProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Grafana Loki"
-    PROVIDER_TAGS = ["alert"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="Instance is valid and user is authenticated",
         ),
     ]
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -125,9 +126,7 @@ class GrafanaLokiProvider(BaseProvider):
         """
         credentials = {}
         if self.authentication_config.authentication_type == "Basic":
-            username_password = f"{self.authentication_config.username}:{self.authentication_config.password}".encode(
-                "utf-8"
-            )
+            username_password = f"{self.authentication_config.username}:{self.authentication_config.password}".encode()
             encoded_credentials = base64.b64encode(username_password).decode("utf-8")
             credentials["Authorization"] = f"Basic {encoded_credentials}"
 

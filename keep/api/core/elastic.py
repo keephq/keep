@@ -13,12 +13,11 @@ from keep.api.utils.enrichment_helpers import parse_and_enrich_deleted_and_assig
 
 
 class ElasticClient:
-
     def __init__(
         self,
         tenant_id,
         api_key=None,
-        hosts: list[str] = None,
+        hosts: list[str] | None = None,
         basic_auth=None,
         **kwargs,
     ):
@@ -231,7 +230,9 @@ class ElasticClient:
         actions = []
         for alert in alerts:
             if hasattr(alert, "incident_dto"):
-                alert.incident_dto = [incident.json() for incident in alert.incident_dto]
+                alert.incident_dto = [
+                    incident.json() for incident in alert.incident_dto
+                ]
 
             action = {
                 "_index": self.alerts_index,

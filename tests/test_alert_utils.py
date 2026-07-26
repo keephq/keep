@@ -1,4 +1,5 @@
 import pytest
+
 from keep.api.utils.alert_utils import sanitize_alert
 
 
@@ -22,7 +23,10 @@ from keep.api.utils.alert_utils import sanitize_alert
 )
 def test_sanitize_alert(input_data, expected_output):
     sanitized_alert = sanitize_alert(input_data)
-    assert sanitized_alert == expected_output, f"Expected {expected_output}, but got {sanitized_alert}"
+    assert sanitized_alert == expected_output, (
+        f"Expected {expected_output}, but got {sanitized_alert}"
+    )
+
 
 def test_sanitize_alert_invalid_input():
     with pytest.raises(ValueError, match="Input must be a dictionary"):

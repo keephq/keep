@@ -1,13 +1,14 @@
-import pytest
 from datetime import datetime
 from unittest.mock import Mock, patch
+
+import pytest
 from sqlmodel import Session
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.provider import Provider
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.provider_exceptions import ProviderMethodException
 from keep.providers.providers_factory import ProviderConfigurationException
-from keep.exceptions.provider_exception import ProviderException
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 VALID_API_KEY = "valid_api_key"

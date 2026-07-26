@@ -5,6 +5,7 @@ Auth0 provider.
 import dataclasses
 import datetime
 import os
+from typing import ClassVar
 
 import requests
 
@@ -43,7 +44,7 @@ class Auth0Provider(BaseProvider):
     """Enrich alerts with data from Auth0."""
 
     PROVIDER_DISPLAY_NAME = "Auth0"
-    PROVIDER_CATEGORY = ["Identity and Access Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Identity and Access Management"]
 
     provider_id: str
     config: ProviderConfig
@@ -61,7 +62,7 @@ class Auth0Provider(BaseProvider):
             **self.config.authentication
         )
 
-    def _query(self, log_type: str, from_: str = None, **kwargs: dict):
+    def _query(self, log_type: str, from_: str | None = None, **kwargs: dict):
         """
         Query Auth0 logs.
 
@@ -88,7 +89,7 @@ class Auth0Provider(BaseProvider):
         }
         if from_:
             params["q"] = (
-                f"({params['q']}) AND (date:[{from_} TO {datetime.datetime.now().isoformat()}])"
+                f"({params['q']}) AND (date:[{from_} TO {datetime.datetime.now(tz=datetime.UTC).isoformat()}])"
             )
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()

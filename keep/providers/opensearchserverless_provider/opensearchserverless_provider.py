@@ -3,7 +3,7 @@ OpensearchProvider is a class that provides a way to read/add data from AWS Open
 """
 
 import dataclasses
-from typing import List
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin
 
 import boto3
@@ -54,9 +54,9 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
     """Push alarms from AWS Opensearch to Keep."""
 
     PROVIDER_DISPLAY_NAME = "Opensearch Serverless"
-    PROVIDER_CATEGORY = ["Database", "Observability"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Database", "Observability"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="iam:SimulatePrincipalPolicy",
             description="Required to check if we have access to AOSS API.",
@@ -111,10 +111,14 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
         self.client = None
         super().__init__(context_manager, provider_id, config)
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for Opensearch api requests.
         """
+        if paths is None:
+            paths = []
         host = self.authentication_config.domain_endpoint.rstrip("/").rstrip()
         self.logger.info(f"Building URL with host: {host}")
         url = urljoin(
@@ -158,7 +162,7 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
             scopes["iam:SimulatePrincipalPolicy"] = True
         except Exception as e:
             self.logger.error(e)
-            scopes = {s: str(e) for s in scopes.keys()}
+            scopes = {s: str(e) for s in scopes}
             return scopes
 
         all_allowed = True
@@ -168,7 +172,7 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
                 scopes[res["EvalActionName"]] = (
                     True
                     if res["EvalDecision"] == "allowed"
-                    else f'{res["EvalActionName"]} is not allowed'
+                    else f"{res['EvalActionName']} is not allowed"
                 )
 
         if not all_allowed:
@@ -259,7 +263,7 @@ class OpensearchserverlessProvider(BaseProvider, ProviderHealthMixin):
             return x
         except Exception as e:
             self.logger.error("Error while querying index", extra={"exception": str(e)})
-            raise e
+            raise
 
     def _notify(self, index: str, document: dict, doc_id: str):
         try:

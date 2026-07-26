@@ -124,8 +124,8 @@ class ProvidersFactory:
             error_message = f"Configuration problem while trying to initialize the provider {provider_id}. Probably missing provider config, please check the provider configuration."
             logging.getLogger(__name__).error(error_message)
             raise ProviderConfigurationException(exc)
-        except Exception as exc:
-            raise exc
+        except Exception:
+            raise
         finally:
             # if the provider has changed the auth config, we need to update it, even if the provider failed to initialize
             if (
@@ -292,9 +292,10 @@ class ProvidersFactory:
             os.path.dirname(os.path.abspath(__file__))
         ):
             # skip files that aren't providers
-            if not provider_directory.endswith("_provider"):
-                continue
-            elif provider_directory in blacklisted_providers:
+            if (
+                not provider_directory.endswith("_provider")
+                or provider_directory in blacklisted_providers
+            ):
                 continue
             # import it
             try:
@@ -403,7 +404,7 @@ class ProvidersFactory:
                     provider_methods = ProvidersFactory.__get_methods(provider_class)
                 except Exception as e:
                     logger.warning(
-                        f"Could not get provider {provider_directory} methods. ({str(e)})"
+                        f"Could not get provider {provider_directory} methods. ({e!s})"
                     )
                     provider_methods = []
                 # if the provider has a PROVIDER_DISPLAY_NAME, use it, otherwise use the provider type
@@ -468,7 +469,7 @@ class ProvidersFactory:
             # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
             except TypeError as e:
                 logger.warning(
-                    f"Cannot import provider {provider_directory}, unexpected error. ({str(e)})"
+                    f"Cannot import provider {provider_directory}, unexpected error. ({e!s})"
                 )
                 continue
 

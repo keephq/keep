@@ -279,6 +279,7 @@ def get_or_create_correlation_rules(keep_api_key, keep_api_url):
             )
             response.raise_for_status()
 
+
 def get_installed_providers(keep_api_key, keep_api_url):
     response = requests.get(
         f"{keep_api_url}/providers",
@@ -390,7 +391,10 @@ def perform_demo_ai(keep_api_key, keep_api_url):
             )
             response.raise_for_status()
 
+
 number_of_errors_before_restart = 10
+
+
 async def safe_run_async_worker(worker, *args, **kwargs):
     number_of_errors = 0
     while True:
@@ -399,7 +403,7 @@ async def safe_run_async_worker(worker, *args, **kwargs):
             extra={
                 "args_": args,
                 "kwargs_": kwargs,
-            }
+            },
         )
         try:
             await worker(*args, **kwargs)
@@ -413,9 +417,8 @@ async def safe_run_async_worker(worker, *args, **kwargs):
                 number_of_errors_before_restart
                 and number_of_errors >= number_of_errors_before_restart
             ):
-                logger.error(
-                    f"Worker encountered {number_of_errors} errors, restarting...",
-                    exc_info=True,
+                logger.exception(
+                    f"Worker encountered {number_of_errors} errors, restarting..."
                 )
                 raise
             # o.w: log the error and continue
@@ -424,10 +427,18 @@ async def safe_run_async_worker(worker, *args, **kwargs):
             continue
         break
 
+
 def simulate_alerts(*args, **kwargs):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.create_task(safe_run_async_worker(simulate_alerts_worker, worker_id=0, keep_api_key=kwargs.get("keep_api_key"), rps=0))
+    loop.create_task(
+        safe_run_async_worker(
+            simulate_alerts_worker,
+            worker_id=0,
+            keep_api_key=kwargs.get("keep_api_key"),
+            rps=0,
+        )
+    )
     loop.create_task(safe_run_async_worker(simulate_alerts_async, *args, **kwargs))
     loop.run_forever()
 
@@ -512,16 +523,13 @@ async def simulate_alerts_async(
                 shoot = target_rps * 100
 
             for _ in range(shoot):
-
                 send_alert_url_params = {}
 
                 # choose provider based on weights
                 provider_type = random.choices(
                     providers, weights=normalized_weights, k=1
                 )[0]
-                send_alert_url = "{}/alerts/event/{}".format(
-                    keep_api_url, provider_type
-                )
+                send_alert_url = f"{keep_api_url}/alerts/event/{provider_type}"
 
                 if provider_type in existing_providers_to_their_ids:
                     send_alert_url_params["provider_id"] = (
@@ -552,7 +560,6 @@ async def simulate_alerts_async(
                     )
 
                 for _ in range(num_iterations):
-
                     prepared_request = PreparedRequest()
                     prepared_request.prepare_url(send_alert_url, send_alert_url_params)
                     await REQUESTS_QUEUE.put((prepared_request.url, alert))
@@ -568,9 +575,7 @@ async def simulate_alerts_async(
                 "Error in simulate_alerts", extra={"exception_str": str(e)}
             )
 
-        logger.info(
-            "Sleeping for {} seconds before next iteration".format(sleep_interval)
-        )
+        logger.info(f"Sleeping for {sleep_interval} seconds before next iteration")
 
 
 def launch_demo_mode_thread(
@@ -628,7 +633,7 @@ async def simulate_alerts_worker(worker_id, keep_api_key, rps=1):
                 response_time = time.time() - start
                 total_requests += 1
                 if not response.ok:
-                    logger.error("Failed to send alert: {}".format(response.text))
+                    logger.error(f"Failed to send alert: {response.text}")
                 else:
                     logger.info(
                         f"Alert sent successfully in {response_time:.3f} seconds"

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import ClassVar
 
 from keep.api.models.alert import AlertDto
 from keep.contextmanager.contextmanager import ContextManager
@@ -10,8 +11,8 @@ class AirflowProvider(BaseProvider):
     """Enrich alerts with data sent from Airflow."""
 
     PROVIDER_DISPLAY_NAME = "Airflow"
-    PROVIDER_CATEGORY = ["Orchestration"]
-    FINGERPRINT_FIELDS = ["fingerprint"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Orchestration"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["fingerprint"]
 
     webhook_documentation_here_differs_from_general_documentation = True
     webhook_description = ""
@@ -86,7 +87,6 @@ dag = DAG(
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     @staticmethod
     def _format_alert(

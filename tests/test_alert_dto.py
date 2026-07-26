@@ -42,7 +42,7 @@ def test_alert_dto_basic_iso_timestamp():
         name="Test Alert", last_received="2024-02-15T12:34:56.789Z"
     )
     assert alert.lastReceived == "2024-02-15T12:34:56.789Z"
-    assert alert.fingerprint == hashlib.sha256("Test Alert".encode()).hexdigest()
+    assert alert.fingerprint == hashlib.sha256(b"Test Alert").hexdigest()
 
 
 def test_alert_dto_unix_timestamp():
@@ -50,7 +50,7 @@ def test_alert_dto_unix_timestamp():
     alert = create_basic_alert(name="Unix Alert", last_received="1739550225.735604345Z")
     # The expected ISO format for this Unix timestamp
     assert alert.lastReceived.endswith("Z")
-    assert alert.fingerprint == hashlib.sha256("Unix Alert".encode()).hexdigest()
+    assert alert.fingerprint == hashlib.sha256(b"Unix Alert").hexdigest()
 
 
 def test_alert_dto_unix_timestamp_no_z():
@@ -59,7 +59,7 @@ def test_alert_dto_unix_timestamp_no_z():
         name="Unix Alert No Z", last_received="1739550225.735604345"
     )
     assert alert.lastReceived.endswith("Z")
-    assert alert.fingerprint == hashlib.sha256("Unix Alert No Z".encode()).hexdigest()
+    assert alert.fingerprint == hashlib.sha256(b"Unix Alert No Z").hexdigest()
 
 
 def test_alert_dto_empty_timestamp():
@@ -68,9 +68,7 @@ def test_alert_dto_empty_timestamp():
     # Verify it's in ISO format and ends with Z
     assert alert.lastReceived.endswith("Z")
     assert "T" in alert.lastReceived
-    assert (
-        alert.fingerprint == hashlib.sha256("Current Time Alert".encode()).hexdigest()
-    )
+    assert alert.fingerprint == hashlib.sha256(b"Current Time Alert").hexdigest()
 
 
 def test_alert_dto_invalid_timestamp():
@@ -86,17 +84,18 @@ def test_alert_dto_different_timezone():
     )
     # Should be converted to UTC
     assert alert.lastReceived.endswith("Z")
-    assert alert.fingerprint == hashlib.sha256("Timezone Alert".encode()).hexdigest()
+    assert alert.fingerprint == hashlib.sha256(b"Timezone Alert").hexdigest()
 
 
 def test_alert_dto_microsecond_precision():
     """Test timestamp with different microsecond precision"""
     alert = create_basic_alert(
-        name="Precision Alert", last_received="1739550225.735604"  # Less precision
+        name="Precision Alert",
+        last_received="1739550225.735604",  # Less precision
     )
     assert alert.lastReceived.endswith("Z")
     assert "." in alert.lastReceived  # Should still include milliseconds
-    assert alert.fingerprint == hashlib.sha256("Precision Alert".encode()).hexdigest()
+    assert alert.fingerprint == hashlib.sha256(b"Precision Alert").hexdigest()
 
 
 def test_alert_dto_additional_formats():
@@ -139,9 +138,7 @@ def test_alert_dto_additional_formats():
             assert "T" in alert.lastReceived
             assert alert.fingerprint == hashlib.sha256(name.encode()).hexdigest()
         except ValueError as e:
-            pytest.fail(
-                f"Failed to parse timestamp {timestamp} for case {name}: {str(e)}"
-            )
+            pytest.fail(f"Failed to parse timestamp {timestamp} for case {name}: {e!s}")
 
 
 def test_alert_dto_invalid_timestamps():

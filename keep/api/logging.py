@@ -158,9 +158,7 @@ class WorkflowDBHandler(logging.Handler):
             logging.getLogger(__name__).info("Flushed workflow logs to DB")
         except Exception as e:
             # Use the parent logger to avoid infinite recursion
-            logging.getLogger(__name__).error(
-                f"Failed to flush workflow logs: {str(e)}"
-            )
+            logging.getLogger(__name__).error(f"Failed to flush workflow logs: {e!s}")
         finally:
             # Clear the timer reference
             self._flush_timer = None
@@ -221,9 +219,7 @@ class ProviderDBHandler(logging.Handler):
             session.close()
         except Exception as e:
             # Use the parent logger to avoid infinite recursion
-            logging.getLogger(__name__).error(
-                f"Failed to flush provider logs: {str(e)}"
-            )
+            logging.getLogger(__name__).error(f"Failed to flush provider logs: {e!s}")
         finally:
             # Clear the timer reference
             self._flush_timer = None
@@ -524,7 +520,7 @@ def setup_logging():
             "class": "logging.handlers.RotatingFileHandler",
             "filename": KEEP_LOG_FILE,
             "mode": "a",
-            "maxBytes": 1024 * 1024 * 1024,   # 1GB
+            "maxBytes": 1024 * 1024 * 1024,  # 1GB
             "backupCount": 5,
         }
         # Add file handler to root logger

@@ -10,8 +10,11 @@ from sqlalchemy import text
 
 from keep.api.core.db import get_last_alerts
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import DeduplicationRuleDto, AlertStatus
-from keep.api.models.db.alert import AlertDeduplicationRule, AlertDeduplicationEvent, Alert
+from keep.api.models.alert import AlertStatus
+from keep.api.models.db.alert import (
+    Alert,
+    AlertDeduplicationRule,
+)
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 from keep.providers.providers_factory import ProvidersFactory
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
@@ -104,7 +107,7 @@ def test_deduplication_sanity(db_session, client, test_app):
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
     while not any(
-        [rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0]
+        rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0
     ):
         time.sleep(0.1)
         deduplication_rules = client.get(
@@ -161,7 +164,7 @@ def test_deduplication_sanity_2(db_session, client, test_app):
     ).json()
 
     while not any(
-        [rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0]
+        rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0
     ):
         time.sleep(0.1)
         deduplication_rules = client.get(
@@ -267,7 +270,7 @@ def test_custom_deduplication_rule(db_session, client, test_app):
     ).json()
 
     while not any(
-        [rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0]
+        rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0
     ):
         time.sleep(0.1)
         deduplication_rules = client.get(
@@ -336,7 +339,7 @@ def test_custom_deduplication_rule_behaviour(db_session, client, test_app):
     ).json()
 
     while not any(
-        [rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0]
+        rule for rule in deduplication_rules if rule.get("dedup_ratio") == 50.0
     ):
         time.sleep(1)
         deduplication_rules = client.get(
@@ -746,7 +749,7 @@ def test_partial_deduplication(db_session, client, test_app):
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
 
-    while not any([rule for rule in deduplication_rules if rule.get("ingested") == 3]):
+    while not any(rule for rule in deduplication_rules if rule.get("ingested") == 3):
         time.sleep(1)
         deduplication_rules = client.get(
             "/deduplications", headers={"x-api-key": "some-api-key"}
@@ -834,7 +837,7 @@ def test_deduplication_fields(db_session, client, test_app):
         "/deduplications", headers={"x-api-key": "some-api-key"}
     ).json()
 
-    while not any([rule for rule in deduplication_rules if rule.get("ingested") == 3]):
+    while not any(rule for rule in deduplication_rules if rule.get("ingested") == 3):
         print("Waiting for deduplication rules to be ingested")
         time.sleep(1)
         deduplication_rules = client.get(
@@ -857,7 +860,9 @@ def test_full_deduplication_last_received(db_session, create_alert):
     db_session.exec(text("DELETE FROM alertdeduplicationrule"))
     dedup = AlertDeduplicationRule(
         name="Test Rule",
-        fingerprint_fields=["service",],
+        fingerprint_fields=[
+            "service",
+        ],
         full_deduplication=True,
         ignore_fields=["fingerprint", "lastReceived", "id"],
         is_provisioned=True,
@@ -879,33 +884,33 @@ def test_full_deduplication_last_received(db_session, create_alert):
         None,
         AlertStatus.FIRING,
         dt1,
-        {
-            "source": ["keep"],
-            "service": "service"
-        },
+        {"source": ["keep"], "service": "service"},
     )
 
     assert db_session.query(Alert).count() == 1
     alerts = get_last_alerts(SINGLE_TENANT_UUID)
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
 
-    assert alerts_dto[0].lastReceived == dt1.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    assert (
+        alerts_dto[0].lastReceived
+        == dt1.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    )
 
     create_alert(
         None,
         AlertStatus.FIRING,
         dt2,
-        {
-            "source": ["keep"],
-            "service": "service"
-        },
+        {"source": ["keep"], "service": "service"},
     )
 
     assert db_session.query(Alert).count() == 1
     alerts = get_last_alerts(SINGLE_TENANT_UUID)
     alerts_dto = convert_db_alerts_to_dto_alerts(alerts)
 
-    assert alerts_dto[0].lastReceived == dt2.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    assert (
+        alerts_dto[0].lastReceived
+        == dt2.astimezone(pytz.UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    )
 
 
 @pytest.mark.parametrize(
@@ -931,7 +936,7 @@ def test_sort_keys_deduplication_fix(db_session, client, test_app):
         "alertname": "TestAlert",
         "env": "production",
         "team": "backend",
-        "priority": "high"
+        "priority": "high",
     }
 
     # Calculate fingerprint like prometheus does
@@ -943,13 +948,13 @@ def test_sort_keys_deduplication_fix(db_session, client, test_app):
         "labels": base_labels,
         "annotations": {
             "runbook": "http://example.com",
-            "description": "Test description"
+            "description": "Test description",
         },
         "generatorURL": "http://prometheus:9090/graph",
         "startsAt": datetime.now(tz=timezone.utc).isoformat(),
         "endsAt": "0001-01-01T00:00:00Z",
         "status": "firing",
-        "fingerprint": fingerprint
+        "fingerprint": fingerprint,
     }
 
     # Create the same alert but with different key ordering in nested objects
@@ -958,7 +963,7 @@ def test_sort_keys_deduplication_fix(db_session, client, test_app):
         "priority": "high",  # different order
         "env": "production",
         "alertname": "TestAlert",
-        "team": "backend"
+        "team": "backend",
     }
 
     # Same fingerprint since label content is identical
@@ -968,26 +973,26 @@ def test_sort_keys_deduplication_fix(db_session, client, test_app):
         "generatorURL": "http://prometheus:9090/graph",  # different position
         "annotations": {
             "runbook": "http://example.com",
-            "description": "Test description"
+            "description": "Test description",
         },
         "startsAt": datetime.now(tz=timezone.utc).isoformat(),
         "endsAt": "0001-01-01T00:00:00Z",
         "status": "firing",
-        "fingerprint": fingerprint  # Same fingerprint
+        "fingerprint": fingerprint,  # Same fingerprint
     }
 
     # Send both alerts to prometheus provider
     client.post(
         "/alerts/event/prometheus",
         json=base_alert,
-        headers={"x-api-key": "some-api-key"}
+        headers={"x-api-key": "some-api-key"},
     )
     time.sleep(0.1)
 
     client.post(
         "/alerts/event/prometheus",
         json=reordered_alert,
-        headers={"x-api-key": "some-api-key"}
+        headers={"x-api-key": "some-api-key"},
     )
     time.sleep(0.1)
 
@@ -1001,7 +1006,7 @@ def test_sort_keys_deduplication_fix(db_session, client, test_app):
 
     # Wait for deduplication ratio to be calculated
     while not any(
-        [rule for rule in deduplication_rules if rule.get("dedup_ratio", 0) > 0]
+        rule for rule in deduplication_rules if rule.get("dedup_ratio", 0) > 0
     ):
         time.sleep(0.1)
         deduplication_rules = client.get(

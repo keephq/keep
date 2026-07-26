@@ -31,12 +31,12 @@ ALERTS = {
     "faults": "",
     "uid": "41",
     "severity": "ok",
-    "rule": "{\"condition\":\"AND\",\"rules\":[{\"id\":\"macros.device_down\",\"field\":\"macros.device_down\",\"type\":\"integer\",\"input\":\"radio\",\"operator\":\"equal\",\"value\":\"1\"}],\"valid\":true}",
+    "rule": '{"condition":"AND","rules":[{"id":"macros.device_down","field":"macros.device_down","type":"integer","input":"radio","operator":"equal","value":"1"}],"valid":true}',
     "name": "Devices up/down",
     "string": "",
     "timestamp": "2025-03-04 11:01:41",
     "contacts": "",
     "state": "0",
     "msg": "Device 10.10.1.147 recovered from Devices up/down\nSeverity: ok\nTime elapsed: 3m 7s Timestamp: 2025-03-04 11:01:41\nUnique-ID: 41\nRule:  Devices up/down  Faults:\n  #1: sysObjectID => .1.3.6.1.4.1.8072.3.2.10; sysDescr => Linux node 6.8.0-54-generic #56-Ubuntu SMP PREEMPT_DYNAMIC Sat Feb  8 00:37:57 UTC 2025 x86_64; location_id => 1;\nAlert sent to:",
-    "builder": "{\"condition\":\"AND\",\"rules\":[{\"id\":\"macros.device_down\",\"field\":\"macros.device_down\",\"type\":\"integer\",\"input\":\"radio\",\"operator\":\"equal\",\"value\":\"1\"}],\"valid\":true}"
+    "builder": '{"condition":"AND","rules":[{"id":"macros.device_down","field":"macros.device_down","type":"integer","input":"radio","operator":"equal","value":"1"}],"valid":true}',
 }

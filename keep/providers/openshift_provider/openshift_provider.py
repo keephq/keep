@@ -1,9 +1,10 @@
 import dataclasses
 import datetime
+import warnings
+from typing import ClassVar
 
 import pydantic
 import requests
-import warnings
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 from openshift_client import Context
@@ -51,9 +52,9 @@ class OpenshiftProvider(BaseProvider):
 
     provider_id: str
     PROVIDER_DISPLAY_NAME = "Openshift"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="connect_to_openshift",
             description="Check if the provided token can connect to the openshift server",
@@ -113,38 +114,44 @@ class OpenshiftProvider(BaseProvider):
             # Suppress SSL warnings if insecure is True
             if self.authentication_config.insecure:
                 # Suppress SSL verification warnings
-                warnings.filterwarnings('ignore', message='Unverified HTTPS request')
-            
+                warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+
             # Test API connectivity by hitting the /version endpoint
             headers = {
-                'Authorization': f'Bearer {self.authentication_config.token}',
-                'Accept': 'application/json'
+                "Authorization": f"Bearer {self.authentication_config.token}",
+                "Accept": "application/json",
             }
-            
+
             verify_ssl = not self.authentication_config.insecure
-            
+
             # Try to get cluster version info
             response = requests.get(
                 f"{self.authentication_config.api_server}/version",
                 headers=headers,
                 verify=verify_ssl,
-                timeout=30
+                timeout=30,
             )
-            
+
             if response.status_code == 200:
-                self.logger.info("Successfully connected to OpenShift cluster via REST API")
+                self.logger.info(
+                    "Successfully connected to OpenShift cluster via REST API"
+                )
                 return True, None
             else:
-                error_msg = f"API returned status code {response.status_code}: {response.text}"
-                self.logger.error(f"Failed to connect to OpenShift cluster: {error_msg}")
+                error_msg = (
+                    f"API returned status code {response.status_code}: {response.text}"
+                )
+                self.logger.error(
+                    f"Failed to connect to OpenShift cluster: {error_msg}"
+                )
                 return False, error_msg
-                
+
         except requests.exceptions.RequestException as e:
-            error_msg = f"Connection error: {str(e)}"
+            error_msg = f"Connection error: {e!s}"
             self.logger.error(f"Failed to connect to OpenShift cluster: {error_msg}")
             return False, error_msg
         except Exception as e:
-            error_msg = f"Unexpected error: {str(e)}"
+            error_msg = f"Unexpected error: {e!s}"
             self.logger.error(f"Failed to connect to OpenShift cluster: {error_msg}")
             return False, error_msg
 
@@ -154,11 +161,11 @@ class OpenshiftProvider(BaseProvider):
         Uses REST API validation instead of CLI commands for better reliability.
         """
         self.logger.info("Validating scopes for OpenShift provider")
-        
+
         try:
             # Try REST API approach first
             success, error_msg = self.__test_connection_via_rest_api()
-            
+
             if success:
                 self.logger.info("Successfully validated OpenShift connection")
                 scopes = {
@@ -169,13 +176,13 @@ class OpenshiftProvider(BaseProvider):
                 scopes = {
                     "connect_to_openshift": error_msg,
                 }
-                
+
         except Exception as e:
             self.logger.exception("Error validating scopes for OpenShift provider")
             scopes = {
                 "connect_to_openshift": str(e),
             }
-            
+
         return scopes
 
     def _query(self, command_type: str, **kwargs):
@@ -183,7 +190,7 @@ class OpenshiftProvider(BaseProvider):
         Query OpenShift resources.
         Args:
             command_type (str): The type of query to perform. Supported queries are:
-                - get_logs: Get logs from a pod  
+                - get_logs: Get logs from a pod
                 - get_events: Get events for a namespace or pod
                 - get_pods: List pods in a namespace or across all namespaces
                 - get_node_pressure: Get node pressure conditions
@@ -236,7 +243,15 @@ class OpenshiftProvider(BaseProvider):
         else:
             raise NotImplementedError(f"Action {action} is not implemented")
 
-    def __get_logs(self, k8s_client, namespace, pod_name, container_name=None, tail_lines=100, **kwargs):
+    def __get_logs(
+        self,
+        k8s_client,
+        namespace,
+        pod_name,
+        container_name=None,
+        tail_lines=100,
+        **kwargs,
+    ):
         """Get logs from a pod."""
         self.logger.info(f"Getting logs for pod {pod_name} in namespace {namespace}")
         core_v1 = client.CoreV1Api(k8s_client)
@@ -262,7 +277,9 @@ class OpenshiftProvider(BaseProvider):
             self.logger.error(f"Error getting logs for pod {pod_name}: {e}")
             raise Exception(f"Error getting logs for pod {pod_name}: {e}")
 
-    def __get_events(self, k8s_client, namespace, pod_name=None, sort_by=None, **kwargs):
+    def __get_events(
+        self, k8s_client, namespace, pod_name=None, sort_by=None, **kwargs
+    ):
         """Get events for a namespace or specific pod."""
         self.logger.info(
             f"Getting events in namespace {namespace}"
@@ -373,27 +390,27 @@ class OpenshiftProvider(BaseProvider):
     def __get_routes(self, namespace=None, **kwargs):
         """List OpenShift routes."""
         self.logger.info("Getting OpenShift routes")
-        
+
         try:
             # Use REST API to get routes
             headers = {
-                'Authorization': f'Bearer {self.authentication_config.token}',
-                'Accept': 'application/json'
+                "Authorization": f"Bearer {self.authentication_config.token}",
+                "Accept": "application/json",
             }
-            
+
             verify_ssl = not self.authentication_config.insecure
-            
+
             if namespace:
                 url = f"{self.authentication_config.api_server}/apis/route.openshift.io/v1/namespaces/{namespace}/routes"
             else:
                 url = f"{self.authentication_config.api_server}/apis/route.openshift.io/v1/routes"
-            
+
             response = requests.get(url, headers=headers, verify=verify_ssl, timeout=30)
             response.raise_for_status()
-            
+
             routes_data = response.json()
-            return routes_data.get('items', [])
-            
+            return routes_data.get("items", [])
+
         except Exception as e:
             self.logger.error(f"Error getting routes: {e}")
             raise Exception(f"Error getting routes: {e}")
@@ -401,27 +418,27 @@ class OpenshiftProvider(BaseProvider):
     def __get_deploymentconfigs(self, namespace=None, **kwargs):
         """List OpenShift deployment configs."""
         self.logger.info("Getting OpenShift deployment configs")
-        
+
         try:
             # Use REST API to get deployment configs
             headers = {
-                'Authorization': f'Bearer {self.authentication_config.token}',
-                'Accept': 'application/json'
+                "Authorization": f"Bearer {self.authentication_config.token}",
+                "Accept": "application/json",
             }
-            
+
             verify_ssl = not self.authentication_config.insecure
-            
+
             if namespace:
                 url = f"{self.authentication_config.api_server}/apis/apps.openshift.io/v1/namespaces/{namespace}/deploymentconfigs"
             else:
                 url = f"{self.authentication_config.api_server}/apis/apps.openshift.io/v1/deploymentconfigs"
-            
+
             response = requests.get(url, headers=headers, verify=verify_ssl, timeout=30)
             response.raise_for_status()
-            
+
             dc_data = response.json()
-            return dc_data.get('items', [])
-            
+            return dc_data.get("items", [])
+
         except Exception as e:
             self.logger.error(f"Error getting deployment configs: {e}")
             raise Exception(f"Error getting deployment configs: {e}")
@@ -429,30 +446,32 @@ class OpenshiftProvider(BaseProvider):
     def __get_projects(self, **kwargs):
         """List OpenShift projects."""
         self.logger.info("Getting OpenShift projects")
-        
+
         try:
             # Use REST API to get projects
             headers = {
-                'Authorization': f'Bearer {self.authentication_config.token}',
-                'Accept': 'application/json'
+                "Authorization": f"Bearer {self.authentication_config.token}",
+                "Accept": "application/json",
             }
-            
+
             verify_ssl = not self.authentication_config.insecure
             url = f"{self.authentication_config.api_server}/apis/project.openshift.io/v1/projects"
-            
+
             response = requests.get(url, headers=headers, verify=verify_ssl, timeout=30)
             response.raise_for_status()
-            
+
             projects_data = response.json()
-            return projects_data.get('items', [])
-            
+            return projects_data.get("items", [])
+
         except Exception as e:
             self.logger.error(f"Error getting projects: {e}")
             raise Exception(f"Error getting projects: {e}")
 
     def __rollout_restart(self, kind, name, namespace, labels=None, **kwargs):
         """Perform a rollout restart on a deployment, statefulset, or daemonset using REST API."""
-        self.logger.info(f"Performing rollout restart for {kind} {name} in namespace {namespace}")
+        self.logger.info(
+            f"Performing rollout restart for {kind} {name} in namespace {namespace}"
+        )
 
         k8s_client = self.__get_k8s_client()
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -511,7 +530,9 @@ class OpenshiftProvider(BaseProvider):
             else:
                 raise ValueError(f"Unsupported kind {kind} to perform rollout restart")
         except ApiException as e:
-            self.logger.error(f"Error performing rollout restart for {kind} {name}: {e}")
+            self.logger.error(
+                f"Error performing rollout restart for {kind} {name}: {e}"
+            )
             raise Exception(f"Error performing rollout restart for {kind} {name}: {e}")
 
         self.logger.info(f"Successfully performed rollout restart for {kind} {name}")
@@ -524,36 +545,40 @@ class OpenshiftProvider(BaseProvider):
         """Restart a DeploymentConfig using OpenShift REST API."""
         try:
             headers = {
-                'Authorization': f'Bearer {self.authentication_config.token}',
-                'Content-Type': 'application/json'
+                "Authorization": f"Bearer {self.authentication_config.token}",
+                "Content-Type": "application/json",
             }
-            
+
             verify_ssl = not self.authentication_config.insecure
             url = f"{self.authentication_config.api_server}/apis/apps.openshift.io/v1/namespaces/{namespace}/deploymentconfigs/{name}/instantiate"
-            
+
             # Trigger a new deployment
             body = {
                 "kind": "DeploymentRequest",
                 "apiVersion": "apps.openshift.io/v1",
                 "name": name,
                 "latest": True,
-                "force": True
+                "force": True,
             }
-            
-            response = requests.post(url, headers=headers, json=body, verify=verify_ssl, timeout=30)
+
+            response = requests.post(
+                url, headers=headers, json=body, verify=verify_ssl, timeout=30
+            )
             response.raise_for_status()
-            
+
             self.logger.info(f"Successfully restarted DeploymentConfig {name}")
             return {
                 "status": "success",
                 "message": f"Successfully restarted DeploymentConfig {name}",
             }
-            
+
         except Exception as e:
             self.logger.error(f"Error restarting DeploymentConfig {name}: {e}")
             raise Exception(f"Error restarting DeploymentConfig {name}: {e}")
 
-    def __restart_pod(self, namespace, pod_name, container_name=None, message=None, **kwargs):
+    def __restart_pod(
+        self, namespace, pod_name, container_name=None, message=None, **kwargs
+    ):
         """Restart a pod by deleting it (it will be recreated by its controller)."""
         k8s_client = self.__get_k8s_client()
         core_v1 = client.CoreV1Api(k8s_client)
@@ -598,16 +623,18 @@ class OpenshiftProvider(BaseProvider):
         """Scale a deployment to specified replicas."""
         k8s_client = self.__get_k8s_client()
         apps_v1 = client.AppsV1Api(k8s_client)
-        
-        self.logger.info(f"Scaling deployment {deployment_name} in namespace {namespace} to {replicas} replicas")
-        
+
+        self.logger.info(
+            f"Scaling deployment {deployment_name} in namespace {namespace} to {replicas} replicas"
+        )
+
         try:
             apps_v1.patch_namespaced_deployment_scale(
                 name=deployment_name,
                 namespace=namespace,
                 body={"spec": {"replicas": replicas}},
             )
-            
+
             return {
                 "status": "success",
                 "message": f"Successfully scaled deployment {deployment_name} to {replicas} replicas",
@@ -617,35 +644,41 @@ class OpenshiftProvider(BaseProvider):
             self.logger.error(error_message)
             raise Exception(error_message)
 
-    def __scale_deploymentconfig(self, namespace, deploymentconfig_name, replicas, **kwargs):
+    def __scale_deploymentconfig(
+        self, namespace, deploymentconfig_name, replicas, **kwargs
+    ):
         """Scale a DeploymentConfig to specified replicas using OpenShift REST API."""
         try:
             headers = {
-                'Authorization': f'Bearer {self.authentication_config.token}',
-                'Content-Type': 'application/strategic-merge-patch+json'
+                "Authorization": f"Bearer {self.authentication_config.token}",
+                "Content-Type": "application/strategic-merge-patch+json",
             }
-            
+
             verify_ssl = not self.authentication_config.insecure
             url = f"{self.authentication_config.api_server}/apis/apps.openshift.io/v1/namespaces/{namespace}/deploymentconfigs/{deploymentconfig_name}/scale"
-            
-            body = {
-                "spec": {
-                    "replicas": replicas
-                }
-            }
-            
-            response = requests.patch(url, headers=headers, json=body, verify=verify_ssl, timeout=30)
+
+            body = {"spec": {"replicas": replicas}}
+
+            response = requests.patch(
+                url, headers=headers, json=body, verify=verify_ssl, timeout=30
+            )
             response.raise_for_status()
-            
-            self.logger.info(f"Successfully scaled DeploymentConfig {deploymentconfig_name} to {replicas} replicas")
+
+            self.logger.info(
+                f"Successfully scaled DeploymentConfig {deploymentconfig_name} to {replicas} replicas"
+            )
             return {
                 "status": "success",
                 "message": f"Successfully scaled DeploymentConfig {deploymentconfig_name} to {replicas} replicas",
             }
-            
+
         except Exception as e:
-            self.logger.error(f"Error scaling DeploymentConfig {deploymentconfig_name}: {e}")
-            raise Exception(f"Error scaling DeploymentConfig {deploymentconfig_name}: {e}")
+            self.logger.error(
+                f"Error scaling DeploymentConfig {deploymentconfig_name}: {e}"
+            )
+            raise Exception(
+                f"Error scaling DeploymentConfig {deploymentconfig_name}: {e}"
+            )
 
 
 if __name__ == "__main__":
@@ -674,17 +707,22 @@ if __name__ == "__main__":
     # Test validation
     scopes = openshift_provider.validate_scopes()
     print("Validation result:", scopes)
-    
+
     # Test query operations
     try:
         projects = openshift_provider.query(command_type="get_projects")
         print(f"Found {len(projects)} projects")
     except Exception as e:
         print(f"Error getting projects: {e}")
-        
+
     # Test restart action
     try:
-        restart = openshift_provider.notify(action="rollout_restart", kind="deployment", name="nginx", namespace="default")
+        restart = openshift_provider.notify(
+            action="rollout_restart",
+            kind="deployment",
+            name="nginx",
+            namespace="default",
+        )
         print(restart)
     except Exception as e:
         print(f"Error restarting: {e}")

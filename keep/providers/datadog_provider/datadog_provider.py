@@ -11,7 +11,7 @@ import re
 import time
 from collections import defaultdict
 from dataclasses import asdict
-from typing import List, Literal, Optional
+from typing import ClassVar, Literal
 
 import pydantic
 import requests
@@ -57,14 +57,14 @@ logger = logging.getLogger(__name__)
 
 @pydantic.dataclasses.dataclass
 class DatadogAlertDetails:
-    metric_graph_url: Optional[str] = Field(default=None)
-    metric_query: Optional[str] = Field(default=None)
-    trigger_time: Optional[str] = Field(default=None)
-    monitor_status_url: Optional[str] = Field(default=None)
-    edit_monitor_url: Optional[str] = Field(default=None)
-    related_logs_url: Optional[str] = Field(default=None)
-    alert_message: Optional[str] = Field(default=None)
-    mentioned_users: List[str] = Field(default_factory=list)
+    metric_graph_url: str | None = Field(default=None)
+    metric_query: str | None = Field(default=None)
+    trigger_time: str | None = Field(default=None)
+    monitor_status_url: str | None = Field(default=None)
+    edit_monitor_url: str | None = Field(default=None)
+    related_logs_url: str | None = Field(default=None)
+    alert_message: str | None = Field(default=None)
+    mentioned_users: list[str] = Field(default_factory=list)
 
 
 # Best effort to extract relevant details from the Datadog alert webhook payload body
@@ -182,13 +182,13 @@ class DatadogProviderAuthConfig:
 class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
     """Pull/push alerts from Datadog."""
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
     PROVIDER_DISPLAY_NAME = "Datadog"
     OAUTH2_URL = os.environ.get("DATADOG_OAUTH2_URL")
     DATADOG_CLIENT_ID = os.environ.get("DATADOG_CLIENT_ID")
     DATADOG_CLIENT_SECRET = os.environ.get("DATADOG_CLIENT_SECRET")
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="events_read",
             description="Read events data.",
@@ -242,7 +242,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
             alias="Read APM service catalog Data",
         ),
     ]
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="Mute a Monitor",
             func_name="mute_monitor",
@@ -293,7 +293,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
             type="action",
         ),
     ]
-    FINGERPRINT_FIELDS = ["groups", "monitor_id"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["groups", "monitor_id"]
     WEBHOOK_PAYLOAD = json.dumps(
         {
             "body": "$EVENT_MSG",
@@ -314,7 +314,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
         }
     )
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "P4": AlertSeverity.INFO,
         4: AlertSeverity.INFO,
         "P3": AlertSeverity.WARNING,
@@ -325,7 +325,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
         1: AlertSeverity.CRITICAL,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "Triggered": AlertStatus.FIRING,
         "Recovered": AlertStatus.RESOLVED,
         "Muted": AlertStatus.SUPPRESSED,
@@ -488,8 +488,10 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
         customer_impacted: bool = False,
         important: bool = True,
         severity: Literal["SEV-1", "SEV-2", "SEV-3", "SEV-4", "UNKNOWN"] = "SEV-4",
-        fields: dict = {"state": {"value": "active"}},
+        fields: dict | None = None,
     ):
+        if fields is None:
+            fields = {"state": {"value": "active"}}
         users = self.get_users()
         commander_user_obj = next(
             (
@@ -544,9 +546,12 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
     def mute_monitor(
         self,
         monitor_id: str,
-        groups: list = [],
-        end: datetime.datetime = datetime.datetime.now() + datetime.timedelta(days=1),
+        groups: list | None = None,
+        end: datetime.datetime = datetime.datetime.now(tz=datetime.UTC)
+        + datetime.timedelta(days=1),
     ):
+        if groups is None:
+            groups = []
         self.logger.info("Muting monitor", extra={"monitor_id": monitor_id, "end": end})
         if isinstance(end, str):
             end = datetime.datetime.fromisoformat(end)
@@ -599,8 +604,10 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
     def unmute_monitor(
         self,
         monitor_id: str,
-        groups: list = [],
+        groups: list | None = None,
     ):
+        if groups is None:
+            groups = []
         self.logger.info("Unmuting monitor", extra={"monitor_id": monitor_id})
 
         groups = ",".join(groups)
@@ -749,9 +756,9 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
         with ApiClient(self.configuration) as api_client:
             # tb: when it's out of beta, we should move to api v2
             api = EventsApi(api_client)
-            end = datetime.datetime.now()
+            end = datetime.datetime.now(tz=datetime.UTC)
             # tb: we can make timedelta configurable by the user if we want
-            start = datetime.datetime.now() - datetime.timedelta(days=1)
+            start = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=1)
             filter_from = str(int(start.timestamp() * 1000))
             filter_to = str(int(end.timestamp() * 1000))
             results = api.list_events(
@@ -775,7 +782,6 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -830,13 +836,15 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                         except ApiException as e:
                             # If it's something different from 403 it means we have access! (for example, already exists because we created it once)
                             if e.status == 403:
-                                raise e
+                                raise
                     elif scope.name == "metrics_read":
                         api = MetricsApi(api_client)
                         api.query_metrics(
                             query="system.cpu.idle{*}",
-                            _from=int((datetime.datetime.now()).timestamp()),
-                            to=int(datetime.datetime.now().timestamp()),
+                            _from=int(
+                                (datetime.datetime.now(tz=datetime.UTC)).timestamp()
+                            ),
+                            to=int(datetime.datetime.now(tz=datetime.UTC).timestamp()),
                         )
                     elif scope.name == "logs_read":
                         self._query(
@@ -846,8 +854,10 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                         )
                     elif scope.name == "events_read":
                         api = EventsApi(api_client)
-                        end = datetime.datetime.now()
-                        start = datetime.datetime.now() - datetime.timedelta(hours=1)
+                        end = datetime.datetime.now(tz=datetime.UTC)
+                        start = datetime.datetime.now(
+                            tz=datetime.UTC
+                        ) - datetime.timedelta(hours=1)
 
                         # Convert to milliseconds and ensure they're strings
                         filter_from = str(int(start.timestamp() * 1000))
@@ -1044,9 +1054,9 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                 page += 1
             all_monitors = {monitor.id: monitor for monitor in all_monitors}
             api = EventsApi(api_client)
-            end = datetime.datetime.now()
+            end = datetime.datetime.now(tz=datetime.UTC)
             # tb: we can make timedelta configurable by the user if we want
-            start = datetime.datetime.now() - datetime.timedelta(days=14)
+            start = datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=14)
             # Convert to milliseconds and ensure they're strings
             filter_from = str(int(start.timestamp() * 1000))
             filter_to = str(int(end.timestamp() * 1000))
@@ -1080,9 +1090,9 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                     tags_list = event_attributes.get("tags", [])
                     tags = {
                         k: v
-                        for k, v in map(
-                            lambda tag: tag.split(":", 1),
-                            [tag for tag in tags_list if ":" in tag],
+                        for k, v in (
+                            tag.split(":", 1)
+                            for tag in [tag for tag in tags_list if ":" in tag]
                         )
                     }
 
@@ -1104,12 +1114,10 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
                         False
                         if not monitor
                         else any(
-                            [
-                                downtime
-                                for downtime in monitor.matching_downtimes
-                                if downtime.groups == monitor_groups
-                                or downtime.scope == ["*"]
-                            ]
+                            downtime
+                            for downtime in monitor.matching_downtimes
+                            if downtime.groups == monitor_groups
+                            or downtime.scope == ["*"]
                         )
                     )
 
@@ -1134,24 +1142,21 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
 
                     # Convert timestamp to datetime - in v2 it's a ISO string in attributes.timestamp
                     # or milliseconds in attributes.attributes.timestamp
-                    if (
-                        "timestamp" in event_attributes
-                        and event_attributes["timestamp"]
-                    ):
+                    if event_attributes.get("timestamp"):
                         # If timestamp is in ISO format
                         if isinstance(event_attributes["timestamp"], str):
                             received = datetime.datetime.fromisoformat(
                                 event_attributes["timestamp"].replace("Z", "+00:00")
                             )
                         else:
-                            received = datetime.datetime.now()
+                            received = datetime.datetime.now(tz=datetime.UTC)
                     elif "timestamp" in nested_attributes:
                         # If timestamp is in milliseconds in the nested attributes
                         received = datetime.datetime.fromtimestamp(
                             nested_attributes["timestamp"] / 1000
                         )
                     else:
-                        received = datetime.datetime.now()
+                        received = datetime.datetime.now(tz=datetime.UTC)
 
                     # Create the alert DTO
                     alert = AlertDto(
@@ -1430,7 +1435,7 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
     @staticmethod
     def __get_epoch_one_year_ago() -> int:
         # Get the current time
-        current_time = datetime.datetime.now()
+        current_time = datetime.datetime.now(tz=datetime.UTC)
 
         # Calculate the time one year ago
         one_year_ago = current_time - datetime.timedelta(days=365)
@@ -1597,8 +1602,8 @@ class DatadogProvider(BaseTopologyProvider, ProviderHealthMixin):
 
         # Construct the span search query
         query_parts = [
-            f'service:{tags_dict["service"]}',
-            f'env:{tags_dict["env"]}',
+            f"service:{tags_dict['service']}",
+            f"env:{tags_dict['env']}",
             f"operation_name:{operation_name}",
             f"@duration:>{threshold_seconds}s",  # @ is used to indicate a span attribute
         ]

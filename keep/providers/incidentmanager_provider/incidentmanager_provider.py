@@ -5,6 +5,7 @@ IncidentManagerProvider is a class that provides a way to read data from AWS Inc
 import dataclasses
 import logging
 import os
+from typing import ClassVar
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -66,9 +67,9 @@ class IncidentmanagerProviderAuthConfig:
 class IncidentmanagerProvider(BaseProvider):
     """Push incidents from AWS IncidentManager to Keep."""
 
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="ssm-incidents:ListIncidentRecords",
             description="Required to retrieve incidents.",
@@ -115,12 +116,12 @@ class IncidentmanagerProvider(BaseProvider):
     ]
     PROVIDER_DISPLAY_NAME = "Incident Manager"
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "OPEN": AlertStatus.FIRING,
         "RESOLVED": AlertStatus.RESOLVED,
     }
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         1: AlertSeverity.CRITICAL,
         2: AlertSeverity.HIGH,
         3: AlertSeverity.LOW,
@@ -148,7 +149,7 @@ class IncidentmanagerProvider(BaseProvider):
             iam_client = self.__generate_client("iam")
         except Exception as e:
             self.logger.exception("Error validating AWS IAM scopes")
-            scopes = {s: str(e) for s in scopes.keys()}
+            scopes = {s: str(e) for s in scopes}
             return scopes
 
         # 0. try to validate all scopes using simulate_principal_policy
@@ -341,7 +342,7 @@ class IncidentmanagerProvider(BaseProvider):
         hostname = urlparse(keep_api_url).hostname
         already_subscribed = any(
             hostname in sub["Endpoint"]
-            and not sub["SubscriptionArn"] == "PendingConfirmation"
+            and sub["SubscriptionArn"] != "PendingConfirmation"
             for sub in subscriptions
         )
 

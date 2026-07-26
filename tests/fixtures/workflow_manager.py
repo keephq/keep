@@ -1,10 +1,11 @@
-import pytest
 import asyncio
 import time
 
+import pytest
+
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id
-from keep.workflowmanager.workflowscheduler import WorkflowScheduler
 from keep.workflowmanager.workflowmanager import WorkflowManager
+from keep.workflowmanager.workflowscheduler import WorkflowScheduler
 
 
 @pytest.fixture
@@ -14,7 +15,6 @@ def workflow_manager():
     """
     manager = None
     try:
-
         scheduler = WorkflowScheduler(None)
         manager = WorkflowManager.get_instance()
         scheduler.workflow_manager = manager

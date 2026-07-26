@@ -15,7 +15,7 @@ from keep.api.core.db import (
     get_workflow_execution,
 )
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.incident import Incident, IncidentStatus
 from keep.api.models.db.workflow import Workflow
 from keep.api.models.incident import IncidentDto
@@ -24,10 +24,9 @@ from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identity_managers.db.db_authverifier import (  # noqa
     DbAuthVerifier,
 )
-from tests.fixtures.client import client, test_app  # noqa
 from keep.workflowmanager.workflowstore import WorkflowStore
+from tests.fixtures.client import client, test_app  # noqa
 from tests.fixtures.workflow_manager import (
-    workflow_manager,
     wait_for_workflow_execution,
 )
 
@@ -1163,7 +1162,9 @@ def test_alert_routing_policy(
                     # support both list and dict
                     expected_message in json.dumps(result)
                     for result in workflow_execution.results[action_name]
-                ), f"Expected message '{expected_message}' not found in {action_name} results"
+                ), (
+                    f"Expected message '{expected_message}' not found in {action_name} results"
+                )
 
 
 workflow_definition_nested = """workflow:
@@ -1334,7 +1335,9 @@ def test_nested_conditional_flow(
                 assert any(
                     expected_message in json.dumps(result)
                     for result in workflow_execution.results[action_name]
-                ), f"Expected message '{expected_message}' not found in {action_name} results"
+                ), (
+                    f"Expected message '{expected_message}' not found in {action_name} results"
+                )
 
 
 workflow_resolve_definition = """workflow:

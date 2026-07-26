@@ -2,6 +2,8 @@
 Wazuh is a security platform that provides unified XDR and SIEM protection for endpoints and cloud workloads
 """
 
+from typing import ClassVar
+
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -26,9 +28,9 @@ class WazuhProvider(BaseProvider):
   """
 
     PROVIDER_DISPLAY_NAME = "Wazuh"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
-    FINGERPRINT_FIELDS = ["id"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["id"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -39,7 +41,6 @@ class WazuhProvider(BaseProvider):
         """
         No validation required for Wazuh provider.
         """
-        pass
 
     @staticmethod
     def _format_alert(

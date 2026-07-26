@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 from uuid import UUID, uuid4
 
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
@@ -10,7 +9,7 @@ class Tenant(SQLModel, table=True):
     id: str = Field(primary_key=True)
     name: str
     configuration: dict | None = Field(sa_column=Column(JSON), default=None)
-    installations: List["TenantInstallation"] = Relationship(back_populates="tenant")
+    installations: list["TenantInstallation"] = Relationship(back_populates="tenant")
 
 
 class TenantApiKey(SQLModel, table=True):
@@ -20,7 +19,7 @@ class TenantApiKey(SQLModel, table=True):
     tenant: Tenant = Relationship()
     is_system: bool = False
     is_deleted: bool = False
-    system_description: Optional[str] = None
+    system_description: str | None = None
     created_by: str
     role: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -39,4 +38,4 @@ class TenantInstallation(SQLModel, table=True):
     tenant_id: str = Field(foreign_key="tenant.id")
     bot_id: str
     installed: bool = False
-    tenant: Optional[Tenant] = Relationship(back_populates="installations")
+    tenant: Tenant | None = Relationship(back_populates="installations")

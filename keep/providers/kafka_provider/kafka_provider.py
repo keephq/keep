@@ -5,8 +5,10 @@ Kafka Provider is a class that allows to ingest/digest data from Grafana.
 import dataclasses
 import inspect
 import logging
+from typing import ClassVar
 
 import pydantic
+
 # from confluent_kafka import Consumer, KafkaError, KafkaException
 from kafka import KafkaConsumer
 from kafka.errors import KafkaError, NoBrokersAvailable
@@ -29,7 +31,7 @@ class KafkaProviderAuthConfig:
             "required": True,
             "description": "Kafka host",
             "hint": "e.g. localhost:9092 or localhost:9092,localhost:8093",
-            "validation": "no_scheme_multihost_url"
+            "validation": "no_scheme_multihost_url",
         },
     )
     topic: str = dataclasses.field(
@@ -83,7 +85,7 @@ class ClientIdInjector(logging.Filter):
             # In Python 3.13+, frame.f_locals returns a FrameLocalsProxy
             # which cannot be copied via copy.copy() (pickle fails).
             local_vars = dict(frame.f_locals)
-            for var_name, var_value in local_vars.items():
+            for var_value in local_vars.values():
                 if isinstance(var_value, KafkaProvider):
                     client_id = var_value.context_manager.tenant_id
                     provider_id = var_value.provider_id
@@ -99,10 +101,10 @@ class KafkaProvider(BaseProvider):
     Kafka provider class.
     """
 
-    PROVIDER_CATEGORY = ["Developer Tools", "Queues"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Developer Tools", "Queues"]
 
     PROVIDER_DISPLAY_NAME = "Kafka"
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="topic_read",
             description="The kafka user that have permissions to read the topic.",
@@ -110,7 +112,7 @@ class KafkaProvider(BaseProvider):
             alias="Topic Read",
         )
     ]
-    PROVIDER_TAGS = ["queue"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["queue"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -167,7 +169,6 @@ class KafkaProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -256,7 +257,6 @@ class KafkaProvider(BaseProvider):
                             self._push_alert(record.value)
                         except Exception:
                             self.logger.warning("Error pushing alert to API")
-                            pass
             except Exception:
                 self.logger.exception("Error consuming message from Kafka")
                 break

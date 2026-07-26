@@ -35,7 +35,7 @@ class WebsocketProvider(BaseProvider):
         socket_url: str,
         timeout: int | None = None,
         data: str | None = None,
-        **kwargs: dict
+        **kwargs: dict,
     ) -> dict:
         """
         Query a websocket endpoint.

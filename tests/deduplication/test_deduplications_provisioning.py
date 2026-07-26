@@ -1,10 +1,12 @@
 import json
+from unittest.mock import patch
 from uuid import UUID
+
 import pytest
+
 from keep.api.alert_deduplicator.deduplication_rules_provisioning import (
     provision_deduplication_rules_from_env,
 )
-from unittest.mock import patch
 from keep.api.models.db.alert import AlertDeduplicationRule
 from keep.api.models.provider import Provider
 
@@ -21,7 +23,7 @@ def setup(monkeypatch):
                     "full_deduplication": True,
                     "ignore_fields": ["ignore_field"],
                 }
-            }
+            },
         },
         "Installed Grafana provider": {
             "type": "grafana",
@@ -31,7 +33,7 @@ def setup(monkeypatch):
                     "fingerprint_fields": ["fingerprint"],
                     "full_deduplication": False,
                 }
-            }
+            },
         },
     }
 
@@ -100,7 +102,7 @@ def setup(monkeypatch):
             details={"name": "Installed Grafana provider"},
             can_query=True,
             can_notify=True,
-        )
+        ),
     ]
 
     linked_providers = [
@@ -113,27 +115,31 @@ def setup(monkeypatch):
         )
     ]
 
-    with patch(
-        "keep.api.core.db.get_all_deduplication_rules",
-        return_value=deduplication_rules_in_db,
-    ) as mock_get_all, patch(
-        "keep.api.core.db.delete_deduplication_rule", return_value=None
-    ) as mock_delete, patch(
-        "keep.api.core.db.update_deduplication_rule", return_value=None
-    ) as mock_update, patch(
-        "keep.api.core.db.create_deduplication_rule", return_value=None
-    ) as mock_create, patch(
-        "keep.providers.providers_factory.ProvidersFactory.get_installed_providers",
-        return_value=installed_providers,
-    ) as mock_get_providers, patch(
-        "keep.providers.providers_factory.ProvidersFactory.get_linked_providers",
-        return_value=linked_providers,
-    ) as mock_get_linked_providers:
-
+    with (
+        patch(
+            "keep.api.core.db.get_all_deduplication_rules",
+            return_value=deduplication_rules_in_db,
+        ) as mock_get_all,
+        patch(
+            "keep.api.core.db.delete_deduplication_rule", return_value=None
+        ) as mock_delete,
+        patch(
+            "keep.api.core.db.update_deduplication_rule", return_value=None
+        ) as mock_update,
+        patch(
+            "keep.api.core.db.create_deduplication_rule", return_value=None
+        ) as mock_create,
+        patch(
+            "keep.providers.providers_factory.ProvidersFactory.get_installed_providers",
+            return_value=installed_providers,
+        ) as mock_get_providers,
+        patch(
+            "keep.providers.providers_factory.ProvidersFactory.get_linked_providers",
+            return_value=linked_providers,
+        ) as mock_get_linked_providers,
+    ):
         fake_tenant_id = "fake_tenant_id"
-        monkeypatch.setenv(
-            "KEEP_PROVIDERS", json.dumps(providers_in_env_var)
-        )
+        monkeypatch.setenv("KEEP_PROVIDERS", json.dumps(providers_in_env_var))
 
         yield {
             "mock_get_all": mock_get_all,
@@ -202,26 +208,20 @@ def test_deletion_of_provisioned_rule_not_in_env(setup):
         rule_id=str(UUID("a5d8f32b6c7049efb913c21da7e845fd")),
     )
 
+
 def test_not_throwing_error_if_env_var_empty(setup, monkeypatch):
-    monkeypatch.setenv(
-        "KEEP_PROVIDERS", ''
-    )
+    monkeypatch.setenv("KEEP_PROVIDERS", "")
     try:
         provision_deduplication_rules_from_env(setup["fake_tenant_id"])
     except Exception as e:
         pytest.fail(f"provision_deduplication_rules_from_env raised an exception: {e}")
 
-def test_not_throwing_error_if_providers_do_not_have_dedup_rules(setup, monkeypatch):
-    providers_in_env_var = {
-        "Installed Prometheus provider": {
-            "type": "prometheus"
-        }
-    }
 
-    monkeypatch.setenv(
-        "KEEP_PROVIDERS", json.dumps(providers_in_env_var)
-    )
+def test_not_throwing_error_if_providers_do_not_have_dedup_rules(setup, monkeypatch):
+    providers_in_env_var = {"Installed Prometheus provider": {"type": "prometheus"}}
+
+    monkeypatch.setenv("KEEP_PROVIDERS", json.dumps(providers_in_env_var))
     try:
         provision_deduplication_rules_from_env(setup["fake_tenant_id"])
     except Exception as e:
-        pytest.fail(f"provision_deduplication_rules_from_env raised an exception: {e}")    
+        pytest.fail(f"provision_deduplication_rules_from_env raised an exception: {e}")

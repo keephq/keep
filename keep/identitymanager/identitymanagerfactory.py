@@ -3,7 +3,6 @@ import importlib
 import logging
 import os
 import time
-from typing import Type
 
 from keep.api.core.config import config
 from keep.contextmanager.contextmanager import ContextManager
@@ -34,7 +33,7 @@ class IdentityManagerFactory:
 
     @staticmethod
     def get_identity_manager(
-        tenant_id: str = None,
+        tenant_id: str | None = None,
         context_manager: ContextManager = None,
         identity_manager_type: IdentityManagerTypes = None,
         **kwargs,
@@ -67,7 +66,7 @@ class IdentityManagerFactory:
         )
 
     @staticmethod
-    def get_auth_verifier(scopes: list[str] = []) -> AuthVerifierBase:
+    def get_auth_verifier(scopes: list[str] | None = None) -> AuthVerifierBase:
         """
         Get an instance of the authentication verifier.
 
@@ -77,6 +76,8 @@ class IdentityManagerFactory:
         Returns:
             AuthVerifierBase: An instance of the authentication verifier.
         """
+        if scopes is None:
+            scopes = []
         auth_type = os.environ.get(
             "AUTH_TYPE", IdentityManagerTypes.NOAUTH.value
         ).lower()
@@ -130,7 +131,7 @@ class IdentityManagerFactory:
                 if manager_class in _attr.lower() and "base" not in _attr.lower():
                     class_name = _attr
                     break
-            manager_class: Type = getattr(module, class_name)
+            manager_class: type = getattr(module, class_name)
             resp = manager_class(*args, **kwargs)
             logger.debug(f"Found class {class_name} in {time.time() - t} seconds")
             return resp
@@ -141,7 +142,7 @@ class IdentityManagerFactory:
 
     @staticmethod
     def _backward_compatible_get_identity_manager(
-        auth_type: str = None,
+        auth_type: str | None = None,
     ):
         """
         Map old auth_type to new IdentityManagerTypes enum.

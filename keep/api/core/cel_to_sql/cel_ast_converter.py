@@ -1,10 +1,10 @@
 import logging
 import re
-from typing import Any
+from typing import Any, cast
+
+import celpy
 import celpy.celparser
 import lark
-import celpy
-from typing import List, cast
 from dateutil.parser import parse
 
 from keep.api.core.cel_to_sql.ast_nodes import (
@@ -45,6 +45,7 @@ datetime_regex = re.compile(
 
 logger = logging.getLogger(__name__)
 
+
 class CelToAstConverter(lark.visitors.Visitor_Recursive):
     """Dump a CEL AST creating a close approximation to the original source."""
 
@@ -57,12 +58,12 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             return d.stack[0]
         except Exception as e:
             logger.warning('Error converting "%s" CEL to AST. Error: %s', cel, e)
-            raise e
+            raise
 
     def __init__(self) -> None:
         self.celpy_env = celpy.Environment()
-        self.stack: List[Any] = []
-        self.member_access_stack: List[str] = []
+        self.stack: list[Any] = []
+        self.member_access_stack: list[str] = []
 
     def expr(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
@@ -71,9 +72,7 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             right = self.stack.pop()
             left = self.stack.pop()
             cond = self.stack.pop()
-            self.stack.append(
-                f"{cond} ? {left} : {right}"
-            )
+            self.stack.append(f"{cond} ? {left} : {right}")
 
     def conditionalor(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
@@ -175,22 +174,16 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         else:
             right = self.stack.pop()
             left: dict = self.stack.pop()
-            left['right'] = right
+            left["right"] = right
             self.stack.append(left)
 
     def addition_add(self, tree: lark.Tree) -> None:
         left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'ADD'
-        })
+        self.stack.append({"left": left, "operator": "ADD"})
 
     def addition_sub(self, tree: lark.Tree) -> None:
         left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'SUB'
-        })
+        self.stack.append({"left": left, "operator": "SUB"})
 
     def multiplication(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
@@ -198,29 +191,20 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         else:
             right = self.stack.pop()
             left: dict = self.stack.pop()
-            left['right'] = right
+            left["right"] = right
             self.stack.append(left)
 
     def multiplication_mul(self, tree: lark.Tree) -> None:
         left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'MUL'
-        })
+        self.stack.append({"left": left, "operator": "MUL"})
 
     def multiplication_div(self, tree: lark.Tree) -> None:
         left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'DIV'
-        })
+        self.stack.append({"left": left, "operator": "DIV"})
 
     def multiplication_mod(self, tree: lark.Tree) -> None:
         left = self.stack.pop()
-        self.stack.append({
-            'left': left,
-            'operator': 'MOD'
-        })
+        self.stack.append({"left": left, "operator": "MOD"})
 
     def unary(self, tree: lark.Tree) -> None:
         if len(tree.children) == 1:
@@ -334,7 +318,7 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
         raise NotImplementedError("Map literal not implemented")
 
     def exprlist(self, tree: lark.Tree) -> None:
-        list_items = list(self.stack.pop() for _ in tree.children)
+        list_items = [self.stack.pop() for _ in tree.children]
         self.stack.append(list_items)
 
     def fieldinits(self, tree: lark.Tree) -> None:
@@ -350,9 +334,11 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             self.stack.append(constant_node)
 
     def to_constant_node(self, value: str) -> ConstantNode:
-        if value in ['null', 'NULL']:
+        if value in ["null", "NULL"]:
             value = None
-        elif (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+        elif (value.startswith('"') and value.endswith('"')) or (
+            value.startswith("'") and value.endswith("'")
+        ):
             value = value[1:-1]
 
             if not self.is_number(value) and self.is_date(value):
@@ -360,9 +346,9 @@ class CelToAstConverter(lark.visitors.Visitor_Recursive):
             else:
                 # this code is to handle the case when string literal contains escaped single/double quotes
                 value = re.sub(r'\\(["\'])', r"\1", value)
-        elif value == 'true' or value == 'false':
-            value = value == 'true'
-        elif '.' in value and self.is_float(value):
+        elif value == "true" or value == "false":
+            value = value == "true"
+        elif "." in value and self.is_float(value):
             value = float(value)
         elif self.is_number(value):
             value = int(value)

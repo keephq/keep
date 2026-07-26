@@ -78,9 +78,7 @@ def test_pulling_prometheus_alerts_to_provider(
     # Validate provider is created - increase timeout for validation
     expect(
         browser.locator("button:has-text('prometheus'):has-text('connected')")
-    ).to_be_visible(
-        timeout=10000
-    )  # Increase timeout to 10 seconds
+    ).to_be_visible(timeout=10000)  # Increase timeout to 10 seconds
 
     # Wait for page to stabilize before reloading
     browser.wait_for_load_state("networkidle")

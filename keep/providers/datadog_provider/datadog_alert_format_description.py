@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
@@ -90,7 +90,7 @@ class DatadogAlertFormatDescription(BaseModel):
     ]
 
     class Config:
-        schema_extra = {
+        schema_extra: ClassVar[dict[str, str]] = {
             "example": {
                 "name": "Example-Monitor",
                 "type": "rum alert",

@@ -69,19 +69,23 @@ def test_provision_provider_from_yaml(temp_providers_dir, sample_provider_yaml, 
 
     # Mock environment variables
     with patch.dict(os.environ, {"KEEP_PROVIDERS_DIRECTORY": temp_providers_dir}):
-        with patch(
-            "keep.providers.providers_service.ProvidersService.is_provider_installed",
-            return_value=False,
-        ), patch(
-            "keep.providers.providers_service.ProvidersService.install_provider",
-            return_value=mock_provider,
-        ) as mock_install, patch(
-            "keep.providers.providers_service.provision_deduplication_rules"
-        ) as mock_provision_rules, patch(
-            "keep.api.core.db.get_all_provisioned_providers", return_value=[]
-        ), patch(
-            "keep.providers.providers_factory.ProvidersFactory.get_installed_providers",
-            return_value=[mock_provider],
+        with (
+            patch(
+                "keep.providers.providers_service.ProvidersService.is_provider_installed",
+                return_value=False,
+            ),
+            patch(
+                "keep.providers.providers_service.ProvidersService.install_provider",
+                return_value=mock_provider,
+            ) as mock_install,
+            patch(
+                "keep.providers.providers_service.provision_deduplication_rules"
+            ) as mock_provision_rules,
+            patch("keep.api.core.db.get_all_provisioned_providers", return_value=[]),
+            patch(
+                "keep.providers.providers_factory.ProvidersFactory.get_installed_providers",
+                return_value=[mock_provider],
+            ),
         ):
             # Call the provisioning function
             ProvidersService.provision_providers("test-tenant")
@@ -102,7 +106,7 @@ def test_provision_provider_from_yaml(temp_providers_dir, sample_provider_yaml, 
             call_args = mock_provision_rules.call_args[1]
             assert call_args["tenant_id"] == "test-tenant"
             assert len(call_args["deduplication_rules"]) > 0
-            rule = list(call_args["deduplication_rules"].values())[0]
+            rule = next(iter(call_args["deduplication_rules"].values()))
             assert rule["description"] == "Test deduplication rule"
             assert rule["fingerprint_fields"] == ["fingerprint", "source"]
             assert rule["full_deduplication"] is True
@@ -119,12 +123,15 @@ def test_skip_existing_provider(temp_providers_dir, sample_provider_yaml):
     # Mock environment variables
     with patch.dict(os.environ, {"KEEP_PROVIDERS_DIRECTORY": temp_providers_dir}):
         # Mock database operations to simulate existing provider
-        with patch(
-            "keep.providers.providers_service.ProvidersService.is_provider_installed",
-            return_value=True,
-        ), patch(
-            "keep.providers.providers_service.ProvidersService.install_provider"
-        ) as mock_install:
+        with (
+            patch(
+                "keep.providers.providers_service.ProvidersService.is_provider_installed",
+                return_value=True,
+            ),
+            patch(
+                "keep.providers.providers_service.ProvidersService.install_provider"
+            ) as mock_install,
+        ):
             # Call the provisioning function
             ProvidersService.provision_providers("test-tenant")
 
@@ -142,12 +149,15 @@ def test_invalid_yaml_file(temp_providers_dir):
     # Mock environment variables
     with patch.dict(os.environ, {"KEEP_PROVIDERS_DIRECTORY": temp_providers_dir}):
         # Mock database operations
-        with patch(
-            "keep.providers.providers_service.ProvidersService.is_provider_installed",
-            return_value=False,
-        ), patch(
-            "keep.providers.providers_service.ProvidersService.install_provider"
-        ) as mock_install:
+        with (
+            patch(
+                "keep.providers.providers_service.ProvidersService.is_provider_installed",
+                return_value=False,
+            ),
+            patch(
+                "keep.providers.providers_service.ProvidersService.install_provider"
+            ) as mock_install,
+        ):
             # Call the provisioning function
             ProvidersService.provision_providers("test-tenant")
 
@@ -172,12 +182,15 @@ authentication:
     # Mock environment variables
     with patch.dict(os.environ, {"KEEP_PROVIDERS_DIRECTORY": temp_providers_dir}):
         # Mock database operations
-        with patch(
-            "keep.providers.providers_service.ProvidersService.is_provider_installed",
-            return_value=False,
-        ), patch(
-            "keep.providers.providers_service.ProvidersService.install_provider"
-        ) as mock_install:
+        with (
+            patch(
+                "keep.providers.providers_service.ProvidersService.is_provider_installed",
+                return_value=False,
+            ),
+            patch(
+                "keep.providers.providers_service.ProvidersService.install_provider"
+            ) as mock_install,
+        ):
             # Call the provisioning function
             ProvidersService.provision_providers("test-tenant")
 

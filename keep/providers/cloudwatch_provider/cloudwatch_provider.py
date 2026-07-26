@@ -10,7 +10,7 @@ import logging
 import os
 import time
 import typing
-from typing import List
+from typing import ClassVar
 from urllib.parse import urlparse
 
 import boto3
@@ -82,9 +82,9 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
     """Push alarms from AWS Cloudwatch to Keep."""
 
     PROVIDER_DISPLAY_NAME = "CloudWatch"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure", "Monitoring"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="cloudwatch:DescribeAlarms",
             description="Required to retrieve information about alarms.",
@@ -136,7 +136,7 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         ),
     ]
 
-    VALID_ALARM_KEYS = {
+    VALID_ALARM_KEYS: ClassVar[dict[str, str]] = {
         "AlarmName",
         "AlarmDescription",
         "ActionsEnabled",
@@ -161,14 +161,14 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         "ThresholdMetricId",
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "ALARM": AlertStatus.FIRING,
         "OK": AlertStatus.RESOLVED,
         "INSUFFICIENT_DATA": AlertStatus.PENDING,
     }
 
     # CloudWatch doesn't have built-in severities
-    SEVERITIES_MAP = {}
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {}
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -197,7 +197,7 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 "Error validating AWS IAM scopes",
                 extra={"tenant_id": self.context_manager.tenant_id},
             )
-            scopes = {s: str(e) for s in scopes.keys()}
+            scopes = {s: str(e) for s in scopes}
             return scopes
         # 0. try to validate all scopes using simulate_principal_policy
         #    if the user/role have permissions to simulate_principal_policy, we can validate the scopes easily
@@ -304,10 +304,11 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 queryString="keepTest",
                 startTime=int(
                     (
-                        datetime.datetime.today() - datetime.timedelta(hours=24)
+                        datetime.datetime.now(tz=datetime.UTC)
+                        - datetime.timedelta(hours=24)
                     ).timestamp()
                 ),
-                endTime=int(datetime.datetime.now().timestamp()),
+                endTime=int(datetime.datetime.now(tz=datetime.UTC).timestamp()),
             )
             scopes["logs:StartQuery"] = True
         except Exception as e:
@@ -398,10 +399,10 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
 
     def _query(
         self,
-        log_group: str = None,
-        log_groups: List[str] | None = None,
+        log_group: str | None = None,
+        log_groups: list[str] | None = None,
         remove_ptr_from_results=False,
-        query: str = None,
+        query: str | None = None,
         hours: int = 24,
         **kwargs: dict,
     ) -> dict:
@@ -414,10 +415,11 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 "queryString": query,
                 "startTime": int(
                     (
-                        datetime.datetime.today() - datetime.timedelta(hours=hours)
+                        datetime.datetime.now(tz=datetime.UTC)
+                        - datetime.timedelta(hours=hours)
                     ).timestamp()
                 ),
-                "endTime": int(datetime.datetime.now().timestamp()),
+                "endTime": int(datetime.datetime.now(tz=datetime.UTC).timestamp()),
             }
             if log_group is not None:
                 query_kwargs["logGroupName"] = log_group
@@ -571,7 +573,7 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 hostname = urlparse(keep_api_url).hostname
                 already_subscribed = any(
                     hostname in sub["Endpoint"]
-                    and not sub["SubscriptionArn"] == "PendingConfirmation"
+                    and sub["SubscriptionArn"] != "PendingConfirmation"
                     for sub in subscriptions
                 )
                 if not already_subscribed:
@@ -687,9 +689,9 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 target[param_parts[-1]] = choices[param_index]
 
         # Set StateChangeTime to current time
-        simulated_alert["Message"][
-            "StateChangeTime"
-        ] = datetime.datetime.now().isoformat()
+        simulated_alert["Message"]["StateChangeTime"] = datetime.datetime.now(
+            tz=datetime.UTC
+        ).isoformat()
 
         # Provider expects all keys as string
         for key in simulated_alert:

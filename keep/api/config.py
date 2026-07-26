@@ -16,7 +16,7 @@ from keep.providers.providers_factory import ProvidersFactory
 from keep.providers.providers_service import ProvidersService
 from keep.workflowmanager.workflowstore import WorkflowStore
 
-PORT = int(os.environ.get("PORT", 8080))
+PORT = int(os.environ.get("PORT", "8080"))
 PROVISION_RESOURCES = os.environ.get("PROVISION_RESOURCES", "true") == "true"
 
 keep.api.logging.setup_logging()
@@ -77,9 +77,7 @@ def on_starting(server=None):
         # for oauth2proxy, we don't want to create the default user
         try_create_single_tenant(
             SINGLE_TENANT_UUID,
-            create_default_user=(
-                False if AUTH_TYPE in excluded_from_default_user else True
-            ),
+            create_default_user=(not AUTH_TYPE in excluded_from_default_user),
         )
 
     provision_resources()
@@ -108,8 +106,8 @@ def on_starting(server=None):
 def post_worker_init(worker):
     # We need to reinitialize logging in each worker because gunicorn forks the worker processes
     print("Init logging in worker")
-    logging.getLogger().handlers = []  # noqa
-    keep.api.logging.setup_logging()  # noqa
+    logging.getLogger().handlers = []
+    keep.api.logging.setup_logging()
     print("Logging initialized in worker")
 
 

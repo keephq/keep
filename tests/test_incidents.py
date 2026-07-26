@@ -1,5 +1,5 @@
-from datetime import UTC, datetime, timedelta, timezone
 import importlib
+from datetime import UTC, datetime, timedelta
 from itertools import cycle
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
@@ -9,9 +9,6 @@ from fastapi import HTTPException
 from sqlalchemy import and_, desc, distinct, func
 
 import keep.api.consts
-
-
-from keep.api.models.db.incident import Incident
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
 from keep.api.core.db import (
@@ -22,21 +19,20 @@ from keep.api.core.db import (
     get_alerts_data_for_incident,
     get_incident_alerts_by_incident_id,
     get_incident_by_id,
-    get_incidents_count,
     get_last_incidents,
     merge_incidents_to_id,
     remove_alerts_to_incident_by_incident_id,
 )
 from keep.api.core.db_utils import get_json_extract_field
 from keep.api.core.dependencies import SINGLE_TENANT_EMAIL, SINGLE_TENANT_UUID
-from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
+from keep.api.models.alert import AlertSeverity, AlertStatus
 from keep.api.models.db.alert import (
     NULL_FOR_DELETED_AT,
     Alert,
     Incident,
     LastAlertToIncident,
 )
-from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
+from keep.api.models.db.incident import Incident, IncidentSeverity, IncidentStatus
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.rule import CreateIncidentOn, ResolveOn, Rule
 from keep.api.models.db.tenant import Tenant
@@ -73,8 +69,8 @@ def test_get_alerts_data_for_incident(db_session, create_alert):
     data = get_alerts_data_for_incident(
         SINGLE_TENANT_UUID, [a.fingerprint for a in alerts]
     )
-    assert data["sources"] == set([f"source_{i}" for i in range(10)])
-    assert data["services"] == set([f"service_{i}" for i in range(10)])
+    assert data["sources"] == {f"source_{i}" for i in range(10)}
+    assert data["services"] == {f"service_{i}" for i in range(10)}
 
 
 def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elastic):
@@ -110,11 +106,9 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     assert incident.alerts_count == 100
 
     assert sorted(incident.affected_services) == sorted(
-        ["service_{}".format(i) for i in range(10)]
+        [f"service_{i}" for i in range(10)]
     )
-    assert sorted(incident.sources) == sorted(
-        ["source_{}".format(i) for i in range(10)]
-    )
+    assert sorted(incident.sources) == sorted([f"source_{i}" for i in range(10)])
 
     service_field = get_json_extract_field(db_session, Alert.event, "service")
 
@@ -157,7 +151,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     assert "service_0" in incident.affected_services
     assert len(incident.affected_services) == 10
     assert sorted(incident.affected_services) == sorted(
-        ["service_{}".format(i) for i in range(10)]
+        [f"service_{i}" for i in range(10)]
     )
 
     remove_alerts_to_incident_by_incident_id(
@@ -189,7 +183,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     assert "service_0" not in incident.affected_services
     assert len(incident.affected_services) == 9
     assert sorted(incident.affected_services) == sorted(
-        ["service_{}".format(i) for i in range(1, 10)]
+        [f"service_{i}" for i in range(1, 10)]
     )
 
     source_1 = (
@@ -219,9 +213,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     assert "source_1" in incident.sources
     # source_0 was removed together with service_1
     assert len(incident.sources) == 9
-    assert sorted(incident.sources) == sorted(
-        ["source_{}".format(i) for i in range(1, 10)]
-    )
+    assert sorted(incident.sources) == sorted([f"source_{i}" for i in range(1, 10)])
 
     remove_alerts_to_incident_by_incident_id(
         "keep", incident.id, [a.fingerprint for a in source_1]
@@ -230,9 +222,7 @@ def test_add_remove_alert_to_incidents(db_session, setup_stress_alerts_no_elasti
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
     assert len(incident.sources) == 8
-    assert sorted(incident.sources) == sorted(
-        ["source_{}".format(i) for i in range(2, 10)]
-    )
+    assert sorted(incident.sources) == sorted([f"source_{i}" for i in range(2, 10)])
 
 
 def test_get_last_incidents(db_session, create_alert):
@@ -288,8 +278,7 @@ def test_get_last_incidents(db_session, create_alert):
         )
 
     incidents_candidates, incidents_candidates_count = get_last_incidents(
-        SINGLE_TENANT_UUID,
-        is_candidate=True
+        SINGLE_TENANT_UUID, is_candidate=True
     )
     assert len(incidents_candidates) == 0
     assert incidents_candidates_count == 0
@@ -331,10 +320,13 @@ def test_get_last_incidents(db_session, create_alert):
     # Test sorting
 
     incidents_sorted_by_severity, _ = get_last_incidents(
-        SINGLE_TENANT_UUID, is_candidate=False, sorting=IncidentSorting.severity, limit=5
+        SINGLE_TENANT_UUID,
+        is_candidate=False,
+        sorting=IncidentSorting.severity,
+        limit=5,
     )
     assert all(
-        [i.severity == IncidentSeverity.LOW.order for i in incidents_sorted_by_severity]
+        i.severity == IncidentSeverity.LOW.order for i in incidents_sorted_by_severity
     )
 
     # Test filters
@@ -344,7 +336,7 @@ def test_get_last_incidents(db_session, create_alert):
         SINGLE_TENANT_UUID, is_candidate=False, filters=filters_1, limit=100
     )
     assert len(incidents_with_filters_1) == 12
-    assert all([i.severity == 1 for i in incidents_with_filters_1])
+    assert all(i.severity == 1 for i in incidents_with_filters_1)
 
     filters_2 = {"status": ["firing", "acknowledged"]}
     incidents_with_filters_2, _ = get_last_incidents(
@@ -353,16 +345,14 @@ def test_get_last_incidents(db_session, create_alert):
     assert (
         len(incidents_with_filters_2) == 20 + 20
     )  # 20 confirmed, 20 acknowledged because 60 incidents with cycled status
-    assert all(
-        [i.status in ["firing", "acknowledged"] for i in incidents_with_filters_2]
-    )
+    assert all(i.status in ["firing", "acknowledged"] for i in incidents_with_filters_2)
 
     filters_3 = {"sources": ["keep"]}
     incidents_with_filters_3, _ = get_last_incidents(
         SINGLE_TENANT_UUID, is_candidate=False, filters=filters_3, limit=100
     )
     assert len(incidents_with_filters_3) == 60
-    assert all(["keep" in i.sources for i in incidents_with_filters_3])
+    assert all("keep" in i.sources for i in incidents_with_filters_3)
 
     filters_4 = {"sources": ["grafana"]}
     incidents_with_filters_4, _ = get_last_incidents(
@@ -374,7 +364,7 @@ def test_get_last_incidents(db_session, create_alert):
         SINGLE_TENANT_UUID, is_candidate=False, filters=filters_5, limit=100
     )
     assert len(incidents_with_filters_5) == 30  # half of incidents
-    assert all(["keep" in i.affected_services for i in incidents_with_filters_5])
+    assert all("keep" in i.affected_services for i in incidents_with_filters_5)
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
@@ -408,7 +398,7 @@ def test_incident_status_change(
     )
 
     response_ack = client.post(
-        "/incidents/{}/status".format(incident.id),
+        f"/incidents/{incident.id}/status",
         headers={"x-api-key": "some-key"},
         json={
             "status": IncidentStatus.ACKNOWLEDGED.value,
@@ -439,7 +429,7 @@ def test_incident_status_change(
     )
 
     response_resolved = client.post(
-        "/incidents/{}/status".format(incident.id),
+        f"/incidents/{incident.id}/status",
         headers={"x-api-key": "some-key"},
         json={
             "status": IncidentStatus.RESOLVED.value,
@@ -630,9 +620,7 @@ def test_add_alerts_with_same_fingerprint_to_incident(db_session, create_alert):
     assert len(incident_alerts) == 0
     assert total_incident_alerts == 0
 
-    add_alerts_to_incident(
-        SINGLE_TENANT_UUID, incident, [fp1_alerts[0].fingerprint]
-    )
+    add_alerts_to_incident(SINGLE_TENANT_UUID, incident, [fp1_alerts[0].fingerprint])
 
     incident = get_incident_by_id(SINGLE_TENANT_UUID, incident.id)
 
@@ -1053,7 +1041,7 @@ def test_split_incident_app(db_session, client, test_app, create_alert):
     assert len(incident_2._alerts) == 0
 
     response = client.post(
-        f"/incidents/{str(incident_1.id)}/split",
+        f"/incidents/{incident_1.id!s}/split",
         headers={"x-api-key": "some-key"},
         json={
             "alert_fingerprints": [critical_alert.fingerprint],
@@ -1115,12 +1103,8 @@ def test_cross_tenant_exposure_issue_2768(db_session, create_alert):
         db_session.query(Alert).filter(Alert.tenant_id == "tenant_2").first()
     )
 
-    add_alerts_to_incident(
-        "tenant_1", incident_tenant_1, [alert_tenant_1.fingerprint]
-    )
-    add_alerts_to_incident(
-        "tenant_2", incident_tenant_2, [alert_tenant_2.fingerprint]
-    )
+    add_alerts_to_incident("tenant_1", incident_tenant_1, [alert_tenant_1.fingerprint])
+    add_alerts_to_incident("tenant_2", incident_tenant_2, [alert_tenant_2.fingerprint])
 
     incident_tenant_1 = get_incident_by_id("tenant_1", incident_tenant_1.id)
     incident_tenant_1_alerts, total_incident_tenant_1_alerts = (
@@ -1159,11 +1143,9 @@ def test_incident_bl_create_incident(db_session):
         assert incidents_count == 0
 
         incident_dto_in = IncidentDtoIn(
-            **{
-                "user_generated_name": "Incident name",
-                "user_summary": "Keep: Incident description",
-                "status": "firing",
-            }
+            user_generated_name="Incident name",
+            user_summary="Keep: Incident description",
+            status="firing",
         )
 
         incident_dto = incident_bl.create_incident(
@@ -1224,11 +1206,9 @@ def test_incident_bl_update_incident(db_session):
             tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher
         )
         incident_dto_in = IncidentDtoIn(
-            **{
-                "user_generated_name": "Incident name",
-                "user_summary": "Keep: Incident description",
-                "status": "firing",
-            }
+            user_generated_name="Incident name",
+            user_summary="Keep: Incident description",
+            status="firing",
         )
 
         incident_dto = incident_bl.create_incident(incident_dto_in)
@@ -1237,11 +1217,9 @@ def test_incident_bl_update_incident(db_session):
         assert incidents_count == 1
 
         new_incident_dto_in = IncidentDtoIn(
-            **{
-                "user_generated_name": "Not an incident",
-                "user_summary": "Keep: Incident description",
-                "status": "firing",
-            }
+            user_generated_name="Not an incident",
+            user_summary="Keep: Incident description",
+            status="firing",
         )
 
         incident_dto_update = incident_bl.update_incident(
@@ -1292,11 +1270,9 @@ def test_incident_bl_delete_incident(db_session):
             incident_bl.delete_incident(uuid4())
 
         incident_dto_in = IncidentDtoIn(
-            **{
-                "user_generated_name": "Incident name",
-                "user_summary": "Keep: Incident description",
-                "status": "firing",
-            }
+            user_generated_name="Incident name",
+            user_summary="Keep: Incident description",
+            status="firing",
         )
 
         incident_dto = incident_bl.create_incident(incident_dto_in)
@@ -1347,11 +1323,9 @@ async def test_incident_bl_add_alert_to_incident(db_session, create_alert):
                 tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher
             )
             incident_dto_in = IncidentDtoIn(
-                **{
-                    "user_generated_name": "Incident name",
-                    "user_summary": "Keep: Incident description",
-                    "status": "firing",
-                }
+                user_generated_name="Incident name",
+                user_summary="Keep: Incident description",
+                status="firing",
             )
 
             incident_dto = incident_bl.create_incident(incident_dto_in)
@@ -1425,11 +1399,9 @@ async def test_incident_bl_delete_alerts_from_incident(db_session, create_alert)
                 tenant_id=SINGLE_TENANT_UUID, session=db_session, pusher_client=pusher
             )
             incident_dto_in = IncidentDtoIn(
-                **{
-                    "user_generated_name": "Incident name",
-                    "user_summary": "Keep: Incident description",
-                    "status": "firing",
-                }
+                user_generated_name="Incident name",
+                user_summary="Keep: Incident description",
+                status="firing",
             )
 
             incident_dto = incident_bl.create_incident(incident_dto_in)
@@ -1711,15 +1683,16 @@ async def test_incident_timestamps_based_on_alert_last_received(
 
 
 @pytest.mark.asyncio
-def test_incident_auto_resolve_without_rule( db_session, create_alert):
+def test_incident_auto_resolve_without_rule(db_session, create_alert):
 
     incident = create_incident_from_dict(
-        SINGLE_TENANT_UUID, {
+        SINGLE_TENANT_UUID,
+        {
             "user_generated_name": "test",
             "user_summary": "test",
             "resolve_on": ResolveOn.ALL.value,
         },
-        session=db_session
+        session=db_session,
     )
 
     create_alert(
@@ -1755,13 +1728,14 @@ def test_incident_auto_resolve_only_if_active(db_session, create_alert):
 
     def create_incident_with_status(status: IncidentStatus):
         return create_incident_from_dict(
-            SINGLE_TENANT_UUID, {
+            SINGLE_TENANT_UUID,
+            {
                 "user_generated_name": "test",
                 "user_summary": "test",
                 "resolve_on": ResolveOn.ALL.value,
-                "status": status.value
+                "status": status.value,
             },
-            session=db_session
+            session=db_session,
         )
 
     firing_incident = create_incident_with_status(IncidentStatus.FIRING)
@@ -1780,19 +1754,28 @@ def test_incident_auto_resolve_only_if_active(db_session, create_alert):
     alerts = db_session.query(Alert).all()
     assert len(alerts) == 1
 
-    for incident in [firing_incident, acknowledged_incident, resolved_incident, deleted_incident, merged_incident]:
+    for incident in [
+        firing_incident,
+        acknowledged_incident,
+        resolved_incident,
+        deleted_incident,
+        merged_incident,
+    ]:
         add_alerts_to_incident(
             SINGLE_TENANT_UUID, incident, [alerts[0].fingerprint], session=db_session
         )
 
-    with patch("keep.api.tasks.process_event_task.IncidentBl.resolve_incident_if_require") as incident_bl_mock:
+    with patch(
+        "keep.api.tasks.process_event_task.IncidentBl.resolve_incident_if_require"
+    ) as incident_bl_mock:
         create_alert(
             "alert-test",
             AlertStatus.RESOLVED,
             datetime.utcnow(),
             {"severity": AlertSeverity.CRITICAL.value},
         )
-        assert incident_bl_mock.call_count == 2 # firing and acknowledged
+        assert incident_bl_mock.call_count == 2  # firing and acknowledged
+
 
 def test_get_incidents_by_cel_is_visible_filter(db_session):
     """
@@ -1820,24 +1803,37 @@ def test_get_incidents_by_cel_is_visible_filter(db_session):
     assert visible.is_visible is True
     assert not_visible.is_visible is False
 
-    all_incidents = db_session.query(Incident).filter(
-        Incident.tenant_id == SINGLE_TENANT_UUID,
-    ).all()
+    all_incidents = (
+        db_session.query(Incident)
+        .filter(
+            Incident.tenant_id == SINGLE_TENANT_UUID,
+        )
+        .all()
+    )
     assert len(all_incidents) == 2
 
-    visible_only = db_session.query(Incident).filter(
-        Incident.tenant_id == SINGLE_TENANT_UUID,
-        Incident.is_visible == True,
-    ).all()
+    visible_only = (
+        db_session.query(Incident)
+        .filter(
+            Incident.tenant_id == SINGLE_TENANT_UUID,
+            Incident.is_visible == True,
+        )
+        .all()
+    )
     assert len(visible_only) == 1
     assert visible_only[0].user_generated_name == "Visible Incident"
 
-    not_visible_only = db_session.query(Incident).filter(
-        Incident.tenant_id == SINGLE_TENANT_UUID,
-        Incident.is_visible == False,
-    ).all()
+    not_visible_only = (
+        db_session.query(Incident)
+        .filter(
+            Incident.tenant_id == SINGLE_TENANT_UUID,
+            Incident.is_visible == False,
+        )
+        .all()
+    )
     assert len(not_visible_only) == 1
     assert not_visible_only[0].user_generated_name == "Not Visible Incident"
+
 
 def test_incident_not_created_maintenance(
     db_session,
@@ -1858,7 +1854,7 @@ def test_incident_not_created_maintenance(
     monkeypatch.setenv("MAINTENANCE_WINDOW_STRATEGY", "recover_previous_status")
     importlib.reload(keep.api.consts)
     importlib.reload(keep.api.bl.maintenance_windows_bl)
-    #AND A rule matching by Source
+    # AND A rule matching by Source
     correlation_rule = Rule(
         tenant_id=SINGLE_TENANT_UUID,
         name="Rule-test",
@@ -1878,37 +1874,41 @@ def test_incident_not_created_maintenance(
     db_session.add(correlation_rule)
     db_session.commit()
     db_session.refresh(correlation_rule)
-    #AND A Maintenance Window matching by Source
+    # AND A Maintenance Window matching by Source
     maintenance_w = create_window_maintenance_active(
         start=datetime.now(UTC) - timedelta(hours=3),
         end=datetime.now(UTC) + timedelta(hours=1),
-        cel='source == "test-source"'
+        cel='source == "test-source"',
     )
-    #AND An alert come in from Maintenance Window with Firing
+    # AND An alert come in from Maintenance Window with Firing
     create_alert(
         "test-fingerprint",
         AlertStatus.FIRING,
         datetime.now(UTC) - timedelta(hours=1),
-        {"severity": AlertSeverity.INFO.value,
-        "lastReceived": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
-        "source": ["test-source"]},
+        {
+            "severity": AlertSeverity.INFO.value,
+            "lastReceived": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
+            "source": ["test-source"],
+        },
         tenant_id=SINGLE_TENANT_UUID,
     )
-    #AND An alert received in the same Maintenance Window with Resolved
+    # AND An alert received in the same Maintenance Window with Resolved
     create_alert(
         "test-fingerprint",
         AlertStatus.RESOLVED,
         datetime.now(UTC) - timedelta(hours=1),
-        {"severity": AlertSeverity.INFO.value,
-        "lastReceived": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
-        "source": ["test-source"]},
+        {
+            "severity": AlertSeverity.INFO.value,
+            "lastReceived": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
+            "source": ["test-source"],
+        },
         tenant_id=SINGLE_TENANT_UUID,
     )
-    #AND an expired window
+    # AND an expired window
     finalize_window_maintenance(maintenance_w.id)
-    #WHEN The recover strategy is checked
+    # WHEN The recover strategy is checked
     MaintenanceWindowsBl.recover_strategy(logger=MagicMock(), session=db_session)
-    #THEN its creation is refuse because of the Firing has been already closed by the Resolved.
+    # THEN its creation is refuse because of the Firing has been already closed by the Resolved.
     _, total = get_last_incidents(
         tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_candidate=False
     )
@@ -1936,7 +1936,7 @@ def test_create_incident_after_maintenance_window(
     maintenance_w = create_window_maintenance_active(
         start=datetime.now(UTC) - timedelta(hours=3),
         end=datetime.now(UTC) + timedelta(hours=1),
-        cel='source == "test-source"'
+        cel='source == "test-source"',
     )
     # AND A rule matching by Source
     correlation_rule = Rule(
@@ -1966,7 +1966,7 @@ def test_create_incident_after_maintenance_window(
         {
             "severity": AlertSeverity.INFO.value,
             "lastReceived": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
-            "source": ["test-source"]
+            "source": ["test-source"],
         },
         tenant_id=SINGLE_TENANT_UUID,
     )
@@ -1980,15 +1980,16 @@ def test_create_incident_after_maintenance_window(
         tenant_id=SINGLE_TENANT_UUID, with_alerts=True, is_candidate=False
     )
     assert total == 1
-    assert incidents[total-1].user_generated_name == "Rule-test-after-mw"
+    assert incidents[total - 1].user_generated_name == "Rule-test-after-mw"
 
 
 def test_incident_dto_is_visible_from_db(db_session, create_alert):
     """Test that is_visible is correctly mapped in IncidentDto.from_db_incident()."""
-    from keep.api.models.db.incident import Incident as DbIncident
-    from keep.api.models.incident import IncidentDto
-    from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
     import datetime
+
+    from keep.api.models.db.incident import Incident as DbIncident
+    from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
+    from keep.api.models.incident import IncidentDto
 
     # Create a DB incident with is_visible=False
     db_incident = DbIncident(
@@ -2001,16 +2002,18 @@ def test_incident_dto_is_visible_from_db(db_session, create_alert):
         is_predicted=False,
         is_candidate=False,
         alerts_count=0,
-        creation_time=datetime.datetime.utcnow(),
-        start_time=datetime.datetime.utcnow(),
-        last_seen_time=datetime.datetime.utcnow(),
+        creation_time=datetime.datetime.now(tz=datetime.UTC),
+        start_time=datetime.datetime.now(tz=datetime.UTC),
+        last_seen_time=datetime.datetime.now(tz=datetime.UTC),
     )
     db_session.add(db_incident)
     db_session.commit()
 
     # Convert to DTO
     dto = IncidentDto.from_db_incident(db_incident)
-    assert dto.is_visible is False, "is_visible should be False when DB has is_visible=False"
+    assert dto.is_visible is False, (
+        "is_visible should be False when DB has is_visible=False"
+    )
 
     # Also test the default (True)
     db_incident2 = DbIncident(
@@ -2023,22 +2026,25 @@ def test_incident_dto_is_visible_from_db(db_session, create_alert):
         is_predicted=False,
         is_candidate=False,
         alerts_count=0,
-        creation_time=datetime.datetime.utcnow(),
-        start_time=datetime.datetime.utcnow(),
-        last_seen_time=datetime.datetime.utcnow(),
+        creation_time=datetime.datetime.now(tz=datetime.UTC),
+        start_time=datetime.datetime.now(tz=datetime.UTC),
+        last_seen_time=datetime.datetime.now(tz=datetime.UTC),
     )
     db_session.add(db_incident2)
     db_session.commit()
 
     dto2 = IncidentDto.from_db_incident(db_incident2)
-    assert dto2.is_visible is True, "is_visible should be True when DB has is_visible=True"
+    assert dto2.is_visible is True, (
+        "is_visible should be True when DB has is_visible=True"
+    )
 
 
 def test_incident_dto_is_visible_to_db():
     """Test that is_visible is correctly mapped in IncidentDto.to_db_incident()."""
-    from keep.api.models.incident import IncidentDto
-    from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
     import datetime
+
+    from keep.api.models.db.incident import IncidentSeverity, IncidentStatus
+    from keep.api.models.incident import IncidentDto
 
     dto = IncidentDto(
         id=uuid4(),
@@ -2051,10 +2057,12 @@ def test_incident_dto_is_visible_to_db():
         alerts_count=0,
         alert_sources=[],
         services=[],
-        creation_time=datetime.datetime.utcnow(),
-        start_time=datetime.datetime.utcnow(),
-        last_seen_time=datetime.datetime.utcnow(),
+        creation_time=datetime.datetime.now(tz=datetime.UTC),
+        start_time=datetime.datetime.now(tz=datetime.UTC),
+        last_seen_time=datetime.datetime.now(tz=datetime.UTC),
     )
 
     db_incident = dto.to_db_incident()
-    assert db_incident.is_visible is False, "to_db_incident should preserve is_visible=False"
+    assert db_incident.is_visible is False, (
+        "to_db_incident should preserve is_visible=False"
+    )

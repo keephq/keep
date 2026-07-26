@@ -1,5 +1,4 @@
 import logging
-from typing import List, Optional
 from uuid import UUID
 
 from arq import ArqRedis
@@ -27,6 +26,7 @@ from keep.api.core.db import (
     DestinationIncidentNotFound,
     add_audit,
     confirm_predicted_incident_by_id,
+    get_enrichment,
     get_future_incidents_by_incident_id,
     get_incident_alerts_and_links_by_incident_id,
     get_incident_by_id,
@@ -36,7 +36,6 @@ from keep.api.core.db import (
     get_session,
     get_workflow_executions_for_incident_or_alert,
     merge_incidents_to_id,
-    get_enrichment,
 )
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.incidents import (
@@ -82,7 +81,7 @@ from keep.api.utils.pluralize import pluralize
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.providers_factory import ProvidersFactory
-from keep.topologies.topologies_service import TopologiesService  # noqa
+from keep.topologies.topologies_service import TopologiesService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -128,15 +127,15 @@ def get_incidents_meta(
 )
 def get_all_incidents(
     candidate: bool = False,
-    predicted: Optional[bool] = None,
+    predicted: bool | None = None,
     limit: int = 25,
     offset: int = 0,
     sorting: IncidentSorting = IncidentSorting.creation_time,
-    status: List[IncidentStatus] = Query(None),
-    severity: List[IncidentSeverity] = Query(None),
-    assignees: List[str] = Query(None),
-    sources: List[str] = Query(None),
-    affected_services: List[str] = Query(None),
+    status: list[IncidentStatus] = Query(None),
+    severity: list[IncidentSeverity] = Query(None),
+    assignees: list[str] = Query(None),
+    sources: list[str] = Query(None),
+    affected_services: list[str] = Query(None),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
@@ -202,7 +201,7 @@ def get_all_incidents(
         )
         return result
     except CelToSqlException as e:
-        logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
+        logger.exception(f'Error parsing CEL expression "{cel}". {e!s}')
         raise HTTPException(
             status_code=400, detail=f"Error parsing CEL expression: {cel}"
         ) from e
@@ -340,7 +339,7 @@ def get_incidents_report(
             incidents_query_cel=cel, allowed_incident_ids=allowed_incident_ids
         )
     except CelToSqlException as e:
-        logger.exception(f'Error parsing CEL expression "{cel}". {str(e)}')
+        logger.exception(f'Error parsing CEL expression "{cel}". {e!s}')
         raise HTTPException(
             status_code=400, detail=f"Error parsing CEL expression: {cel}"
         )
@@ -425,7 +424,7 @@ def update_incident(
     description="Delete incidents in bulk",
 )
 def bulk_delete_incidents(
-    incident_ids: List[UUID] = Body(..., embed=True),
+    incident_ids: list[UUID] = Body(..., embed=True),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -688,11 +687,11 @@ def get_incident_workflows(
     "/{incident_id}/alerts",
     description="Add alerts to incident",
     status_code=202,
-    response_model=List[AlertDto],
+    response_model=list[AlertDto],
 )
 async def add_alerts_to_incident(
     incident_id: UUID,
-    alert_fingerprints: List[str],
+    alert_fingerprints: list[str],
     is_created_by_ai: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
@@ -712,11 +711,11 @@ async def add_alerts_to_incident(
     "/{incident_id}/alerts",
     description="Delete alerts from incident",
     status_code=202,
-    response_model=List[AlertDto],
+    response_model=list[AlertDto],
 )
 def delete_alerts_from_incident(
     incident_id: UUID,
-    fingerprints: List[str],
+    fingerprints: list[str],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -948,7 +947,7 @@ def add_comment(
     status_code=202,
 )
 async def create_with_ai(
-    alerts_fingerprints: List[str],
+    alerts_fingerprints: list[str],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
@@ -975,18 +974,18 @@ async def create_with_ai(
 @router.post(
     "/ai/{suggestion_id}/commit",
     description="Commit incidents with AI and user feedback",
-    response_model=List[IncidentDto],
+    response_model=list[IncidentDto],
     status_code=202,
 )
 async def commit_with_ai(
     suggestion_id: UUID,
-    incidents_with_feedback: List[IncidentCommit],
+    incidents_with_feedback: list[IncidentCommit],
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:incident"])
     ),
     session: Session = Depends(get_session),
     pusher_client: Pusher | None = Depends(get_pusher_client),
-) -> List[IncidentDto]:
+) -> list[IncidentDto]:
     tenant_id = authenticated_entity.tenant_id
 
     # Create business logic instances
@@ -1012,7 +1011,7 @@ async def commit_with_ai(
                 {},
             )
         except Exception as e:
-            logger.error(f"Failed to notify client: {str(e)}")
+            logger.error(f"Failed to notify client: {e!s}")
 
     return committed_incidents
 

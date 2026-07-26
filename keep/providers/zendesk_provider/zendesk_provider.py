@@ -1,4 +1,5 @@
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 
@@ -35,7 +36,7 @@ class ZendeskProviderAuthConfig:
 
 class ZendeskProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Zendesk"
-    PROVIDER_CATEGORY = ["Ticketing"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Ticketing"]
     PROVIDER_COMING_SOON = True
 
     def __init__(
@@ -52,4 +53,3 @@ class ZendeskProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass

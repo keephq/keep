@@ -6,11 +6,12 @@ Create Date: 2024-10-14 08:34:46.608806
 
 """
 
-from sqlalchemy import inspect
-from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.sql import expression
 from contextlib import contextmanager
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy import inspect
+from sqlalchemy.sql import expression
 
 # revision identifiers, used by Alembic.
 revision = "83c1020be97d"
@@ -29,13 +30,15 @@ def drop_and_restore_f_keys(table_name, conn):
     # Drop all foreign keys
     for fk in existing_f_keys:
         try:
-            op.drop_constraint(fk['name'], table_name, type_='foreignkey')
+            op.drop_constraint(fk["name"], table_name, type_="foreignkey")
             print(f"Dropped foreign key: {fk['name']}")
         except NotImplementedError as e:
             if "No support for ALTER of constraints in SQLite dialect." in str(e):
-                print("No support for ALTER of constraints in SQLite dialect, constraint should be overriden later so skipping")
+                print(
+                    "No support for ALTER of constraints in SQLite dialect, constraint should be overriden later so skipping"
+                )
             else:
-                raise e
+                raise
     try:
         yield
     finally:
@@ -43,35 +46,41 @@ def drop_and_restore_f_keys(table_name, conn):
         for fk in existing_f_keys:
             try:
                 op.create_foreign_key(
-                    fk['name'],
+                    fk["name"],
                     table_name,
-                    fk['referred_table'],
-                    fk['constrained_columns'],
-                    fk['referred_columns'],
-                    ondelete=fk['options'].get('ondelete')
+                    fk["referred_table"],
+                    fk["constrained_columns"],
+                    fk["referred_columns"],
+                    ondelete=fk["options"].get("ondelete"),
                 )
                 print(f"Restored foreign key: {fk['name']}")
             except NotImplementedError as e:
                 if "No support for ALTER of constraints in SQLite dialect." in str(e):
-                    print("No support for ALTER of constraints in SQLite dialect, constraint should be overriden later so skipping")
+                    print(
+                        "No support for ALTER of constraints in SQLite dialect, constraint should be overriden later so skipping"
+                    )
                 else:
-                    raise e
+                    raise
 
 
 def upgrade() -> None:
     with op.batch_alter_table("alerttoincident", schema=None) as batch_op:
-        batch_op.add_column(sa.Column(
-            "is_created_by_ai", 
-            sa.Boolean(), 
-            nullable=False, 
-            server_default=expression.false()
-        ))
-        batch_op.add_column(sa.Column(
-            "deleted_at",
-            sa.DateTime(), 
-            nullable=False,
-            server_default="1000-01-01 00:00:00",
-        ))
+        batch_op.add_column(
+            sa.Column(
+                "is_created_by_ai",
+                sa.Boolean(),
+                nullable=False,
+                server_default=expression.false(),
+            )
+        )
+        batch_op.add_column(
+            sa.Column(
+                "deleted_at",
+                sa.DateTime(),
+                nullable=False,
+                server_default="1000-01-01 00:00:00",
+            )
+        )
 
     conn = op.get_bind()
 
@@ -79,13 +88,17 @@ def upgrade() -> None:
         try:
             with op.batch_alter_table("alerttoincident", schema=None) as batch_op:
                 inspector = inspect(conn)
-                existing_primary_key = inspector.get_pk_constraint('alerttoincident', schema=None)
-                batch_op.drop_constraint(existing_primary_key['name'], type_="primary")
+                existing_primary_key = inspector.get_pk_constraint(
+                    "alerttoincident", schema=None
+                )
+                batch_op.drop_constraint(existing_primary_key["name"], type_="primary")
         except ValueError as e:
             if "Constraint must have a name" in str(e):
-                print("Constraint must have a name, constraint should be overriden later so skipping")
+                print(
+                    "Constraint must have a name, constraint should be overriden later so skipping"
+                )
             else:
-                raise e
+                raise
 
         with op.batch_alter_table("alerttoincident", schema=None) as batch_op:
             batch_op.create_primary_key(
@@ -97,7 +110,7 @@ def downgrade() -> None:
     conn = op.get_bind()
     inspector = inspect(conn)
 
-    existing_primary_key = inspector.get_pk_constraint('alerttoincident', schema=None)
+    existing_primary_key = inspector.get_pk_constraint("alerttoincident", schema=None)
 
     with op.batch_alter_table("alerttoincident", schema=None) as batch_op:
         batch_op.drop_column("deleted_at")
@@ -105,7 +118,7 @@ def downgrade() -> None:
 
     with drop_and_restore_f_keys("alerttoincident", conn):
         with op.batch_alter_table("alerttoincident", schema=None) as batch_op:
-            batch_op.drop_constraint(existing_primary_key['name'], type_="primary")
+            batch_op.drop_constraint(existing_primary_key["name"], type_="primary")
         with op.batch_alter_table("alerttoincident", schema=None) as batch_op:
             batch_op.create_primary_key(
                 "alerttoincident_pkey", ["alert_id", "incident_id"]

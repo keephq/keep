@@ -1,6 +1,7 @@
 import dataclasses
 from collections import Counter
 from datetime import datetime, timedelta
+from typing import ClassVar
 from urllib.parse import urlparse
 
 import pydantic
@@ -36,9 +37,9 @@ class PosthogProvider(BaseProvider, ProviderHealthMixin):
     """Query data from PostHog analytics."""
 
     PROVIDER_DISPLAY_NAME = "PostHog"
-    PROVIDER_CATEGORY = ["Analytics"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Analytics"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="session_recording:read",
             description="Read PostHog session recordings",
@@ -59,7 +60,7 @@ class PosthogProvider(BaseProvider, ProviderHealthMixin):
         ),
     ]
 
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="Get Session Recording Domains",
             func_name="get_session_recording_domains",
@@ -348,7 +349,6 @@ class PosthogProvider(BaseProvider, ProviderHealthMixin):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
 
 if __name__ == "__main__":

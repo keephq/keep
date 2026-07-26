@@ -1,11 +1,10 @@
 import hashlib
 import logging
-from typing import Optional
 from uuid import uuid4
 
-from sqlmodel import Session, select
-from sqlalchemy.exc import IntegrityError as SqlalchemyIntegrityError
 from google.api_core.exceptions import InvalidArgument as GoogleAPIInvalidArgument
+from sqlalchemy.exc import IntegrityError as SqlalchemyIntegrityError
+from sqlmodel import Session, select
 
 from keep.api.core.config import config
 from keep.api.models.db.tenant import TenantApiKey
@@ -105,7 +104,7 @@ def create_api_key(
     created_by: str,
     role: str,
     commit: bool = True,
-    system_description: Optional[str] = None,
+    system_description: str | None = None,
 ) -> str:
     """
     Creates an API key for the given tenant.
@@ -275,7 +274,7 @@ def get_or_create_api_key(
     tenant_id: str,
     created_by: str,
     unique_api_key_id: str,
-    system_description: Optional[str] = None,
+    system_description: str | None = None,
 ) -> str:
     """
     Gets or creates an API key for the given tenant.

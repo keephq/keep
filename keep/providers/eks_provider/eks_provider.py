@@ -4,6 +4,7 @@ EksProvider is a class that provides a way to interact with AWS EKS clusters.
 
 import dataclasses
 import logging
+from typing import ClassVar
 
 import boto3
 import pydantic
@@ -61,9 +62,9 @@ class EksProvider(BaseProvider):
     """Interact with and query AWS EKS clusters."""
 
     PROVIDER_DISPLAY_NAME = "EKS"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="eks:DescribeCluster",
             description="Required to get cluster information",
@@ -125,7 +126,7 @@ class EksProvider(BaseProvider):
     ),
     """
 
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="List Pods",
             func_name="get_pods",
@@ -329,7 +330,7 @@ class EksProvider(BaseProvider):
             self._client = self.__generate_client()
         return self._client
 
-    def get_pods(self, namespace: str = None) -> list:
+    def get_pods(self, namespace: str | None = None) -> list:
         """
         List all pods in a namespace or across all namespaces.
         Args:
@@ -343,7 +344,7 @@ class EksProvider(BaseProvider):
             pods = self.client.list_pod_for_all_namespaces()
         return [pod.to_dict() for pod in pods.items]
 
-    def get_pvc(self, namespace: str = None) -> list:
+    def get_pvc(self, namespace: str | None = None) -> list:
         """
         List all PVCs in a namespace or across all namespaces.
         Args:
@@ -423,7 +424,7 @@ class EksProvider(BaseProvider):
         )
 
     def exec_command(
-        self, namespace: str, pod_name: str, command: str, container: str = None
+        self, namespace: str, pod_name: str, command: str, container: str | None = None
     ) -> str:
         """
         Execute a command in a pod.
@@ -497,7 +498,7 @@ class EksProvider(BaseProvider):
             image = container_info.image if container_info else "unknown"
             raise ProviderException(
                 f"Failed to execute command in pod {pod_name} (container: {container}, "
-                f"image: {image}): {str(e)}"
+                f"image: {image}): {e!s}"
             )
 
     def restart_pod(self, namespace: str, pod_name: str):
@@ -532,7 +533,7 @@ class EksProvider(BaseProvider):
             )
             return deployment.to_dict()
         except Exception as e:
-            raise ProviderException(f"Failed to get deployment info: {str(e)}")
+            raise ProviderException(f"Failed to get deployment info: {e!s}")
 
     def scale_deployment(self, namespace: str, deployment_name: str, replicas: int):
         """
@@ -561,7 +562,7 @@ class EksProvider(BaseProvider):
         self,
         namespace: str,
         pod_name: str,
-        container: str = None,
+        container: str | None = None,
         tail_lines: int = 100,
     ):
         """

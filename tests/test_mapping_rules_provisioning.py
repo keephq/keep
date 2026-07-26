@@ -13,8 +13,8 @@ import pytest
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
-import keep.api.core.db as db
 from keep.api.bl.mapping_rules_provisioning import provision_mapping_rules_from_env
+from keep.api.core import db
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.mapping import MappingRule, MappingRuleUpdateDtoIn
 from keep.api.routes.mapping import delete_rule, update_rule
@@ -41,7 +41,7 @@ def _provisioned_mapping_rules(tenant_id=SINGLE_TENANT_UUID) -> list[MappingRule
         return session.exec(
             select(MappingRule).where(
                 MappingRule.tenant_id == tenant_id,
-                MappingRule.is_provisioned == True,  # noqa: E712
+                MappingRule.is_provisioned == True,
             )
         ).all()
 

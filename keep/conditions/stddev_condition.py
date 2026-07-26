@@ -41,9 +41,7 @@ class StddevCondition(BaseCondition):
         """
         values = self._filter_values_by_stddev(compare_value, compare_to)
         # If there are any values that are outside the standard devitation
-        if values:
-            return True
-        return False
+        return bool(values)
 
     def get_compare_value(self):
         """Get the value to compare. The actual value from the step output.

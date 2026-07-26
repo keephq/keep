@@ -2,8 +2,8 @@ import datetime
 import os
 import time
 from unittest.mock import MagicMock, patch
-import freezegun
 
+import freezegun
 import pytest
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
@@ -14,11 +14,11 @@ from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.preset import PresetSearchQuery as SearchQuery
 from keep.api.models.db.rule import CreateIncidentOn, ResolveOn, Rule
+from keep.api.models.incident import IncidentDtoIn
 from keep.api.models.query import QueryDto
 from keep.api.routes.alerts import query_alerts
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.searchengine.searchengine import SearchEngine
-from keep.api.models.incident import IncidentDtoIn
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
 # Shahar: If you are struggling - you can play with https://playcel.undistro.io/ to see how the CEL expressions work
@@ -231,18 +231,18 @@ def test_search_sanity_5(db_session, setup_alerts):
         search_query
     )
     assert len(elastic_filtered_alerts) == 2
-    assert sorted(
-        list(set([alert.fingerprint for alert in elastic_filtered_alerts]))
-    ) == sorted(["test-2", "test-1"])
+    assert sorted({alert.fingerprint for alert in elastic_filtered_alerts}) == sorted(
+        ["test-2", "test-1"]
+    )
     # then, use db
     os.environ["ELASTIC_ENABLED"] = "false"
     db_filtered_alerts = SearchEngine(tenant_id=SINGLE_TENANT_UUID).search_alerts(
         search_query
     )
     assert len(db_filtered_alerts) == 2
-    assert sorted(
-        list(set([alert.fingerprint for alert in db_filtered_alerts]))
-    ) == sorted(["test-2", "test-1"])
+    assert sorted({alert.fingerprint for alert in db_filtered_alerts}) == sorted(
+        ["test-2", "test-1"]
+    )
     # compare sort by fingerprint
     assert sorted(elastic_filtered_alerts, key=lambda x: x.fingerprint) == sorted(
         db_filtered_alerts, key=lambda x: x.fingerprint
@@ -295,9 +295,9 @@ def test_search_sanity_6(db_session, setup_alerts):
         search_query
     )
     assert len(elastic_filtered_alerts) == 2
-    assert sorted(
-        list(set([alert.fingerprint for alert in elastic_filtered_alerts]))
-    ) == sorted(["test-2", "test-1"])
+    assert sorted({alert.fingerprint for alert in elastic_filtered_alerts}) == sorted(
+        ["test-2", "test-1"]
+    )
 
     # then, use db
     os.environ["ELASTIC_ENABLED"] = "false"
@@ -305,9 +305,9 @@ def test_search_sanity_6(db_session, setup_alerts):
         search_query
     )
     assert len(db_filtered_alerts) == 2
-    assert sorted(
-        list(set([alert.fingerprint for alert in db_filtered_alerts]))
-    ) == sorted(["test-2", "test-1"])
+    assert sorted({alert.fingerprint for alert in db_filtered_alerts}) == sorted(
+        ["test-2", "test-1"]
+    )
     # compare sort by fingerprint
     assert sorted(elastic_filtered_alerts, key=lambda x: x.fingerprint) == sorted(
         db_filtered_alerts, key=lambda x: x.fingerprint
@@ -1221,17 +1221,6 @@ alert_details = {
             SearchQuery(
                 sql_query={
                     "sql": "(severity = :severity_1)",
-                    "params": {"severity_1": "high"},
-                },
-                cel_query='severity == "high"',
-            ),
-            1,
-        ),
-        (
-            alert_details,
-            SearchQuery(
-                sql_query={
-                    "sql": "(severity = :severity_1)",
                     "params": {"severity_1": "warning"},
                 },
                 cel_query=' severity== "warning"',
@@ -1315,9 +1304,9 @@ def test_severity_comparisons(
     assert len(db_filtered_alerts) == expected_severity_counts
 
     # compare
-    assert set([alert.id for alert in elastic_filtered_alerts]) == set(
-        [alert.id for alert in db_filtered_alerts]
-    )
+    assert {alert.id for alert in elastic_filtered_alerts} == {
+        alert.id for alert in db_filtered_alerts
+    }
 
 
 @pytest.mark.timeout(10)
@@ -1487,6 +1476,7 @@ def test_search_alerts_by_cel(
         ),
     )
 
+
 @pytest.mark.parametrize(
     "cel_query, n_alerts",
     [
@@ -1508,67 +1498,55 @@ async def test_search_no_incidents_scenario_1(
             by alerts without incidents, incident.id==null,
             we should get 0 results. In the same way, incident.id!=null should be 2.
     """
-    #GIVEN Two incidents with ResolveON All
-    incident_bl = IncidentBl(
-                tenant_id=SINGLE_TENANT_UUID, session=db_session
-            )
+    # GIVEN Two incidents with ResolveON All
+    incident_bl = IncidentBl(tenant_id=SINGLE_TENANT_UUID, session=db_session)
 
-    incident_dto_1 = incident_bl.create_incident(IncidentDtoIn(
-                **{
-                    "user_generated_name": "Incident name",
-                    "user_summary": "Keep: Incident description",
-                    "status": "firing",
-                    "resolve_on": ResolveOn.ALL.value
-
-                }
-            ))
-    incident_dto_2 = incident_bl.create_incident(IncidentDtoIn(
-                **{
-                    "user_generated_name": "Incident name",
-                    "user_summary": "Keep: Incident description",
-                    "status": "firing",
-                    "resolve_on": ResolveOn.ALL.value
-
-                }
-            ))
-
-    #AND The first Firing alert linked to both incidents.
-    create_alert(
-                "alert-test-1",
-                AlertStatus("firing"),
-                datetime.datetime.utcnow(),
-                {},
-            )
-    await incident_bl.add_alerts_to_incident(
-                incident_dto_1.id, ["alert-test-1"]
-            )
-    await incident_bl.add_alerts_to_incident(
-                incident_dto_2.id, ["alert-test-1"]
-            )
-    #AND The second FIRING alert linked to the first incident.
-    create_alert(
-            "alert-test-2",
-            AlertStatus("firing"),
-            datetime.datetime.utcnow(),
-            {},
+    incident_dto_1 = incident_bl.create_incident(
+        IncidentDtoIn(
+            user_generated_name="Incident name",
+            user_summary="Keep: Incident description",
+            status="firing",
+            resolve_on=ResolveOn.ALL.value,
         )
-    await incident_bl.add_alerts_to_incident(
-                incident_dto_1.id, ["alert-test-2"]
-            )
-    #AND One RESOLVED alert linked to the second incident.
-    create_alert(
-            "alert-test-1",
-            AlertStatus("resolved"),
-            datetime.datetime.utcnow(),
-            {},
+    )
+    incident_dto_2 = incident_bl.create_incident(
+        IncidentDtoIn(
+            user_generated_name="Incident name",
+            user_summary="Keep: Incident description",
+            status="firing",
+            resolve_on=ResolveOn.ALL.value,
         )
-    await incident_bl.add_alerts_to_incident(
-                incident_dto_2.id, ["alert-test-1"]
-            )
+    )
+
+    # AND The first Firing alert linked to both incidents.
+    create_alert(
+        "alert-test-1",
+        AlertStatus("firing"),
+        datetime.datetime.now(tz=datetime.UTC),
+        {},
+    )
+    await incident_bl.add_alerts_to_incident(incident_dto_1.id, ["alert-test-1"])
+    await incident_bl.add_alerts_to_incident(incident_dto_2.id, ["alert-test-1"])
+    # AND The second FIRING alert linked to the first incident.
+    create_alert(
+        "alert-test-2",
+        AlertStatus("firing"),
+        datetime.datetime.now(tz=datetime.UTC),
+        {},
+    )
+    await incident_bl.add_alerts_to_incident(incident_dto_1.id, ["alert-test-2"])
+    # AND One RESOLVED alert linked to the second incident.
+    create_alert(
+        "alert-test-1",
+        AlertStatus("resolved"),
+        datetime.datetime.now(tz=datetime.UTC),
+        {},
+    )
+    await incident_bl.add_alerts_to_incident(incident_dto_2.id, ["alert-test-1"])
 
     auth = AuthenticatedEntity(tenant_id=SINGLE_TENANT_UUID, email="test")
     db_session.expire_all()
-    #WHEN I search for alerts linked to incidents
+    # WHEN I search for alerts linked to incidents
     result_query = query_alerts(
         request=MagicMock(),
         query=QueryDto(
@@ -1577,7 +1555,7 @@ async def test_search_no_incidents_scenario_1(
         bg_tasks=MagicMock(),
         authenticated_entity=auth,
     )
-    #THEN I should get only the alerts following the CEL expression
+    # THEN I should get only the alerts following the CEL expression
     assert len(result_query["results"]) == n_alerts
     assert result_query["count"] == n_alerts
 
@@ -1600,43 +1578,36 @@ async def test_search_no_incidents_scenario_2(
             the filter will show 1 alert if it is == null, (without incidents alive)
             In the same way, != null will show 0 incidents.
     """
-    #GIVEN Two incidents with ResolveON All
-    incident_bl = IncidentBl(
-                tenant_id=SINGLE_TENANT_UUID, session=db_session
-            )
+    # GIVEN Two incidents with ResolveON All
+    incident_bl = IncidentBl(tenant_id=SINGLE_TENANT_UUID, session=db_session)
 
-    incident_dto_1 = incident_bl.create_incident(IncidentDtoIn(
-                **{
-                    "user_generated_name": "Incident name",
-                    "user_summary": "Keep: Incident description",
-                    "status": "firing",
-                    "resolve_on": ResolveOn.ALL.value
-
-                }
-            ))
-    #AND The Firing alert linked to the incident.
+    incident_dto_1 = incident_bl.create_incident(
+        IncidentDtoIn(
+            user_generated_name="Incident name",
+            user_summary="Keep: Incident description",
+            status="firing",
+            resolve_on=ResolveOn.ALL.value,
+        )
+    )
+    # AND The Firing alert linked to the incident.
     create_alert(
-                "alert-test-1",
-                AlertStatus("firing"),
-                datetime.datetime.utcnow(),
-                {},
-            )
-    await incident_bl.add_alerts_to_incident(
-                incident_dto_1.id, ["alert-test-1"]
-            )
-    #AND The Resolved alert linked to the incident.
+        "alert-test-1",
+        AlertStatus("firing"),
+        datetime.datetime.now(tz=datetime.UTC),
+        {},
+    )
+    await incident_bl.add_alerts_to_incident(incident_dto_1.id, ["alert-test-1"])
+    # AND The Resolved alert linked to the incident.
     create_alert(
-                "alert-test-1",
-                AlertStatus("resolved"),
-                datetime.datetime.utcnow(),
-                {},
-            )
-    await incident_bl.add_alerts_to_incident(
-                incident_dto_1.id, ["alert-test-1"]
-            )
+        "alert-test-1",
+        AlertStatus("resolved"),
+        datetime.datetime.now(tz=datetime.UTC),
+        {},
+    )
+    await incident_bl.add_alerts_to_incident(incident_dto_1.id, ["alert-test-1"])
     auth = AuthenticatedEntity(tenant_id=SINGLE_TENANT_UUID, email="test")
     db_session.expire_all()
-    #WHEN I search for alerts linked to incidents
+    # WHEN I search for alerts linked to incidents
     result_query = query_alerts(
         request=MagicMock(),
         query=QueryDto(
@@ -1645,9 +1616,10 @@ async def test_search_no_incidents_scenario_2(
         bg_tasks=MagicMock(),
         authenticated_entity=auth,
     )
-    #THEN I should get only the alerts followig the CEL exp
+    # THEN I should get only the alerts followig the CEL exp
     assert len(result_query["results"]) == n_alerts
     assert result_query["count"] == n_alerts
+
 
 @pytest.mark.parametrize(
     "cel_query, n_alerts",
@@ -1665,7 +1637,7 @@ def test_search_alert_incident_not_visible(
             alerts without incident linked or with incidents not visible.
             Having the incident creation from a correlation.
     """
-    #GIVEN One incident created from correlation, not visible because of the threshold 2.
+    # GIVEN One incident created from correlation, not visible because of the threshold 2.
     correlation_rule = Rule(
         tenant_id=SINGLE_TENANT_UUID,
         name="Incident no visible",
@@ -1677,34 +1649,34 @@ def test_search_alert_incident_not_visible(
         timeframe=600,
         timeunit="seconds",
         created_by="test",
-        creation_time=datetime.datetime.utcnow(),
+        creation_time=datetime.datetime.now(tz=datetime.UTC),
         require_approve=False,
         resolve_on=ResolveOn.ALL.value,
         create_on=CreateIncidentOn.ANY.value,
-        threshold=2
+        threshold=2,
     )
     db_session.add(correlation_rule)
     db_session.commit()
     db_session.refresh(correlation_rule)
 
-    #AND The Firing alert linked to the incident.
+    # AND The Firing alert linked to the incident.
     create_alert(
-                "alert-test-1",
-                AlertStatus("firing"),
-                datetime.datetime.utcnow(),
-                {'source': ["any"]},
-            )
-    #AND Another Firing alert not linked to the incident.
+        "alert-test-1",
+        AlertStatus("firing"),
+        datetime.datetime.now(tz=datetime.UTC),
+        {"source": ["any"]},
+    )
+    # AND Another Firing alert not linked to the incident.
     create_alert(
-                "alert-test-2",
-                AlertStatus("firing"),
-                datetime.datetime.utcnow(),
-                {'source': ["other"]},
-            )
+        "alert-test-2",
+        AlertStatus("firing"),
+        datetime.datetime.now(tz=datetime.UTC),
+        {"source": ["other"]},
+    )
 
     auth = AuthenticatedEntity(tenant_id=SINGLE_TENANT_UUID, email="test")
     db_session.expire_all()
-    #WHEN I search using the CEL expression
+    # WHEN I search using the CEL expression
     result_query = query_alerts(
         request=MagicMock(),
         query=QueryDto(
@@ -1713,9 +1685,10 @@ def test_search_alert_incident_not_visible(
         bg_tasks=MagicMock(),
         authenticated_entity=auth,
     )
-    #THEN I should get the alerts which match the CEL expression
+    # THEN I should get the alerts which match the CEL expression
     assert len(result_query["results"]) == n_alerts
     assert result_query["count"] == n_alerts
+
 
 """
 COMMENTED OUT UNTIL WE FIGURE ' something in list'

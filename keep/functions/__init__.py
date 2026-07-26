@@ -4,7 +4,7 @@ import json
 import logging
 import re
 import urllib.parse
-from datetime import timedelta
+from datetime import timedelta, timezone
 from itertools import groupby
 from typing import Literal
 
@@ -90,7 +90,9 @@ def diff(iterable: iter) -> bool:
     return not all(iterable)
 
 
-def len(iterable=[], **kwargs) -> int:
+def len(iterable=None, **kwargs) -> int:
+    if iterable is None:
+        iterable = []
     return _len(iterable)
 
 
@@ -224,7 +226,7 @@ def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
 
 
 def from_timestamp(
-    timestamp: int | float | str, timezone: str = "UTC"
+    timestamp: float | str, timezone: str = "UTC"
 ) -> datetime.datetime | str:
     try:
         if isinstance(timestamp, str):
@@ -244,7 +246,7 @@ def to_timestamp(dt: datetime.datetime | str = "") -> int:
     return int(dt.timestamp())
 
 
-def datetime_compare(t1: datetime = None, t2: datetime = None) -> float:
+def datetime_compare(t1: datetime | None = None, t2: datetime | None = None) -> float:
     if not t1 or not t2:
         return 0
     diff = (t1 - t2).total_seconds() / 3600
@@ -366,7 +368,9 @@ def add_time_to_date(date, date_format, time_str):
         datetime.datetime: The new datetime object with the added time.
     """
     if isinstance(date, str):
-        date = datetime.datetime.strptime(date, date_format)
+        date = datetime.datetime.strptime(date, date_format).replace(
+            tzinfo=timezone.utc
+        )
 
     time_units = {
         "w": "weeks",
@@ -441,7 +445,7 @@ def get_firing_time(alert: dict, time_unit: str, **kwargs) -> str:
     return f"{result:.2f}"
 
 
-def is_first_time(fingerprint: str, since: str = None, **kwargs) -> str:
+def is_first_time(fingerprint: str, since: str | None = None, **kwargs) -> str:
     """
     Get the firing time of an alert.
 
@@ -488,11 +492,8 @@ def is_first_time(fingerprint: str, since: str = None, **kwargs) -> str:
     else:
         raise ValueError("Invalid time unit. Use 'm', 'h', 'd', or 'w'.")
 
-    current_time = datetime.datetime.utcnow()
-    if current_time - prevAlert.timestamp > time_delta:
-        return True
-    else:
-        return False
+    current_time = datetime.datetime.now(tz=datetime.UTC)
+    return current_time - prevAlert.timestamp > time_delta
 
 
 def is_business_hours(
@@ -575,7 +576,7 @@ def is_business_hours(
     return start_hour <= hour < end_hour
 
 
-def dictget(data: str | dict, key: str, default: any = None) -> any:
+def dictget(data: str | dict, key: str, default: any | None = None) -> any:
     """
     Get a value from a dictionary with a default fallback.
 
@@ -609,12 +610,12 @@ def dictget(data: str | dict, key: str, default: any = None) -> any:
 def dict_set(data: str | dict, key: str, value: any) -> dict:
     """
     Sets a key-value pair in a dictionary, returning a new dictionary.
-    
+
     Args:
         data (str | dict): The dictionary to update. Can be a JSON string or dict.
         key (str): The key to set.
         value (any): The value to set.
-        
+
     Returns:
         dict: A new dictionary with the key set to the value.
     """
@@ -628,6 +629,7 @@ def dict_set(data: str | dict, key: str, value: any) -> dict:
         data = {}
 
     import copy
+
     dict_copy = copy.deepcopy(data)
     dict_copy[key] = value
     return dict_copy
@@ -637,10 +639,10 @@ def dict_merge(*args) -> dict:
     """
     Merges multiple dictionaries into one, returning a new dictionary.
     Dictionaries passed later override earlier ones.
-    
+
     Args:
         *args: Dictionaries or JSON strings to merge.
-        
+
     Returns:
         dict: A new dictionary containing all merged keys and values.
     """
@@ -654,6 +656,5 @@ def dict_merge(*args) -> dict:
 
         if isinstance(data, dict):
             result.update(data)
-            
-    return result
 
+    return result

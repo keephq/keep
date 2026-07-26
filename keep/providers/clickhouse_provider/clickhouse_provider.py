@@ -1,6 +1,7 @@
 import dataclasses
 import json
 import typing
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -12,7 +13,6 @@ from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.validation.fields import NoSchemeUrl, UrlPort
-
 
 DEFAULT_TIMEOUT_SECONDS = 120  # Not to hang the thread forever, only for extreme cases
 
@@ -81,9 +81,9 @@ class ClickhouseProvider(BaseProvider, ProviderHealthMixin):
     """Enrich alerts with data from Clickhouse."""
 
     PROVIDER_DISPLAY_NAME = "Clickhouse"
-    PROVIDER_CATEGORY = ["Database"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Database"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="connect_to_server",
             description="The user can connect to the server",
@@ -161,7 +161,7 @@ class ClickhouseProvider(BaseProvider, ProviderHealthMixin):
             verify=self.authentication_config.verify,
         )
 
-    def _execute_http_query(self, query: str, params: dict = None) -> list:
+    def _execute_http_query(self, query: str, params: dict | None = None) -> list:
         """
         Execute a query using HTTP protocol.
 

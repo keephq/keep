@@ -2,6 +2,8 @@
 Dash0 Provider allows to receive alerts from Dash0 using Webhook.
 """
 
+from typing import ClassVar
+
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -28,22 +30,22 @@ To send alerts from Dash0 to Keep, Use the following webhook url to configure Da
 7. Go to Checks under Alerting in the left sidebar and create a New Check Rule according to your requirements and assign the Notification Rule.
 """
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "critical": AlertStatus.FIRING,
         "degraded": AlertStatus.FIRING,
         "resolved": AlertStatus.RESOLVED,
     }
 
     # Dash0 doesn't have severity levels, so we map status to severity levels manually.
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "critical": AlertSeverity.CRITICAL,
         "degraded": AlertSeverity.WARNING,
         "resolved": AlertSeverity.INFO,
     }
 
     PROVIDER_DISPLAY_NAME = "Dash0"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -54,7 +56,6 @@ To send alerts from Dash0 to Keep, Use the following webhook url to configure Da
         """
         Validates required configuration for Dash0's provider.
         """
-        pass
 
     @staticmethod
     def _format_alert(

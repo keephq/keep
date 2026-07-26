@@ -1,4 +1,5 @@
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 
@@ -16,7 +17,7 @@ class NetxmsProviderAuthConfig:
 
 class NetxmsProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "NetXMS"
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
     PROVIDER_COMING_SOON = True
 
     def __init__(
@@ -33,4 +34,3 @@ class NetxmsProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass

@@ -3,6 +3,7 @@ Thousandseyes provider is a class that allows you to retrieve alerts from Thousa
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -49,17 +50,21 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
     """
 
     PROVIDER_DISPLAY_NAME = "ThousandEyes"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring", "Incident Management", "Cloud Infrastructure"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = [
+        "Monitoring",
+        "Incident Management",
+        "Cloud Infrastructure",
+    ]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authenticated",
         )
     ]
 
-    SEVERITY_MAP = {
+    SEVERITY_MAP: ClassVar[dict[str, str]] = {
         "info": AlertSeverity.INFO,
         "minor": AlertSeverity.WARNING,
         "major": AlertSeverity.HIGH,
@@ -67,7 +72,7 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
     }
 
     # Thousandeyes only supports severity. We map severity to status.
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "info": AlertStatus.PENDING,
         "minor": AlertStatus.ACKNOWLEDGED,
         "major": AlertStatus.FIRING,
@@ -83,7 +88,6 @@ To send alerts from ThousandEyes to Keep, Use the following webhook url to confi
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """

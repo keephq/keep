@@ -36,7 +36,6 @@ class KeepProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def _calculate_time_delta(self, timerange=None, default_time_range=1):
         """Calculate time delta in days from timerange dict."""
@@ -136,10 +135,12 @@ class KeepProvider(BaseProvider):
         self.logger.info("Got alerts from Keep", extra={"num_of_alerts": len(alerts)})
         return alerts
 
-    def _build_alert(self, alert_data, fingerprint_fields=[], **kwargs):
+    def _build_alert(self, alert_data, fingerprint_fields=None, **kwargs):
         """
         Build alerts from Keep.
         """
+        if fingerprint_fields is None:
+            fingerprint_fields = []
         labels = copy.copy(kwargs.get("labels", {}))
         alert = AlertDto(
             name=kwargs["name"],
@@ -686,7 +687,7 @@ class KeepProvider(BaseProvider):
                 self.context_manager.workflow_execution_id,
             )
             workflow_db_id = workflow_execution.workflow_id
-            if not workflow_execution.workflow_id == "test":
+            if workflow_execution.workflow_id != "test":
                 self._delete_workflows(except_workflow_id=workflow_db_id)
             else:
                 self.logger.info(
@@ -752,7 +753,6 @@ class KeepProvider(BaseProvider):
         Validates required configuration for Keep provider.
 
         """
-        pass
 
     @staticmethod
     def _format_alert(
@@ -888,7 +888,7 @@ class KeepProvider(BaseProvider):
                         rendered_providers_parameters[key] = result
                 except Exception as e:
                     self.logger.warning(
-                        f"Failed to evaluate potential ternary expression: {value}. Error: {str(e)}",
+                        f"Failed to evaluate potential ternary expression: {value}. Error: {e!s}",
                         extra={"value": value, "error": str(e)},
                     )
 

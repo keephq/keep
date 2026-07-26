@@ -11,15 +11,15 @@ from sqlalchemy.exc import IntegrityError
 
 from keep.api.consts import RUNNING_IN_CLOUD_RUN
 from keep.api.core.config import config
-from keep.api.core.db import create_workflow_execution
-from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import (
+    create_workflow_execution,
     get_enrichment,
     get_previous_execution_id,
     get_timeouted_workflow_exections,
+    get_workflows_that_should_run,
 )
+from keep.api.core.db import finish_workflow_execution as finish_workflow_execution_db
 from keep.api.core.db import get_workflow_by_id as get_workflow_db
-from keep.api.core.db import get_workflows_that_should_run
 from keep.api.core.metrics import (
     workflow_execution_errors_total,
     workflow_execution_status,
@@ -127,7 +127,6 @@ class WorkflowScheduler:
                 "Error getting workflows that should run",
                 exc_info=ex,
             )
-            pass
         for workflow in workflows:
             workflow_execution_id = workflow.get("workflow_execution_id")
             tenant_id = workflow.get("tenant_id")
@@ -290,7 +289,7 @@ class WorkflowScheduler:
         event: AlertDto | IncidentDto,
         workflow: Workflow = None,
         test_run: bool = False,
-        inputs: dict = None,
+        inputs: dict | None = None,
     ):
         self.logger.info(f"Running manual event workflow {workflow_id}...")
         try:
@@ -300,7 +299,7 @@ class WorkflowScheduler:
             if isinstance(event, IncidentDto):
                 event_id = str(event.id)
                 event_type = "incident"
-                fingerprint = "incident:{}".format(event_id)
+                fingerprint = f"incident:{event_id}"
             else:
                 event_id = event.event_id
                 event_type = "alert"
@@ -321,7 +320,7 @@ class WorkflowScheduler:
         # This is kinda WTF exception since create_workflow_execution shouldn't fail for manual
         except Exception as e:
             self.logger.error(f"WTF: error creating workflow execution: {e}")
-            raise e
+            raise
 
         self.logger.info(
             f"Adding workflow to run {'(test)' if test_run else ''}",
@@ -361,7 +360,7 @@ class WorkflowScheduler:
         """
         # if fingerprint supplied
         if fingerprint and workflow_id:
-            payload = f"{str(fingerprint)}:{str(workflow_id)}".encode()
+            payload = f"{fingerprint!s}:{workflow_id!s}".encode()
         # else, just return random
         elif fingerprint:
             payload = str(fingerprint).encode()
@@ -666,7 +665,6 @@ class WorkflowScheduler:
                 # This is the "mainloop" of the scheduler, we don't want to crash it
                 # But any exception here should be investigated
                 self.logger.error("Error getting workflows that should run")
-                pass
             self.logger.debug("Sleeping until next iteration")
             time.sleep(1)
         self.logger.info("Workflows scheduler stopped")

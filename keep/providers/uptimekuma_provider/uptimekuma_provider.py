@@ -3,6 +3,7 @@ UptimeKuma is a class that provides the necessary methods to interact with the U
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 from socketio.exceptions import BadNamespaceError
@@ -25,7 +26,7 @@ class UptimekumaProviderAuthConfig:
             "required": True,
             "description": "UptimeKuma Host URL",
             "sensitive": False,
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         },
     )
 
@@ -48,24 +49,23 @@ class UptimekumaProviderAuthConfig:
 
 class UptimekumaProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "UptimeKuma"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="alerts",
             description="Read alerts from UptimeKuma",
         )
     ]
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         # Possible firing
         "down": AlertStatus.FIRING.value,
         "unavailable": AlertStatus.FIRING.value,
         "firing": AlertStatus.FIRING.value,
         "0": AlertStatus.FIRING.value,
         0: AlertStatus.FIRING.value,
-
         # RESOLVED
         "up": AlertStatus.RESOLVED.value,
         "available": AlertStatus.RESOLVED.value,
@@ -135,10 +135,15 @@ class UptimekumaProvider(BaseProvider):
                     AlertDto(
                         id=heartbeat.get("id"),
                         name=name,
-                        monitor_id=heartbeat.get("monitor_id", heartbeat.get("monitorID")),
+                        monitor_id=heartbeat.get(
+                            "monitor_id", heartbeat.get("monitorID")
+                        ),
                         description=heartbeat.get("msg", ""),
                         status=self.STATUS_MAP.get(heartbeat.get("status"), "firing"),
-                        lastReceived=self._format_datetime(heartbeat.get("localDateTime", ""), heartbeat.get("timezoneOffset", 0)),
+                        lastReceived=self._format_datetime(
+                            heartbeat.get("localDateTime", ""),
+                            heartbeat.get("timezoneOffset", 0),
+                        ),
                         ping=heartbeat.get("ping"),
                         source=["uptimekuma"],
                     )
@@ -162,7 +167,6 @@ class UptimekumaProvider(BaseProvider):
         except Exception as e:
             self.logger.error("Error getting alerts from UptimeKuma: %s", e)
             raise Exception(f"Error getting alerts from UptimeKuma: {e}")
-
 
     @classmethod
     def _format_alert(
@@ -204,11 +208,14 @@ class UptimekumaProvider(BaseProvider):
 
         # String datetime + numeric offset in minutes
         try:
-            dt_obj = datetime.strptime(str(dt), "%Y-%m-%d %H:%M:%S")
+            dt_obj = datetime.strptime(
+                str(dt).replace(tzinfo=timezone.utc), "%Y-%m-%d %H:%M:%S"
+            )
             tz = timezone(timedelta(minutes=int(offset)))
             return dt_obj.replace(tzinfo=tz).isoformat()
         except (ValueError, TypeError):
             return str(dt)
+
 
 if __name__ == "__main__":
     import logging

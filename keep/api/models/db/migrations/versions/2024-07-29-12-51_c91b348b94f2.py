@@ -61,14 +61,9 @@ def downgrade() -> None:
     # First add the description column back
     with op.batch_alter_table("incident", schema=None) as batch_op:
         batch_op.add_column(
-            sa.Column(
-                "description", 
-                sa.VARCHAR(), 
-                nullable=False, 
-                server_default=""
-            )
+            sa.Column("description", sa.VARCHAR(), nullable=False, server_default="")
         )
-    
+
     # Copy the data from user_summary to description
     session = Session(op.get_bind())
     depopulate_db(session)

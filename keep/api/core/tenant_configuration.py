@@ -11,7 +11,6 @@ class TenantConfiguration:
     _instance = None
 
     class _TenantConfiguration:
-
         def __init__(self):
             self.logger = logging.getLogger(__name__)
             self.configurations = self._load_tenant_configurations()
@@ -40,7 +39,9 @@ class TenantConfiguration:
                     self.configurations = updated_configurations
                     self.logger.info("Tenants configurations reloaded")
                 else:
-                    self.logger.warning("No tenants configurations found in db, maybe error")
+                    self.logger.warning(
+                        "No tenants configurations found in db, maybe error"
+                    )
 
         def get_configuration(self, tenant_id, config_name=None):
             self._reload_if_needed()

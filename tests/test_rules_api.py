@@ -127,7 +127,7 @@ def test_delete_rule_api(db_session, client, test_app):
     rule = create_rule_db(**TEST_RULE_DATA)
 
     response = client.delete(
-        "/rules/{}".format(rule.id),
+        f"/rules/{rule.id}",
         headers={"x-api-key": "some-key"},
     )
 
@@ -137,7 +137,7 @@ def test_delete_rule_api(db_session, client, test_app):
     assert data["message"] == "Rule deleted"
 
     response = client.delete(
-        "/rules/{}".format(rule.id),
+        f"/rules/{rule.id}",
         headers={"x-api-key": "some-key"},
     )
 
@@ -167,7 +167,7 @@ def test_update_rule_api(db_session, client, test_app):
     }
 
     response = client.put(
-        "/rules/{}".format(rule.id), headers={"x-api-key": "some-key"}, json=rule_data
+        f"/rules/{rule.id}", headers={"x-api-key": "some-key"}, json=rule_data
     )
 
     assert response.status_code == 200
@@ -178,7 +178,7 @@ def test_update_rule_api(db_session, client, test_app):
     for invalid_data_step in INVALID_DATA_STEPS:
         current_step = "Invalid data step: {}".format(invalid_data_step["error"])
         invalid_data_response_2 = client.put(
-            "/rules/{}".format(rule.id),
+            f"/rules/{rule.id}",
             headers={"x-api-key": "some-key"},
             json=dict(rule_data, **invalid_data_step["update"]),
         )

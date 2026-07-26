@@ -1,7 +1,6 @@
 import functools
 import logging
 import time
-from typing import Optional
 
 from arq.worker import Worker
 
@@ -90,11 +89,11 @@ async def patched_finish_job(
     self,
     job_id: str,
     finish: bool,
-    result_data: Optional[bytes],
-    result_timeout_s: Optional[float],
+    result_data: bytes | None,
+    result_timeout_s: float | None,
     keep_result_forever: bool,
-    incr_score: Optional[int],
-    keep_in_progress: Optional[float],
+    incr_score: int | None,
+    keep_in_progress: float | None,
 ) -> None:
     debug_logger.info(
         f"💾 FINISH JOB {job_id}: finish={finish}, incr_score={incr_score}, "

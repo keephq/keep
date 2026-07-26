@@ -3,7 +3,7 @@ IncidentioProvider is a class that allows to get all incidents as well query spe
 """
 
 import dataclasses
-from typing import List
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -40,9 +40,9 @@ class IncidentioProvider(BaseProvider, ProviderHealthMixin):
     """Receive Incidents from Incidentio."""
 
     PROVIDER_DISPLAY_NAME = "incident.io"
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authenticated",
@@ -57,7 +57,7 @@ class IncidentioProvider(BaseProvider, ProviderHealthMixin):
         ),
     ]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "Warning": AlertSeverity.WARNING,
         "Major": AlertSeverity.HIGH,
         "Info": AlertSeverity.INFO,
@@ -65,7 +65,7 @@ class IncidentioProvider(BaseProvider, ProviderHealthMixin):
         "Minor": AlertSeverity.LOW,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "triage": AlertStatus.ACKNOWLEDGED,
         "declined": AlertStatus.SUPPRESSED,
         "merged": AlertStatus.RESOLVED,
@@ -85,7 +85,6 @@ class IncidentioProvider(BaseProvider, ProviderHealthMixin):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -95,7 +94,9 @@ class IncidentioProvider(BaseProvider, ProviderHealthMixin):
             **self.config.authentication
         )
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for Incidentio api requests.
 
@@ -108,6 +109,8 @@ class IncidentioProvider(BaseProvider, ProviderHealthMixin):
         # url = https://incidentio.com/api/2/issue/createmeta?projectKeys=key1
         """
 
+        if paths is None:
+            paths = []
         base_url = "https://api.incident.io/v2/"
         path_str = "/".join(str(path) for path in paths)
         url = urljoin(base_url, path_str)
@@ -178,7 +181,7 @@ class IncidentioProvider(BaseProvider, ProviderHealthMixin):
                     "exception": str(e),
                 },
             )
-            raise e
+            raise
         else:
             if response.ok:
                 res = response.json()
@@ -214,7 +217,7 @@ class IncidentioProvider(BaseProvider, ProviderHealthMixin):
                 self.logger.error(
                     "Error getting IncidentIO scopes:", extra={"exception": str(e)}
                 )
-                raise e
+                raise
             else:
                 data = response.json()
                 try:
@@ -225,7 +228,7 @@ class IncidentioProvider(BaseProvider, ProviderHealthMixin):
                         "Error while mapping incidents to AlertDTO",
                         extra={"exception": str(e)},
                     )
-                    raise e
+                    raise
                 pagination_meta = data.get("pagination_meta", {})
                 next_page = pagination_meta.get("after")
 

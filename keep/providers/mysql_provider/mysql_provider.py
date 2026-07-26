@@ -4,6 +4,7 @@ MysqlProvider is a class that provides a way to read data from MySQL.
 
 import dataclasses
 import os
+from typing import ClassVar
 
 import mysql.connector
 import pydantic
@@ -41,9 +42,9 @@ class MysqlProvider(BaseProvider):
     """Enrich alerts with data from MySQL."""
 
     PROVIDER_DISPLAY_NAME = "MySQL"
-    PROVIDER_CATEGORY = ["Database"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Database"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="connect_to_server",
             description="The user can connect to the server",

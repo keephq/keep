@@ -1,5 +1,7 @@
 from typing import Any
+
 from sqlalchemy import CTE, func, literal, literal_column, select, text
+
 from keep.api.core.cel_to_sql.ast_nodes import DataType
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
@@ -25,7 +27,9 @@ class BaseFacetsQueryBuilder:
 
     def build_facets_data_query(
         self,
-        base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
+        base_query_factory: lambda facet_property_path, involved_fields, select_statement: (
+            Any
+        ),
         entity_id_column: any,
         facets: list[FacetDto],
         facet_options_query: FacetOptionsQueryDto,
@@ -100,7 +104,9 @@ class BaseFacetsQueryBuilder:
         self,
         facet_key: str,
         entity_id_column,
-        base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
+        base_query_factory: lambda facet_property_path, involved_fields, select_statement: (
+            Any
+        ),
         facet_property_path: str,
         facet_cel: str,
     ):

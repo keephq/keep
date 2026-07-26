@@ -3,7 +3,7 @@ SnowflakeProvider is a class that provides a way to read data from Snowflake.
 """
 
 import dataclasses
-import typing
+from typing import ClassVar
 
 import pydantic
 from cryptography.hazmat.backends import default_backend
@@ -32,7 +32,7 @@ class SnowflakeProviderAuthConfig:
             "sensitive": True,
         }
     )
-    pkey_passphrase: typing.Optional[str] = dataclasses.field(
+    pkey_passphrase: str | None = dataclasses.field(
         metadata={
             "required": False,
             "description": "Snowflake password",
@@ -46,7 +46,7 @@ class SnowflakeProvider(BaseProvider):
     """Enrich alerts with data from Snowflake."""
 
     PROVIDER_DISPLAY_NAME = "Snowflake"
-    PROVIDER_CATEGORY = ["Database"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Database"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig

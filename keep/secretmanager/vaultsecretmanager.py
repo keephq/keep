@@ -18,7 +18,7 @@ class VaultSecretManager(BaseSecretManager):
     def __init__(self, context_manager, **kwargs):
         super().__init__(context_manager)
         vault_token = os.environ.get("HASHICORP_VAULT_TOKEN")
-        vault_use_k8s = os.environ.get("HASHICORP_VAULT_USE_K8S", False)
+        vault_use_k8s = os.environ.get("HASHICORP_VAULT_USE_K8S", "")
         if vault_token:
             self.client = hvac.Client(
                 url=self.HASHICORP_VAULT_ADDR,
@@ -59,11 +59,14 @@ class VaultSecretManager(BaseSecretManager):
             "Secret retrieved successfully", extra={"secret_name": secret_name}
         )
         secret_value = secret["data"]["data"].get("value")
-        if is_json: 
+        if is_json:
             try:
                 secret_value = json.loads(secret_value)
             except json.JSONDecodeError as e:
-                self.logger.error("Failed to parse secret as JSON", extra={"secret_name": secret_name, "error": str(e)})
+                self.logger.error(
+                    "Failed to parse secret as JSON",
+                    extra={"secret_name": secret_name, "error": str(e)},
+                )
                 raise
         return secret_value
 

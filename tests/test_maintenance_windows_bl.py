@@ -1,25 +1,27 @@
-from datetime import datetime, timedelta
 import importlib
 import time
+from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
+
 import keep.api.consts
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
-from keep.api.core.db import get_alerts_by_status, get_workflow_executions, get_workflow_executions_count
+from keep.api.core.db import (
+    get_alerts_by_status,
+    get_workflow_executions,
+)
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Alert
-from keep.api.models.db.maintenance_window import MaintenanceRuleCreate, MaintenanceWindowRule
-from keep.api.models.db.workflow import Workflow
+from keep.api.models.db.maintenance_window import (
+    MaintenanceRuleCreate,
+    MaintenanceWindowRule,
+)
 from keep.api.routes.maintenance import update_maintenance_rule
 from keep.functions import cyaml
 from keep.workflowmanager.workflowstore import WorkflowStore
-from tests.fixtures.workflow_manager import (
-    workflow_manager,
-    wait_for_workflow_execution,
-)
 
 
 @pytest.fixture
@@ -37,7 +39,9 @@ def active_maintenance_window_rule_custom_ignore():
         start_time=datetime.utcnow() - timedelta(hours=1),
         end_time=datetime.utcnow() + timedelta(days=1),
         enabled=True,
-        ignore_statuses=[AlertStatus.FIRING.value,],
+        ignore_statuses=[
+            AlertStatus.FIRING.value,
+        ],
     )
 
 
@@ -107,6 +111,7 @@ def alert_dto():
         lastReceived="2021-08-01T00:00:00Z",
     )
 
+
 @pytest.fixture
 def alert_maint():
     return Alert(
@@ -142,13 +147,16 @@ def test_alert_in_active_maintenance_window(
 
 
 def test_alert_in_active_maintenance_window_with_suppress(
-    mock_session, active_maintenance_window_rule_with_suppression_on, alert_dto, monkeypatch
+    mock_session,
+    active_maintenance_window_rule_with_suppression_on,
+    alert_dto,
+    monkeypatch,
 ):
     # Ensure we use the default strategy (not recover_previous_status from other tests)
     monkeypatch.setenv("MAINTENANCE_WINDOW_STRATEGY", "default")
     importlib.reload(keep.api.consts)
     importlib.reload(keep.api.bl.maintenance_windows_bl)
-    
+
     # Simulate the query to return the active maintenance_window
     mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
         active_maintenance_window_rule_with_suppression_on
@@ -182,9 +190,7 @@ def test_alert_not_in_expired_maintenance_window(
 
 def test_alert_in_no_maintenance_window(mock_session, alert_dto):
     # Simulate the query to return no maintenance_windows
-    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = (
-        []
-    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = []
 
     maintenance_window_bl = MaintenanceWindowsBl(
         tenant_id="test-tenant", session=mock_session
@@ -249,7 +255,9 @@ def test_alert_ignored_due_to_acknowledged_status(
     assert result is False
 
 
-def test_alert_with_missing_cel_field(mock_session, active_maintenance_window_rule, alert_dto):
+def test_alert_with_missing_cel_field(
+    mock_session, active_maintenance_window_rule, alert_dto
+):
     # Modify the cel_query to reference a non-existent field
     active_maintenance_window_rule.cel_query = 'alertname == "test-alert"'
     mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
@@ -289,7 +297,10 @@ def test_alert_not_ignored_due_to_custom_status(
 
 
 def test_strategy_restore_update_status(
-    mock_session, active_maintenance_window_rule_with_suppression_on, alert_dto, monkeypatch
+    mock_session,
+    active_maintenance_window_rule_with_suppression_on,
+    alert_dto,
+    monkeypatch,
 ):
     """
     Feature: Strategy - recover previous status
@@ -318,8 +329,12 @@ def test_strategy_restore_update_status(
     # AND the current status should be set to MAINTENANCE
     assert alert_dto.status == AlertStatus.MAINTENANCE.value
 
+
 def test_strategy_clean_status(
-    mock_session, alert_maint, monkeypatch, expired_maintenance_window_rule_with_suppression_on
+    mock_session,
+    alert_maint,
+    monkeypatch,
+    expired_maintenance_window_rule_with_suppression_on,
 ):
     """
     Feature: Strategy - recover previous status
@@ -348,21 +363,36 @@ def test_strategy_clean_status(
     mock_last_alert.event = {"alert_id": alert_maint.id}
 
     # WHEN recover its previous status
-    mock_session.__enter__.side_effect = [retrieve_windows_session, retrieve_alerts_session, recover_status_session, MagicMock(),  MagicMock()]
-    with patch("keep.api.core.db.existed_or_new_session", return_value=mock_session), \
-            patch("keep.api.bl.maintenance_windows_bl.get_last_alert_by_fingerprint", return_value=mock_last_alert), \
-                patch("keep.api.core.db.get_alert_by_event_id", return_value=alert_maint):
-        
+    mock_session.__enter__.side_effect = [
+        retrieve_windows_session,
+        retrieve_alerts_session,
+        recover_status_session,
+        MagicMock(),
+        MagicMock(),
+    ]
+    with (
+        patch("keep.api.core.db.existed_or_new_session", return_value=mock_session),
+        patch(
+            "keep.api.bl.maintenance_windows_bl.get_last_alert_by_fingerprint",
+            return_value=mock_last_alert,
+        ),
+        patch("keep.api.core.db.get_alert_by_event_id", return_value=alert_maint),
+    ):
         MaintenanceWindowsBl.recover_strategy(logger=MagicMock(), session=mock_session)
 
     # THEN the new status will be the previous status, and the previous status will be the old status
-    _, new_status, new_previous_status, _ = list(recover_status_session.exec.call_args[0][0]._values.values())[0].value.values()
+    _, new_status, new_previous_status, _ = next(
+        iter(recover_status_session.exec.call_args[0][0]._values.values())
+    ).value.values()
     assert new_status == AlertStatus.FIRING.value
     assert new_previous_status == AlertStatus.MAINTENANCE.value
 
 
 def test_strategy_alert_block_by_window(
-    mock_session, active_maintenance_window_rule_with_suppression_on, alert_maint, monkeypatch
+    mock_session,
+    active_maintenance_window_rule_with_suppression_on,
+    alert_maint,
+    monkeypatch,
 ):
     """
     Feature: Strategy - recover previous status
@@ -374,7 +404,9 @@ def test_strategy_alert_block_by_window(
     importlib.reload(keep.api.bl.maintenance_windows_bl)
     # AND there is a maintenance window active
     retrieve_windows_session = MagicMock()
-    retrieve_windows_session.exec.return_value.all.return_value = [active_maintenance_window_rule_with_suppression_on]
+    retrieve_windows_session.exec.return_value.all.return_value = [
+        active_maintenance_window_rule_with_suppression_on
+    ]
     # AND there is an alert which was received inside a maintenance window
     retrieve_alerts_session = MagicMock()
     retrieve_alerts_session.exec.return_value.all.return_value = [alert_maint]
@@ -385,7 +417,12 @@ def test_strategy_alert_block_by_window(
 
     loggerMag = MagicMock()
     # WHEN the conditions match to recover the initial alert status
-    mock_session.__enter__.side_effect = [retrieve_windows_session, retrieve_alerts_session, recover_status_session, MagicMock()]
+    mock_session.__enter__.side_effect = [
+        retrieve_windows_session,
+        retrieve_alerts_session,
+        recover_status_session,
+        MagicMock(),
+    ]
     with patch("keep.api.core.db.existed_or_new_session", return_value=mock_session):
         MaintenanceWindowsBl.recover_strategy(logger=loggerMag, session=mock_session)
 
@@ -393,9 +430,11 @@ def test_strategy_alert_block_by_window(
     assert not recover_status_session.exec.called
     # AND logger alert will rise an info about the alert blocked by maintenance window
     loggerMag.info.assert_any_call(
-            "Alert %s is blocked due to the maintenance window: %s.", alert_maint.id,
-            active_maintenance_window_rule_with_suppression_on.id
-        )
+        "Alert %s is blocked due to the maintenance window: %s.",
+        alert_maint.id,
+        active_maintenance_window_rule_with_suppression_on.id,
+    )
+
 
 def test_strategy_alert_expired_by_current_time(
     create_alert, db_session, monkeypatch, create_window_maintenance_active
@@ -416,7 +455,7 @@ def test_strategy_alert_expired_by_current_time(
         end=datetime.utcnow() + timedelta(days=1),
     )
 
-    #AND there are new alerts
+    # AND there are new alerts
     create_alert(
         "alert-test-1",
         AlertStatus("firing"),
@@ -431,25 +470,29 @@ def test_strategy_alert_expired_by_current_time(
     )
     MaintenanceWindowsBl.recover_strategy(logger=MagicMock(), session=db_session)
     maintenance_status_prev = get_alerts_by_status(AlertStatus.MAINTENANCE, db_session)
-    #WHEN The Maintenance Window is closed, because the end time is < current time
+    # WHEN The Maintenance Window is closed, because the end time is < current time
     update_maintenance_rule(
         rule_id=mw.id,
         rule_dto=MaintenanceRuleCreate(
             name=mw.name,
             cel_query=mw.cel_query,
             start_time=mw.start_time,
-            duration_seconds=36000-5,  # 10h - 5 seconds duration, so the end is just before current time
+            duration_seconds=36000
+            - 5,  # 10h - 5 seconds duration, so the end is just before current time
         ),
-        authenticated_entity=MagicMock(tenant_id=SINGLE_TENANT_UUID, email="test@keephq.dev"),
-        session=db_session
+        authenticated_entity=MagicMock(
+            tenant_id=SINGLE_TENANT_UUID, email="test@keephq.dev"
+        ),
+        session=db_session,
     )
     time.sleep(3)
     MaintenanceWindowsBl.recover_strategy(logger=MagicMock(), session=db_session)
 
-    #THEN There are 2 alert prev to the current hour and 0 after the maintenance window is expired
+    # THEN There are 2 alert prev to the current hour and 0 after the maintenance window is expired
     maintenance_status_post = get_alerts_by_status(AlertStatus.MAINTENANCE, db_session)
     assert len(maintenance_status_prev) == 2
     assert len(maintenance_status_post) == 0
+
 
 @pytest.mark.parametrize(
     ["solved_alert", "executions"],
@@ -459,13 +502,18 @@ def test_strategy_alert_expired_by_current_time(
     ],
 )
 def test_strategy_alert_execution_wf(
-    create_alert, db_session, monkeypatch, create_window_maintenance_active, workflow_manager,
-    solved_alert, executions
+    create_alert,
+    db_session,
+    monkeypatch,
+    create_window_maintenance_active,
+    workflow_manager,
+    solved_alert,
+    executions,
 ):
     """
     Feature: Strategy - recover previous status with Workflow execution
-    Scenario: Having a WF created and a Maintenance window active, 
-             receiving in that window 3 alerts (same FP), 2 FIRING and the other 
+    Scenario: Having a WF created and a Maintenance window active,
+             receiving in that window 3 alerts (same FP), 2 FIRING and the other
              one in RESOLVED status, the WF is not executed at the end of the
              maintenance window.
 
@@ -476,7 +524,7 @@ def test_strategy_alert_execution_wf(
     monkeypatch.setenv("MAINTENANCE_WINDOW_STRATEGY", "recover_previous_status")
     importlib.reload(keep.api.consts)
     importlib.reload(keep.api.bl.maintenance_windows_bl)
-    #AND A Workflow ready to be executed
+    # AND A Workflow ready to be executed
     workflow_definition = """
         workflow:
             id: 123-333-22-11-22
@@ -503,11 +551,11 @@ def test_strategy_alert_execution_wf(
         """
     workflow_data = cyaml.safe_load(workflow_definition)
     workflow = WorkflowStore().create_workflow(
-            tenant_id=SINGLE_TENANT_UUID,
-            created_by="keep",
-            workflow=workflow_data.pop("workflow"),
-        )
-    #AND A Maintenance window active
+        tenant_id=SINGLE_TENANT_UUID,
+        created_by="keep",
+        workflow=workflow_data.pop("workflow"),
+    )
+    # AND A Maintenance window active
     mw = create_window_maintenance_active(
         cel='fingerprint == "alert-test-1"',
         start=datetime.utcnow() - timedelta(hours=10),
@@ -528,7 +576,7 @@ def test_strategy_alert_execution_wf(
         {},
     )
     if solved_alert:
-        #AND 1 Resolved alert with the same Fingerprint
+        # AND 1 Resolved alert with the same Fingerprint
         create_alert(
             "alert-test-1",
             AlertStatus("resolved"),
@@ -537,21 +585,24 @@ def test_strategy_alert_execution_wf(
         )
     time.sleep(1)
     MaintenanceWindowsBl.recover_strategy(logger=MagicMock(), session=db_session)
-    #WHEN The Maintenance Window is closed, because the end time is < current time
+    # WHEN The Maintenance Window is closed, because the end time is < current time
     update_maintenance_rule(
         rule_id=mw.id,
         rule_dto=MaintenanceRuleCreate(
             name=mw.name,
             cel_query=mw.cel_query,
             start_time=mw.start_time,
-            duration_seconds=36000-5,  # 10h - 5 seconds duration, so the end is just before current time
+            duration_seconds=36000
+            - 5,  # 10h - 5 seconds duration, so the end is just before current time
         ),
-        authenticated_entity=MagicMock(tenant_id=SINGLE_TENANT_UUID, email="test@keephq.dev"),
-        session=db_session
+        authenticated_entity=MagicMock(
+            tenant_id=SINGLE_TENANT_UUID, email="test@keephq.dev"
+        ),
+        session=db_session,
     )
     MaintenanceWindowsBl.recover_strategy(logger=MagicMock(), session=db_session)
     time.sleep(5)
-    #THEN The WF is not executed if there is a resolved alert or executed 1 time if there are only firing alerts
+    # THEN The WF is not executed if there is a resolved alert or executed 1 time if there are only firing alerts
     n_executions = get_workflow_executions(SINGLE_TENANT_UUID, workflow.id)[0]
 
     assert n_executions == executions

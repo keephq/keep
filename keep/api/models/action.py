@@ -1,14 +1,16 @@
-from typing import Optional, Union, Any
+from typing import Any
+
 from pydantic import BaseModel
 
 
 class ActionDTO(BaseModel):
-  id: Optional[str]
-  use: str
-  name: str
-  details: Union[dict[str, Any], None] = None
+    id: str | None
+    use: str
+    name: str
+    details: dict[str, Any] | None = None
+
 
 class PartialActionDTO(BaseModel):
-    use: Optional[str] = None
-    name: Optional[str] = None
-    details: Union[dict, None] = None
+    use: str | None = None
+    name: str | None = None
+    details: dict | None = None

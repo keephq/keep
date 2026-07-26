@@ -89,12 +89,10 @@ def process_topology(
 
     # Then create the dependencies
     for service in topology_data:
-
         # Group all services by application (this is for processing application related data in the next step)
         if service.application_relations is not None:
             service_id = service_to_keep_service_id_map.get(service.service)
             for application_id in service.application_relations:
-
                 application_to_name[application_id] = service.application_relations[
                     application_id
                 ]

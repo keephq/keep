@@ -4,6 +4,7 @@ PostgresProvider is a class that provides a way to read data from Postgres and w
 
 import dataclasses
 import os
+from typing import ClassVar
 
 import psycopg2
 import pydantic
@@ -53,8 +54,8 @@ class PostgresProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "PostgreSQL"
     PROVIDER_DOCS_SLUG = "postgresql"
-    PROVIDER_CATEGORY = ["Database"]
-    PROVIDER_SCOPES = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Database"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="connect_to_server",
             description="The user can connect to the server",
@@ -62,7 +63,7 @@ class PostgresProvider(BaseProvider):
             alias="Connect to the server",
         )
     ]
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="query",
             func_name="execute_query",

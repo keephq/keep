@@ -27,9 +27,7 @@ depends_on = None
 def upgrade() -> None:
     session = Session(op.get_bind())
     counts = session.execute(
-        select(
-        count(LastAlertToIncident.fingerprint), LastAlertToIncident.incident_id
-        )
+        select(count(LastAlertToIncident.fingerprint), LastAlertToIncident.incident_id)
         .where(LastAlertToIncident.deleted_at == NULL_FOR_DELETED_AT)
         .group_by(LastAlertToIncident.incident_id)
     ).all()
@@ -46,6 +44,7 @@ def upgrade() -> None:
             .values(alerts_count=counts_per_incident.get(incident_id, 0))
         )
         session.commit()
+
 
 def downgrade() -> None:
     pass

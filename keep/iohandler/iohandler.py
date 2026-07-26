@@ -33,10 +33,10 @@ KEEP_SECURE_EVAL = (
 WORKFLOW_HELPERS = {
     "fn": {
         "default": lambda text, render: render(text) or "",
-        "na":      lambda text, render: render(text) or "N/A",
-        "upper":   lambda text, render: render(text).upper(),
-        "lower":   lambda text, render: render(text).lower(),
-        "strip":   lambda text, render: render(text).strip(),
+        "na": lambda text, render: render(text) or "N/A",
+        "upper": lambda text, render: render(text).upper(),
+        "lower": lambda text, render: render(text).lower(),
+        "strip": lambda text, render: render(text).strip(),
     }
 }
 
@@ -54,6 +54,7 @@ def _safe_eval_literal(value: str, dependencies=None):
         return ast.literal_eval(value)
 
     import datetime
+
     from dateutil.tz import tzutc
 
     g = {"__builtins__": {}}
@@ -62,7 +63,7 @@ def _safe_eval_literal(value: str, dependencies=None):
             g[dep.__name__] = dep
     g["tzutc"] = tzutc
     g["datetime"] = datetime
-    return eval(value, g)  # noqa: S307
+    return eval(value, g)
 
 
 class RenderException(Exception):
@@ -307,15 +308,11 @@ class IOHandler:
                     _arg = None
                     if isinstance(arg, ast.Call):
                         _arg = _parse(self, arg)
-                    elif isinstance(arg, ast.Str) or isinstance(arg, ast.Constant):
+                    elif isinstance(arg, (ast.Str, ast.Constant)):
                         _arg = str(arg.s)
                     elif isinstance(arg, ast.Dict):
                         _arg = ast.literal_eval(arg)
-                    elif (
-                        isinstance(arg, ast.Set)
-                        or isinstance(arg, ast.List)
-                        or isinstance(arg, ast.Tuple)
-                    ):
+                    elif isinstance(arg, (ast.Set, ast.List, ast.Tuple)):
                         _arg = astunparse.unparse(arg).strip()
                         if (
                             (_arg.startswith("[") and _arg.endswith("]"))
@@ -350,15 +347,11 @@ class IOHandler:
 
                     if isinstance(value, ast.Call):
                         _kwargs[key] = _parse(self, value)
-                    elif isinstance(value, ast.Str) or isinstance(value, ast.Constant):
+                    elif isinstance(value, (ast.Str, ast.Constant)):
                         _kwargs[key] = str(value.s)
                     elif isinstance(value, ast.Dict):
                         _kwargs[key] = ast.literal_eval(value)
-                    elif (
-                        isinstance(value, ast.Set)
-                        or isinstance(value, ast.List)
-                        or isinstance(value, ast.Tuple)
-                    ):
+                    elif isinstance(value, (ast.Set, ast.List, ast.Tuple)):
                         parsed_value = astunparse.unparse(value).strip()
                         if (
                             (
@@ -522,7 +515,9 @@ class IOHandler:
             i += 1
         return "".join(result)
 
-    def render_context(self, context_to_render: dict, additional_context: dict = None):
+    def render_context(
+        self, context_to_render: dict, additional_context: dict | None = None
+    ):
         """
         Iterates the provider context and renders it using the workflow context.
         """
@@ -552,12 +547,12 @@ class IOHandler:
         return context_to_render
 
     def _render_list_context(
-        self, context_to_render: list, additional_context: dict = None
+        self, context_to_render: list, additional_context: dict | None = None
     ):
         """
         Iterates the provider context and renders it using the workflow context.
         """
-        for i in range(0, len(context_to_render)):
+        for i in range(len(context_to_render)):
             value = context_to_render[i]
             if isinstance(value, str):
                 context_to_render[i] = self._render_template_with_context(
@@ -578,7 +573,7 @@ class IOHandler:
         template: str,
         safe: bool = False,
         default: str = "",
-        additional_context: dict = None,
+        additional_context: dict | None = None,
     ) -> str:
         """
         Renders a template with the given context.
@@ -665,9 +660,7 @@ class IOHandler:
         iterations = 0
 
         while iterations < max_iterations:
-            rendered = chevron.render(
-                current, context, warn=True if iterations == 0 else False
-            )
+            rendered = chevron.render(current, context, warn=iterations == 0)
 
             # https://github.com/keephq/keep/issues/2326
             rendered = html.unescape(rendered)

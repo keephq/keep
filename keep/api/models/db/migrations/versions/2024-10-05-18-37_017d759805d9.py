@@ -21,8 +21,13 @@ def upgrade() -> None:
 
     with op.batch_alter_table("rule", schema=None) as batch_op:
         batch_op.add_column(
-            sa.Column("resolve_on", sqlmodel.sql.sqltypes.AutoString(), nullable=False,
-                      default="never", server_default="never")
+            sa.Column(
+                "resolve_on",
+                sqlmodel.sql.sqltypes.AutoString(),
+                nullable=False,
+                default="never",
+                server_default="never",
+            )
         )
 
 

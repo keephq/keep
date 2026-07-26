@@ -1,7 +1,8 @@
 from typing import Any
+
 from sqlalchemy import Integer, String, case, cast, func, lateral, literal, select
-from sqlalchemy.sql import literal_column
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql import literal_column
 from sqlmodel import true
 
 from keep.api.core.cel_to_sql.ast_nodes import DataType
@@ -15,7 +16,6 @@ from keep.api.core.facets_query_builder.base_facets_query_builder import (
 
 
 class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
-
     def _get_select_for_column(self, property_metadata: PropertyMetadataInfo):
         if property_metadata.data_type == DataType.ARRAY:
             return literal_column(
@@ -41,7 +41,9 @@ class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
         self,
         facet_key: str,
         entity_id_column,
-        base_query_factory: lambda facet_property_path, involved_fields, select_statement: Any,
+        base_query_factory: lambda facet_property_path, involved_fields, select_statement: (
+            Any
+        ),
         facet_property_path: str,
         facet_cel: str,
     ):
@@ -81,12 +83,10 @@ class PostgreSqlFacetsQueryBuilder(BaseFacetsQueryBuilder):
         column_name = metadata.field_mappings[0].map_to
         alias = metadata.field_name.replace("_", "") + "_array"
         json_table_join = lateral(
-            (
-                select(
-                    func.jsonb_array_elements_text(
-                        cast(literal_column(column_name), JSONB)
-                    ).label("value")
-                )
+            select(
+                func.jsonb_array_elements_text(
+                    cast(literal_column(column_name), JSONB)
+                ).label("value")
             )
         )
         return base_query.outerjoin(json_table_join.alias(alias), true())

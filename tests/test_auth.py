@@ -103,9 +103,12 @@ def test_bearer_token(db_session, client, test_app):
 
     # Patch the jwks client (otherwise it will be None)
     dependencies.jwks_client = MockJWKClient()
-    with patch("jwt.decode", side_effect=get_mock_jwt_payload), patch(
-        "jwt.PyJWKClient.get_signing_key_from_jwt",
-        side_effect=mock_get_signing_key_from_jwt,
+    with (
+        patch("jwt.decode", side_effect=get_mock_jwt_payload),
+        patch(
+            "jwt.PyJWKClient.get_signing_key_from_jwt",
+            side_effect=mock_get_signing_key_from_jwt,
+        ),
     ):
         response = client.get(
             "/providers", headers={"Authorization": f"Bearer {MOCK_TOKEN}"}
@@ -386,13 +389,14 @@ def test_oauth_proxy2(db_session, client, test_app):
 def test_deleted_api_key_authentication(db_session, client, test_app):
     """Tests that deleted API keys cannot be used for authentication"""
     import hashlib
+
+    from keep.api.core.db import get_api_key
     from keep.api.core.dependencies import SINGLE_TENANT_UUID
     from keep.api.models.db.tenant import TenantApiKey
-    from keep.api.core.db import get_api_key
-    
+
     auth_type = os.getenv("AUTH_TYPE")
     valid_api_key = "test_deleted_key"
-    
+
     # Create API key in database directly
     hash_api_key = hashlib.sha256(valid_api_key.encode()).hexdigest()
     api_key_entry = TenantApiKey(
@@ -401,32 +405,32 @@ def test_deleted_api_key_authentication(db_session, client, test_app):
         key_hash=hash_api_key,
         created_by="test@example.com",
         role="admin",
-        is_deleted=False
+        is_deleted=False,
     )
     db_session.add(api_key_entry)
     db_session.commit()
-    
+
     # Test that non-deleted API key works
     response = client.get("/providers", headers={"x-api-key": valid_api_key})
     assert response.status_code == 200
-    
+
     # Test get_api_key function directly - should find non-deleted key
     found_key = get_api_key(valid_api_key)
     assert found_key is not None
     assert found_key.is_deleted == False
-    
+
     # Mark API key as deleted
     api_key_entry.is_deleted = True
     db_session.commit()
-    
+
     # Test that deleted API key is rejected
     response = client.get("/providers", headers={"x-api-key": valid_api_key})
     assert response.status_code == 401 if auth_type != "NO_AUTH" else 200
-    
+
     # Test get_api_key function directly - should NOT find deleted key by default
     found_key = get_api_key(valid_api_key)
     assert found_key is None
-    
+
     # Test get_api_key function with include_deleted=True - should find deleted key
     found_key = get_api_key(valid_api_key, include_deleted=True)
     assert found_key is not None
@@ -447,7 +451,15 @@ def test_mesh_alert_ingestion_with_service_name(db_session, client, test_app):
     """Mesh alert ingestion accepts POST /alerts/event without API key when enabled"""
     response = client.post(
         "/alerts/event",
-        json=[{"id": "test-1", "name": "Test", "severity": "info", "status": "firing", "source": ["test-svc"]}],
+        json=[
+            {
+                "id": "test-1",
+                "name": "Test",
+                "severity": "info",
+                "status": "firing",
+                "source": ["test-svc"],
+            }
+        ],
         headers={"X-Service-Name": "test-service"},
     )
     assert response.status_code == 202
@@ -467,7 +479,15 @@ def test_mesh_alert_ingestion_without_service_name(db_session, client, test_app)
     """Mesh alert ingestion works without X-Service-Name header (falls back to 'unknown')"""
     response = client.post(
         "/alerts/event",
-        json=[{"id": "test-2", "name": "Test", "severity": "info", "status": "firing", "source": ["test"]}],
+        json=[
+            {
+                "id": "test-2",
+                "name": "Test",
+                "severity": "info",
+                "status": "firing",
+                "source": ["test"],
+            }
+        ],
     )
     assert response.status_code == 202
 
@@ -482,7 +502,9 @@ def test_mesh_alert_ingestion_without_service_name(db_session, client, test_app)
     ],
     indirect=True,
 )
-def test_mesh_alert_ingestion_blocked_on_non_alert_endpoints(db_session, client, test_app):
+def test_mesh_alert_ingestion_blocked_on_non_alert_endpoints(
+    db_session, client, test_app
+):
     """Non-alert endpoints remain protected even when mesh ingestion is enabled"""
     response = client.get("/providers")
     assert response.status_code == 401
@@ -505,7 +527,15 @@ def test_mesh_alert_ingestion_disabled(db_session, client, test_app):
     """POST /alerts/event without API key is rejected when mesh ingestion is disabled"""
     response = client.post(
         "/alerts/event",
-        json=[{"id": "test-3", "name": "Test", "severity": "info", "status": "firing", "source": ["test"]}],
+        json=[
+            {
+                "id": "test-3",
+                "name": "Test",
+                "severity": "info",
+                "status": "firing",
+                "source": ["test"],
+            }
+        ],
         headers={"X-Service-Name": "test-service"},
     )
     assert response.status_code == 401

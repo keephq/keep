@@ -1,15 +1,16 @@
-import os
-import time
 import asyncio
 import logging
+import os
 import threading
+import time
 from datetime import datetime
+
 from keep.api.core.db import get_activity_report, get_or_creat_posthog_instance_id
 from keep.api.core.posthog import (
-    posthog_client,
-    is_posthog_reachable,
     KEEP_VERSION,
     POSTHOG_DISABLED,
+    is_posthog_reachable,
+    posthog_client,
 )
 
 logger = logging.getLogger(__name__)

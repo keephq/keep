@@ -2,7 +2,6 @@ import json
 import logging
 import math
 import os
-from typing import Optional
 from uuid import UUID
 
 from openai import OpenAI
@@ -16,40 +15,40 @@ from keep.api.utils.ai_utils import get_ai_temperature_kwargs
 
 
 class IncidentMetrics(BaseModel):
-    total_incidents: Optional[int] = None
-    resolved_incidents: Optional[int] = None
-    deleted_incidents: Optional[int] = None
-    unresolved_incidents: Optional[int] = None
+    total_incidents: int | None = None
+    resolved_incidents: int | None = None
+    deleted_incidents: int | None = None
+    unresolved_incidents: int | None = None
 
 
 class IncidentDurations(BaseModel):
-    shortest_duration_seconds: Optional[int] = None
-    shortest_duration_incident_id: Optional[str] = None
-    longest_duration_seconds: Optional[int] = None
-    longest_duration_incident_id: Optional[str] = None
+    shortest_duration_seconds: int | None = None
+    shortest_duration_incident_id: str | None = None
+    longest_duration_seconds: int | None = None
+    longest_duration_incident_id: str | None = None
 
 
 class IncidentReportDto(BaseModel):
-    incident_name: Optional[str] = None
-    incident_id: Optional[str] = None
+    incident_name: str | None = None
+    incident_id: str | None = None
 
 
 class ReoccuringIncidentReportDto(IncidentReportDto):
-    occurrence_count: Optional[int] = None
+    occurrence_count: int | None = None
 
 
 class IncidentReport(BaseModel):
-    services_affected_metrics: Optional[dict[str, int]] = None
-    severity_metrics: Optional[dict[str, list[IncidentReportDto]]] = None
-    incident_durations: Optional[IncidentDurations] = None
-    mean_time_to_detect_seconds: Optional[int] = None
-    mean_time_to_resolve_seconds: Optional[int] = None
-    most_frequent_reasons: Optional[dict[str, list[str]]] = None
-    recurring_incidents: Optional[list[ReoccuringIncidentReportDto]] = None
+    services_affected_metrics: dict[str, int] | None = None
+    severity_metrics: dict[str, list[IncidentReportDto]] | None = None
+    incident_durations: IncidentDurations | None = None
+    mean_time_to_detect_seconds: int | None = None
+    mean_time_to_resolve_seconds: int | None = None
+    most_frequent_reasons: dict[str, list[str]] | None = None
+    recurring_incidents: list[ReoccuringIncidentReportDto] | None = None
 
 
 class OpenAIReportPart(BaseModel):
-    most_frequent_reasons: Optional[dict[str, list[str]]] = None
+    most_frequent_reasons: dict[str, list[str]] | None = None
 
 
 system_prompt = """
@@ -177,7 +176,7 @@ class IncidentReportsBl:
                     Response: {model_response}
                 """
             )
-            raise e
+            raise
 
     def __calculate_top_services_affected(
         self, incidents: list[IncidentDto]
@@ -281,7 +280,7 @@ class IncidentReportsBl:
         recurring_incidents: dict[str, set[str]] = {}
         for incident in incidents_dict.values():
             current_incident_in_the_past_id = incident.same_incident_in_the_past_id
-            path = list([incident.id])
+            path = [incident.id]
             while current_incident_in_the_past_id:
                 path.append(current_incident_in_the_past_id)
                 past_incident = same_incident_in_the_past_id = incidents_dict.get(

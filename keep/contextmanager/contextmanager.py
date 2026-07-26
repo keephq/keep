@@ -73,7 +73,6 @@ class ContextManager:
                         self.last_workflow_run_time = last_workflow_execution.started
             except Exception:
                 self.logger.exception("Failed to get last workflow execution")
-                pass
         self.aliases = {}
         # dependencies are used so iohandler will be able to use the output class of the providers
         # e.g. let's say bigquery_provider results are google.cloud.bigquery.Row

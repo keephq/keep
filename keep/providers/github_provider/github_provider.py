@@ -3,6 +3,7 @@ GithubProvider is a provider that interacts with GitHub.
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 from github import Github
@@ -34,8 +35,8 @@ class GithubProvider(BaseProvider):
     """
 
     PROVIDER_DISPLAY_NAME = "GitHub"
-    PROVIDER_CATEGORY = ["Developer Tools"]
-    PROVIDER_METHODS = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Developer Tools"]
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="get_last_commits",
             func_name="get_last_commits",
@@ -100,7 +101,6 @@ class GithubProvider(BaseProvider):
         """
         Dispose of the provider.
         """
-        pass
 
     def validate_config(self):
         self.authentication_config = GithubProviderAuthConfig(

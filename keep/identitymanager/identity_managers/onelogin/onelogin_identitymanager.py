@@ -1,11 +1,12 @@
 import os
 
-
 from keep.api.models.user import Group, Role, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.authverifierbase import AuthVerifierBase
-from keep.identitymanager.identity_managers.onelogin.onelogin_authverifier import OneLoginAuthVerifier
+from keep.identitymanager.identity_managers.onelogin.onelogin_authverifier import (
+    OneLoginAuthVerifier,
+)
 from keep.identitymanager.identitymanager import BaseIdentityManager
 
 
@@ -25,7 +26,9 @@ class OneLoginIdentityManager(BaseIdentityManager):
         self.onelogin_client_secret = os.environ.get("ONELOGIN_CLIENT_SECRET")
 
         # Only require the essential variables for SSO
-        if not all([self.onelogin_issuer, self.onelogin_client_id, self.onelogin_client_secret]):
+        if not all(
+            [self.onelogin_issuer, self.onelogin_client_id, self.onelogin_client_secret]
+        ):
             missing_vars = []
             if not self.onelogin_issuer:
                 missing_vars.append("ONELOGIN_ISSUER")
@@ -34,14 +37,17 @@ class OneLoginIdentityManager(BaseIdentityManager):
             if not self.onelogin_client_secret:
                 missing_vars.append("ONELOGIN_CLIENT_SECRET")
 
-            self.logger.error(f"Missing environment variables: {', '.join(missing_vars)}")
+            self.logger.error(
+                f"Missing environment variables: {', '.join(missing_vars)}"
+            )
             raise Exception(f"Missing environment variables: {', '.join(missing_vars)}")
 
         # Remove any trailing slash from issuer
-        if self.onelogin_issuer.endswith("/"):
-            self.onelogin_issuer = self.onelogin_issuer[:-1]
+        self.onelogin_issuer = self.onelogin_issuer.removesuffix("/")
 
-        self.logger.info("OneLogin Identity Manager initialized for SSO authentication only")
+        self.logger.info(
+            "OneLogin Identity Manager initialized for SSO authentication only"
+        )
 
     def on_start(self, app) -> None:
         """
@@ -68,8 +74,17 @@ class OneLoginIdentityManager(BaseIdentityManager):
         self.logger.info("get_users called but management functions are disabled")
         return []
 
-    def create_user(self, user_email: str, user_name: str, password: str, role: str, groups: list[str] = []) -> dict:
+    def create_user(
+        self,
+        user_email: str,
+        user_name: str,
+        password: str,
+        role: str,
+        groups: list[str] | None = None,
+    ) -> dict:
         """Create a new user in OneLogin - disabled"""
+        if groups is None:
+            groups = []
         self.logger.info("create_user called but management functions are disabled")
         return {"status": "not_implemented", "message": "User management is disabled"}
 
@@ -92,20 +107,21 @@ class OneLoginIdentityManager(BaseIdentityManager):
         self.logger.info("get_groups called but management functions are disabled")
         return []
 
-    def create_group(self, group_name: str, members: list[str], roles: list[str]) -> None:
+    def create_group(
+        self, group_name: str, members: list[str], roles: list[str]
+    ) -> None:
         """Create a new group in OneLogin - disabled"""
         self.logger.info("create_group called but management functions are disabled")
-        return None
 
-    def update_group(self, group_name: str, members: list[str], roles: list[str]) -> None:
+    def update_group(
+        self, group_name: str, members: list[str], roles: list[str]
+    ) -> None:
         """Update an existing group in OneLogin - disabled"""
         self.logger.info("update_group called but management functions are disabled")
-        return None
 
     def delete_group(self, group_name: str) -> None:
         """Delete a group from OneLogin - disabled"""
         self.logger.info("delete_group called but management functions are disabled")
-        return None
 
     def create_role(self, role: Role, predefined=False) -> str:
         """Create a role in OneLogin - disabled"""
@@ -120,4 +136,3 @@ class OneLoginIdentityManager(BaseIdentityManager):
     def delete_role(self, role_id: str) -> None:
         """Delete a role from OneLogin - disabled"""
         self.logger.info("delete_role called but management functions are disabled")
-        return None

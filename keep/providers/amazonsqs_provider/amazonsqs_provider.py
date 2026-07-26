@@ -8,6 +8,7 @@ import logging
 import time
 import uuid
 from datetime import datetime
+from typing import ClassVar
 
 import boto3
 import botocore
@@ -82,7 +83,7 @@ class ClientIdInjector(logging.Filter):
         client_id = None
         while frame:
             local_vars = copy.copy(frame.f_locals)
-            for var_name, var_value in local_vars.items():
+            for var_value in local_vars.values():
                 if isinstance(var_value, AmazonsqsProvider):
                     client_id = var_value.context_manager.tenant_id
                     provider_id = var_value.provider_id
@@ -96,10 +97,10 @@ class ClientIdInjector(logging.Filter):
 class AmazonsqsProvider(BaseProvider):
     """Sends and receive alerts from AmazonSQS."""
 
-    PROVIDER_CATEGORY = ["Monitoring", "Queues"]
-    PROVIDER_TAGS = ["queue"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring", "Queues"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["queue"]
 
-    alert_severity_dict = {
+    alert_severity_dict: ClassVar[dict[str, str]] = {
         "critical": AlertSeverity.CRITICAL,
         "high": AlertSeverity.HIGH,
         "warning": AlertSeverity.WARNING,
@@ -108,7 +109,7 @@ class AmazonsqsProvider(BaseProvider):
     }
 
     PROVIDER_DISPLAY_NAME = "AmazonSQS"
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="Key-Id pair is valid and working",
@@ -148,7 +149,6 @@ class AmazonsqsProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -282,7 +282,7 @@ class AmazonsqsProvider(BaseProvider):
             self.logger.error(
                 "Error while writing to SQS queue", extra={"exception": str(e)}
             )
-            raise e
+            raise
 
     def __delete_from_queue(self, receipt: str):
         self.logger.info("Deleting message from SQS Queue")
@@ -296,7 +296,7 @@ class AmazonsqsProvider(BaseProvider):
                 "Error while deleting message from SQS queue",
                 extra={"exception": str(e)},
             )
-            raise e
+            raise
 
     @staticmethod
     def get_status_or_default(status_value):

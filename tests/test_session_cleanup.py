@@ -73,9 +73,7 @@ class TestRecoverStrategySessionCleanup:
         mock_get_alerts.side_effect = RuntimeError("simulated DB error")
 
         with pytest.raises(RuntimeError, match="simulated DB error"):
-            MaintenanceWindowsBl.recover_strategy(
-                logger=logging.getLogger(__name__)
-            )
+            MaintenanceWindowsBl.recover_strategy(logger=logging.getLogger(__name__))
 
         mock_session.close.assert_called_once()
 
@@ -95,9 +93,7 @@ class TestCheckDismissalExpirySessionCleanup:
         mock_session = MagicMock()
         mock_get_session.return_value = mock_session
 
-        DismissalExpiryBl.check_dismissal_expiry(
-            logger=logging.getLogger(__name__)
-        )
+        DismissalExpiryBl.check_dismissal_expiry(logger=logging.getLogger(__name__))
 
         mock_get_session.assert_called_once()
         mock_session.close.assert_called_once()
@@ -124,17 +120,13 @@ class TestCheckDismissalExpirySessionCleanup:
         "keep.api.bl.dismissal_expiry_bl.DismissalExpiryBl.get_alerts_with_expired_dismissals"
     )
     @patch("keep.api.bl.dismissal_expiry_bl.get_session_sync")
-    def test_closes_session_on_exception(
-        self, mock_get_session, mock_get_expired
-    ):
+    def test_closes_session_on_exception(self, mock_get_session, mock_get_expired):
         """Session must be closed even when an exception occurs mid-execution."""
         mock_session = MagicMock()
         mock_get_session.return_value = mock_session
         mock_get_expired.side_effect = RuntimeError("simulated DB error")
 
         with pytest.raises(RuntimeError, match="simulated DB error"):
-            DismissalExpiryBl.check_dismissal_expiry(
-                logger=logging.getLogger(__name__)
-            )
+            DismissalExpiryBl.check_dismissal_expiry(logger=logging.getLogger(__name__))
 
         mock_session.close.assert_called_once()

@@ -4,7 +4,7 @@ JiracloudProvider is a class that implements the BaseProvider interface for Jira
 
 import dataclasses
 import json
-from typing import List, Optional
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -64,9 +64,9 @@ class JiraProviderAuthConfig:
 class JiraProvider(BaseProvider):
     """Enrich alerts with Jira tickets."""
 
-    PROVIDER_CATEGORY = ["Ticketing"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Ticketing"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="BROWSE_PROJECTS",
             description="Browse Jira Projects",
@@ -110,7 +110,7 @@ class JiraProvider(BaseProvider):
             alias="Transition issues",
         ),
     ]
-    PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["ticketing"]
     PROVIDER_DISPLAY_NAME = "Jira Cloud"
 
     def __init__(
@@ -194,9 +194,10 @@ class JiraProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for jira api requests.
 
@@ -210,6 +211,8 @@ class JiraProvider(BaseProvider):
         """
         # add url path
 
+        if paths is None:
+            paths = []
         url = urljoin(
             f"{self.jira_host}/rest/api/2/",
             "/".join(str(path) for path in paths),
@@ -305,7 +308,10 @@ class JiraProvider(BaseProvider):
             )
 
     def __transition_issue(
-            self, issue_id: str, transition_name: Optional[str] = None, transition_id: Optional[str] = None
+        self,
+        issue_id: str,
+        transition_name: str | None = None,
+        transition_id: str | None = None,
     ):
         """
         Transition an issue to a new status.
@@ -377,9 +383,9 @@ class JiraProvider(BaseProvider):
         summary: str,
         description: str = "",
         issue_type: str = "",
-        labels: List[str] = None,
-        components: List[str] = None,
-        custom_fields: dict = None,
+        labels: list[str] | None = None,
+        components: list[str] | None = None,
+        custom_fields: dict | None = None,
         **kwargs: dict,
     ):
         """
@@ -411,18 +417,26 @@ class JiraProvider(BaseProvider):
                 # Filter out priority field if it's set to "none" or empty
                 filtered_fields = {}
                 for key, value in custom_fields.items():
-                    if key == "priority" and (not value or str(value).lower() in ["none", "", "null"]):
-                        self.logger.info(f"Skipping priority field with value '{value}' as it may not be available on the issue screen")
+                    if key == "priority" and (
+                        not value or str(value).lower() in ["none", "", "null"]
+                    ):
+                        self.logger.info(
+                            f"Skipping priority field with value '{value}' as it may not be available on the issue screen"
+                        )
                         continue
                     filtered_fields[key] = value
                 fields.update(filtered_fields)
-            
+
             # Also handle priority that might come through kwargs
             if kwargs:
                 filtered_kwargs = {}
                 for key, value in kwargs.items():
-                    if key == "priority" and (not value or str(value).lower() in ["none", "", "null"]):
-                        self.logger.info(f"Skipping priority field from kwargs with value '{value}' as it may not be available on the issue screen")
+                    if key == "priority" and (
+                        not value or str(value).lower() in ["none", "", "null"]
+                    ):
+                        self.logger.info(
+                            f"Skipping priority field from kwargs with value '{value}' as it may not be available on the issue screen"
+                        )
                         continue
                     filtered_kwargs[key] = value
                 fields.update(filtered_kwargs)
@@ -450,9 +464,9 @@ class JiraProvider(BaseProvider):
         issue_id: str,
         summary: str,
         description: str = "",
-        labels: List[str] = None,
-        components: List[str] = None,
-        custom_fields: dict = None,
+        labels: list[str] | None = None,
+        components: list[str] | None = None,
+        custom_fields: dict | None = None,
         **kwargs: dict,
     ):
         """
@@ -550,11 +564,11 @@ class JiraProvider(BaseProvider):
         issue_type: str = "",
         project_key: str = "",
         board_name: str = "",
-        issue_id: str = None,
-        labels: List[str] = None,
-        components: List[str] = None,
-        custom_fields: dict = None,
-        transition_to: Optional[str] = None,
+        issue_id: str | None = None,
+        labels: list[str] | None = None,
+        components: list[str] | None = None,
+        custom_fields: dict | None = None,
+        transition_to: str | None = None,
         **kwargs: dict,
     ):
         """
@@ -600,7 +614,9 @@ class JiraProvider(BaseProvider):
 
                 # Apply transition if requested
                 if transition_to:
-                    self.logger.info(f"Applying transition '{transition_to}' to issue {issue_id}")
+                    self.logger.info(
+                        f"Applying transition '{transition_to}' to issue {issue_id}"
+                    )
                     transition_result = self.__transition_issue(
                         issue_id=issue_id, transition_name=transition_to
                     )
@@ -631,7 +647,9 @@ class JiraProvider(BaseProvider):
             # Apply transition if requested (on newly created issue)
             if transition_to:
                 created_issue_id = result["issue"]["key"]
-                self.logger.info(f"Applying transition '{transition_to}' to newly created issue {created_issue_id}")
+                self.logger.info(
+                    f"Applying transition '{transition_to}' to newly created issue {created_issue_id}"
+                )
                 transition_result = self.__transition_issue(
                     issue_id=created_issue_id, transition_name=transition_to
                 )
@@ -719,5 +737,5 @@ if __name__ == "__main__":
         issue_id=result["issue"]["key"],
         summary="Test Alert - Updated",
         description="Alert has been resolved",
-        transition_to="Done"
+        transition_to="Done",
     )

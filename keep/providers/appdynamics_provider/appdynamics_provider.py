@@ -6,7 +6,7 @@ import dataclasses
 import json
 import tempfile
 from pathlib import Path
-from typing import List, Optional
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -50,11 +50,11 @@ class AppdynamicsProviderAuthConfig:
             "required": True,
             "description": "AppDynamics host",
             "hint": "e.g. https://baseball202404101029219.saas.appdynamics.com",
-            "validation": "any_http_url"
+            "validation": "any_http_url",
         },
     )
 
-    appDynamicsAccessToken: Optional[str] = dataclasses.field(
+    appDynamicsAccessToken: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "AppDynamics Access Token",
@@ -64,7 +64,7 @@ class AppdynamicsProviderAuthConfig:
         },
     )
 
-    appDynamicsUsername: Optional[str] = dataclasses.field(
+    appDynamicsUsername: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "Username",
@@ -73,7 +73,7 @@ class AppdynamicsProviderAuthConfig:
             "config_main_group": "authentication",
         },
     )
-    appDynamicsPassword: Optional[str] = dataclasses.field(
+    appDynamicsPassword: str | None = dataclasses.field(
         default=None,
         metadata={
             "description": "Password",
@@ -102,8 +102,8 @@ class AppdynamicsProvider(BaseProvider):
     """Install Webhooks and receive alerts from AppDynamics."""
 
     PROVIDER_DISPLAY_NAME = "AppDynamics"
-    PROVIDER_CATEGORY = ["Monitoring"]
-    PROVIDER_SCOPES = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authorized",
@@ -120,7 +120,7 @@ class AppdynamicsProvider(BaseProvider):
         ),
     ]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "ERROR": AlertSeverity.CRITICAL,
         "WARN": AlertSeverity.WARNING,
         "INFO": AlertSeverity.INFO,
@@ -135,7 +135,6 @@ class AppdynamicsProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -152,7 +151,9 @@ class AppdynamicsProvider(BaseProvider):
                 f"https://{self.authentication_config.host}"
             )
 
-    def __get_url(self, paths: List[str] = None, query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for AppDynamics api requests.
 
@@ -177,7 +178,7 @@ class AppdynamicsProvider(BaseProvider):
 
         return url
 
-    def get_user_id_by_name(self, name: str) -> Optional[str]:
+    def get_user_id_by_name(self, name: str) -> str | None:
         self.logger.info("Getting user ID by name")
         response = requests.get(
             url=self.__get_url(paths=["controller/api/rbac/v1/users/"]),
@@ -324,14 +325,14 @@ class AppdynamicsProvider(BaseProvider):
             )
         except ResourceAlreadyExists:
             self.logger.info("Template already exists, proceeding with webhook setup")
-        except Exception as e:
-            raise e
+        except Exception:
+            raise
         try:
             self.__create_action()
         except ResourceAlreadyExists:
             self.logger.info("Template already exists, proceeding with webhook setup")
-        except Exception as e:
-            raise e
+        except Exception:
+            raise
 
         # Listing all policies in the specified app
         policies_response = requests.get(

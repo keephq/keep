@@ -12,7 +12,6 @@ from keep.api.core.facets_query_builder.base_facets_query_builder import (
 
 
 class SqliteFacetsHandler(BaseFacetsQueryBuilder):
-
     def _get_select_for_column(self, property_metadata: PropertyMetadataInfo):
         if property_metadata.data_type == DataType.ARRAY:
             return literal_column(

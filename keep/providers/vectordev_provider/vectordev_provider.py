@@ -2,6 +2,7 @@ import dataclasses
 import json
 import logging
 import random
+from typing import ClassVar
 
 import pydantic
 
@@ -24,11 +25,11 @@ class VectordevProviderAuthConfig:
 
 class VectordevProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Vector"
-    PROVIDER_CATEGORY = ["Monitoring", "Developer Tools"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring", "Developer Tools"]
     PROVIDER_COMING_SOON = True
 
     # Mapping from vector sources to keep providers
-    SOURCE_TO_PROVIDER_MAP = {
+    SOURCE_TO_PROVIDER_MAP: ClassVar[dict[str, str]] = {
         "prometheus": "prometheus",
     }
 
@@ -83,7 +84,6 @@ class VectordevProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     @classmethod
     def simulate_alert(cls, **kwargs) -> dict:

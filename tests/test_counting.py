@@ -1,5 +1,8 @@
 from keep.api.models.alert import AlertDto, AlertStatus
-from keep.api.utils.enrichment_helpers import calculated_firing_counter, calculated_unresolved_counter
+from keep.api.utils.enrichment_helpers import (
+    calculated_firing_counter,
+    calculated_unresolved_counter,
+)
 
 
 def test_firing_counter_first_alert():

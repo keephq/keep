@@ -8,6 +8,7 @@ import datetime
 import json
 import logging
 import os
+from typing import ClassVar
 from urllib.parse import quote
 
 import pydantic
@@ -58,9 +59,9 @@ class DynatraceProvider(BaseProvider):
     Dynatrace provider class.
     """
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="problems.read",
             description="Read access to Dynatrace problems",
@@ -80,9 +81,9 @@ class DynatraceProvider(BaseProvider):
             alias="Settings Write",
         ),
     ]
-    FINGERPRINT_FIELDS = ["id"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["id"]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "AVAILABILITY": AlertSeverity.HIGH,
         "ERROR": AlertSeverity.CRITICAL,
         "PERFORMANCE": AlertSeverity.WARNING,
@@ -90,7 +91,7 @@ class DynatraceProvider(BaseProvider):
         "CUSTOM": AlertSeverity.INFO,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "OPEN": AlertStatus.FIRING,
         "RESOLVED": AlertStatus.RESOLVED,
     }
@@ -247,7 +248,7 @@ class DynatraceProvider(BaseProvider):
                 name=event.get("ProblemTitle"),
                 status=status,
                 severity=severity,
-                lastReceived=datetime.datetime.now().isoformat(),
+                lastReceived=datetime.datetime.now(tz=datetime.UTC).isoformat(),
                 description=json.dumps(
                     event.get("ImpactedEntities", {})
                 ),  # was asked by a user (should be configurable)
@@ -432,7 +433,6 @@ class DynatraceProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """

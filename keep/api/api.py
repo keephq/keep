@@ -2,14 +2,14 @@ import asyncio
 import logging
 import os
 import time
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import wraps
 from importlib import metadata
-from typing import Awaitable, Callable
 
-from arq import ArqRedis
 import requests
 import uvicorn
+from arq import ArqRedis
 from dotenv import find_dotenv, load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.gzip import GZipMiddleware
@@ -22,11 +22,15 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
 
-from keep.api.arq_pool import get_pool
 import keep.api.logging
 import keep.api.observability
-from keep.api.tasks import process_watcher_task
 import keep.api.utils.import_ee
+from keep.api.arq_pool import get_pool
+from keep.api.consts import (
+    KEEP_ARQ_QUEUE_MAINTENANCE,
+    MAINTENANCE_WINDOW_ALERT_STRATEGY,
+    REDIS,
+)
 from keep.api.core.config import config
 from keep.api.core.db import dispose_session
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -37,11 +41,11 @@ from keep.api.routes import (
     actions,
     ai,
     alerts,
+    cel,
     dashboard,
     deduplications,
     extraction,
     facets,
-    cel,
     healthcheck,
     incidents,
     maintenance,
@@ -61,13 +65,13 @@ from keep.api.routes import (
 )
 from keep.api.routes.auth import groups as auth_groups
 from keep.api.routes.auth import permissions, roles, users
+from keep.api.tasks import process_watcher_task
 from keep.event_subscriber.event_subscriber import EventSubscriber
 from keep.identitymanager.identitymanagerfactory import (
     IdentityManagerFactory,
     IdentityManagerTypes,
 )
 from keep.topologies.topology_processor import TopologyProcessor
-from keep.api.consts import KEEP_ARQ_QUEUE_MAINTENANCE, MAINTENANCE_WINDOW_ALERT_STRATEGY, REDIS
 
 # load all providers into cache
 from keep.workflowmanager.workflowmanager import WorkflowManager
@@ -161,7 +165,10 @@ async def startup():
         except Exception:
             logger.exception("Failed to start the topology processor")
 
-    if WATCHER or (MAINTENANCE_WINDOWS and MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status"):
+    if WATCHER or (
+        MAINTENANCE_WINDOWS
+        and MAINTENANCE_WINDOW_ALERT_STRATEGY == "recover_previous_status"
+    ):
         if REDIS:
             try:
                 logger.info("Starting the watcher process")
@@ -418,7 +425,7 @@ def wrap_call(middleware_cls, original_call):
 def instrument_middleware(app):
     # Get middleware from FastAPI app
     for middleware in app.user_middleware:
-        if hasattr(middleware.cls, "__call__"):
+        if callable(middleware.cls):
             original_call = middleware.cls.__call__
             middleware.cls.__call__ = wraps(original_call)(
                 wrap_call(middleware.cls, original_call)
@@ -442,4 +449,3 @@ def run(app: FastAPI):
         workers=config("KEEP_WORKERS", default=None, cast=int),
         limit_concurrency=config("KEEP_LIMIT_CONCURRENCY", default=None, cast=int),
     )
-

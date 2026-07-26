@@ -21,15 +21,18 @@ depends_on = None
 migration_metadata = sa.MetaData()
 
 mwr_table = sa.Table(
-    'maintenancewindowrule',
+    "maintenancewindowrule",
     migration_metadata,
-    sa.Column('id', sa.Integer, primary_key=True),
-    sa.Column('ignore_statuses', sa.JSON)
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("ignore_statuses", sa.JSON),
 )
+
 
 def populate_db():
     session = Session(op.get_bind())
-    session.execute(sa.update(mwr_table).values(ignore_statuses=DEFAULT_ALERT_STATUSES_TO_IGNORE))
+    session.execute(
+        sa.update(mwr_table).values(ignore_statuses=DEFAULT_ALERT_STATUSES_TO_IGNORE)
+    )
 
 
 def upgrade() -> None:

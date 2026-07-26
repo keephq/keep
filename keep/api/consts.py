@@ -7,7 +7,7 @@ from keep.api.models.db.preset import PresetDto, StaticPresetsId
 load_dotenv(find_dotenv())
 RUNNING_IN_CLOUD_RUN = os.environ.get("K_SERVICE") is not None
 PROVIDER_PULL_INTERVAL_MINUTE = int(
-    os.environ.get("KEEP_PULL_INTERVAL", 10080)
+    os.environ.get("KEEP_PULL_INTERVAL", "10080")
 )  # maximum once a week
 STATIC_PRESETS = {
     "feed": PresetDto(
@@ -31,7 +31,9 @@ STATIC_PRESETS = {
 MAINTENANCE_WINDOW_ALERT_STRATEGY = os.environ.get(
     "MAINTENANCE_WINDOW_STRATEGY", "default"
 )  # recover_previous_status or default
-WATCHER_LAPSED_TIME = int(os.environ.get("KEEP_WATCHER_LAPSED_TIME", 60))  # in seconds
+WATCHER_LAPSED_TIME = int(
+    os.environ.get("KEEP_WATCHER_LAPSED_TIME", "60")
+)  # in seconds
 ###
 # Set ARQ_TASK_POOL_TO_EXECUTE to "none", "all", "basic_processing" or "ai"
 # to split the tasks between the workers.

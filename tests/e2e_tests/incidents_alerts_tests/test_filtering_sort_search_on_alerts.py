@@ -1,4 +1,5 @@
 import time
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -12,7 +13,6 @@ from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
 )
 from tests.e2e_tests.test_end_to_end import init_e2e_test, setup_console_listener
 from tests.e2e_tests.utils import get_token, save_failure_artifacts
-from copy import deepcopy
 
 
 def multi_sort(data, criteria):
@@ -57,14 +57,14 @@ def init_test(browser: Page, alerts, max_retries=3):
             # (since we might get redirected automatically)
             browser.wait_for_load_state("networkidle")
             browser.wait_for_url(lambda url: url.startswith(base_url), timeout=10000)
-            print("Page loaded successfully. [try: %d]" % (i + 1))
+            print(f"Page loaded successfully. [try: {i + 1}]")
             break
         except Exception as e:
             if i < max_retries - 1:
                 print("Failed to load alerts page. Retrying... - ", e)
                 continue
             else:
-                raise e
+                raise
 
     browser.get_by_role("main").locator("[data-testid='facet-value']").first.wait_for(
         timeout=30000
@@ -119,7 +119,7 @@ def assert_facet(browser, facet_name, alerts, alert_property_name: str):
             ).to_contain_text(str(count))
         except Exception as e:
             save_failure_artifacts(browser, log_entries=[])
-            raise e
+            raise
 
 
 def assert_alerts_by_column(
@@ -135,7 +135,7 @@ def assert_alerts_by_column(
         expect(matched_rows).to_have_count(len(filtered_alerts), timeout=15000)
     except Exception as e:
         save_failure_artifacts(browser, log_entries=[])
-        raise e
+        raise
 
     # check that only alerts with selected status are displayed
     for alert in filtered_alerts:
@@ -262,8 +262,9 @@ def test_adding_custom_facet(
 search_by_cel_tescases = {
     "contains for nested property": {
         "cel_query": "labels.service.contains('java-otel')",
-        "predicate": lambda alert: "java-otel"
-        in alert.get("labels", {}).get("service", ""),
+        "predicate": lambda alert: (
+            "java-otel" in alert.get("labels", {}).get("service", "")
+        ),
         "alert_property_name": "name",
         "commands": [
             lambda browser: browser.keyboard.type("labels."),
@@ -289,9 +290,11 @@ search_by_cel_tescases = {
     },
     "date comparison greater than or equal": {
         "cel_query": f"dateForTests >= '{(datetime(2025, 2, 10, 10) + timedelta(days=-14)).isoformat()}'",
-        "predicate": lambda alert: alert.get("dateForTests")
-        and datetime.fromisoformat(alert.get("dateForTests"))
-        >= (datetime(2025, 2, 10, 10) + timedelta(days=-14)),
+        "predicate": lambda alert: (
+            alert.get("dateForTests")
+            and datetime.fromisoformat(alert.get("dateForTests"))
+            >= (datetime(2025, 2, 10, 10) + timedelta(days=-14))
+        ),
         "alert_property_name": "name",
         "commands": [
             lambda browser: browser.keyboard.type("dateForTests"),
@@ -406,7 +409,7 @@ def test_sort_asc_dsc(
                 save_failure_artifacts(browser, log_entries=[])
                 number_of_missmatches += 1
                 if number_of_missmatches > 2:
-                    raise e
+                    raise
                 else:
                     print(
                         f"Expected: {alert['name']} but got: {column_locator.text_content()}"
@@ -449,7 +452,7 @@ def test_multi_sort_asc_dsc(
         raise
     # data-testid="header-cell-tags.customerName"
     browser.locator(
-        f"[data-testid='alerts-table'] table thead th [data-testid='header-cell-tags.customerName']",
+        "[data-testid='alerts-table'] table thead th [data-testid='header-cell-tags.customerName']",
         has_text=coumn_name,
     ).click()
     print("ff")
@@ -467,7 +470,7 @@ def test_multi_sort_asc_dsc(
         )
 
         column_header_locator = browser.locator(
-            f"[data-testid='alerts-table'] table thead th [data-testid='header-cell-tags.alertIndex']",
+            "[data-testid='alerts-table'] table thead th [data-testid='header-cell-tags.alertIndex']",
             has_text=coumn_name,
         )
         expect(column_header_locator).to_be_visible()
@@ -485,7 +488,7 @@ def test_multi_sort_asc_dsc(
                 save_failure_artifacts(browser, log_entries=[])
                 number_of_missmatches += 1
                 if number_of_missmatches > 2:
-                    raise e
+                    raise
                 else:
                     print(
                         f"Expected: {alert['name']} but got: {column_locator.text_content()}"
@@ -525,7 +528,9 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
     try:
         # refresh the page to get the new alerts
         browser.reload()
-        browser.wait_for_selector("[data-testid='facet-value']", timeout=30000)  # Increase timeout from 10s to 30s
+        browser.wait_for_selector(
+            "[data-testid='facet-value']", timeout=30000
+        )  # Increase timeout from 10s to 30s
 
         # Add retry logic for checking alert count
         max_retries = 5
@@ -536,11 +541,17 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
                     print(f"Retry {retry}/{max_retries} for alert count check")
                     time.sleep(5)
                     browser.reload()
-                    browser.wait_for_selector("[data-testid='facet-value']", timeout=30000)
+                    browser.wait_for_selector(
+                        "[data-testid='facet-value']", timeout=30000
+                    )
 
                 # Check if alerts are visible
-                alert_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
-                print(f"Current alert count: {alert_count}, expected: {len(simulated_alerts)}")
+                alert_count = browser.locator(
+                    "[data-testid='alerts-table'] table tbody tr"
+                ).count()
+                print(
+                    f"Current alert count: {alert_count}, expected: {len(simulated_alerts)}"
+                )
 
                 if alert_count == len(simulated_alerts):
                     break
@@ -552,12 +563,12 @@ def test_alerts_stream(browser: Page, setup_page_logging, failure_artifacts):
                     ).to_have_count(len(simulated_alerts))
             except Exception as retry_error:
                 if retry == max_retries - 1:
-                    raise retry_error
-                print(f"Error during retry {retry}: {str(retry_error)}")
+                    raise
+                print(f"Error during retry {retry}: {retry_error!s}")
 
     except Exception as e:
         save_failure_artifacts(browser, log_entries=log_entries)
-        raise e
+        raise
     query_result = query_alerts(cell_query=cel_to_filter_alerts, limit=1000)
     current_alerts = query_result["results"]
     assert_facet(browser, facet_name, current_alerts, alert_property_name)

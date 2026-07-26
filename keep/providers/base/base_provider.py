@@ -15,11 +15,11 @@ import re
 import uuid
 from collections import Counter
 from operator import attrgetter
-from typing import Literal, Optional
+from typing import ClassVar, Literal
 
-import opentelemetry.trace as trace
 import requests
 from dateutil.parser import parse
+from opentelemetry import trace
 
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.core.db import (
@@ -46,35 +46,43 @@ SPAMMY_ALERTS_THRESHOLD = datetime.timedelta(hours=SPAMMY_ALERTS_THRESHOLD_HOURS
 
 class BaseProvider(metaclass=abc.ABCMeta):
     OAUTH2_URL = None
-    PROVIDER_SCOPES: list[ProviderScope] = []
-    PROVIDER_METHODS: list[ProviderMethod] = []
-    FINGERPRINT_FIELDS: list[str] = []
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = []
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = []
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = []
     PROVIDER_COMING_SOON = False  # tb: if the provider is coming soon, we show it in the UI but don't allow it to be added
-    PROVIDER_CATEGORY: list[
-        Literal[
-            "AI",
-            "Monitoring",
-            "Incident Management",
-            "Cloud Infrastructure",
-            "Ticketing",
-            "Identity",
-            "Developer Tools",
-            "Database",
-            "Identity and Access Management",
-            "Security",
-            "Collaboration",
-            "Organizational Tools",
-            "CRM",
-            "Queues",
-            "Orchestration",
-            "Others",
+    PROVIDER_CATEGORY: ClassVar[
+        list[
+            Literal[
+                "AI",
+                "Monitoring",
+                "Incident Management",
+                "Cloud Infrastructure",
+                "Ticketing",
+                "Identity",
+                "Developer Tools",
+                "Database",
+                "Identity and Access Management",
+                "Security",
+                "Collaboration",
+                "Organizational Tools",
+                "CRM",
+                "Queues",
+                "Orchestration",
+                "Others",
+            ]
         ]
-    ] = [
-        "Others"
-    ]  # tb: Default category for providers that don't declare a category
-    PROVIDER_TAGS: list[
-        Literal[
-            "alert", "ticketing", "messaging", "data", "queue", "topology", "incident"
+    ] = ["Others"]  # tb: Default category for providers that don't declare a category
+    PROVIDER_TAGS: ClassVar[
+        list[
+            Literal[
+                "alert",
+                "ticketing",
+                "messaging",
+                "data",
+                "queue",
+                "topology",
+                "incident",
+            ]
         ]
     ] = []
     WEBHOOK_INSTALLATION_REQUIRED = False  # webhook installation is required for this provider, making it required in the UI
@@ -84,10 +92,10 @@ class BaseProvider(metaclass=abc.ABCMeta):
         context_manager: ContextManager,
         provider_id: str,
         config: ProviderConfig,
-        webhooke_template: Optional[str] = None,
-        webhook_description: Optional[str] = None,
-        webhook_markdown: Optional[str] = None,
-        provider_description: Optional[str] = None,
+        webhooke_template: str | None = None,
+        webhook_description: str | None = None,
+        webhook_markdown: str | None = None,
+        provider_description: str | None = None,
     ):
         """
         Initialize a provider.
@@ -117,7 +125,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
 
         self.logger.setLevel(
             os.environ.get(
-                "KEEP_{}_PROVIDER_LOG_LEVEL".format(self.provider_id.upper()),
+                f"KEEP_{self.provider_id.upper()}_PROVIDER_LOG_LEVEL",
                 os.environ.get("LOG_LEVEL", "INFO"),
             )
         )
@@ -231,7 +239,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 fingerprint = self.context_manager.event_context.fingerprint
             elif self.context_manager.incident_context:
                 entity_type = "incident"
-                fingerprint = self.context_manager.incident_context.id    
+                fingerprint = self.context_manager.incident_context.id
             else:
                 self.logger.warning(
                     "No fingerprint found for alert enrichment",
@@ -358,12 +366,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
             if event and should_check_incidents_resolution:
                 enrichments_bl.check_incident_resolution(event)
 
-        except Exception as e:
+        except Exception:
             self.logger.error(
                 f"Failed to enrich {entity_type} in db",
                 extra={"fingerprint": fingerprint, "provider": self.provider_id},
             )
-            raise e
+            raise
         self.logger.info(
             f"{entity_type.capitalize()} enriched", extra={"fingerprint": fingerprint}
         )
@@ -507,7 +515,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
         return formatted_alert
 
     @staticmethod
-    def get_alert_fingerprint(alert: AlertDto, fingerprint_fields: list = []) -> str:
+    def get_alert_fingerprint(
+        alert: AlertDto, fingerprint_fields: list | None = None
+    ) -> str:
         """
         Get the fingerprint of an alert.
 
@@ -518,6 +528,8 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Returns:
             str: hexdigest of the fingerprint or the event.name if no fingerprint_fields were given.
         """
+        if fingerprint_fields is None:
+            fingerprint_fields = []
         if not fingerprint_fields:
             return alert.name
         fingerprint = hashlib.sha256()
@@ -537,7 +549,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 fingerprint.update(str(fingerprint_field_value).encode())
         return fingerprint.hexdigest()
 
-    def get_alerts_configuration(self, alert_id: Optional[str] = None):
+    def get_alerts_configuration(self, alert_id: str | None = None):
         """
         Get configuration of alerts from the provider.
 
@@ -547,7 +559,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
         # todo: we'd want to have a common alert model for all providers (also for consistent output from GPT)
         raise NotImplementedError("get_alerts() method not implemented")
 
-    def deploy_alert(self, alert: dict, alert_id: Optional[str] = None):
+    def deploy_alert(self, alert: dict, alert_id: str | None = None):
         """
         Deploy an alert to the provider.
 
@@ -817,7 +829,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             providerId=self.provider_id,
         )
         # push the alert to the provider
-        url = f'{os.environ["KEEP_API_URL"]}/alerts/event'
+        url = f"{os.environ['KEEP_API_URL']}/alerts/event"
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -959,7 +971,6 @@ class BaseIncidentProvider(BaseProvider):
 
 
 class ProviderHealthMixin:
-
     HAS_HEALTH_CHECK = True
 
     def get_health_report(self):
@@ -979,7 +990,7 @@ class ProviderHealthMixin:
             uncovered_topology = copy.deepcopy(topology)
             for alert in alerts:
                 uncovered_topology = list(
-                    filter(lambda t: not alert.service == t.service, uncovered_topology)
+                    filter(lambda t: alert.service != t.service, uncovered_topology)
                 )
 
             health["topology"] = {

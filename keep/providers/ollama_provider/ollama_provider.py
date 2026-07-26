@@ -1,5 +1,7 @@
-import json
 import dataclasses
+import json
+from typing import ClassVar
+
 import pydantic
 import requests
 
@@ -22,7 +24,7 @@ class OllamaProviderAuthConfig:
 
 class OllamaProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Ollama"
-    PROVIDER_CATEGORY = ["AI"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["AI"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -83,7 +85,7 @@ class OllamaProvider(BaseProvider):
             }
 
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Error calling Ollama API: {str(e)}")
+            raise Exception(f"Error calling Ollama API: {e!s}")
 
 
 if __name__ == "__main__":
@@ -115,10 +117,7 @@ if __name__ == "__main__":
             structured_output_format={
                 "type": "object",
                 "properties": {
-                    "environment": {
-                        "type": "string",
-                        "enum": ['production', 'debug']
-                    },
+                    "environment": {"type": "string", "enum": ["production", "debug"]},
                 },
                 "required": ["environment"],
             },

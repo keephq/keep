@@ -62,9 +62,7 @@ class TestGetAlertsCustomDedup(unittest.TestCase):
 
         provider = _make_provider([alert_a, alert_b])
 
-        with patch(
-            "keep.providers.base.base_provider.tracer"
-        ) as mock_tracer:
+        with patch("keep.providers.base.base_provider.tracer") as mock_tracer:
             mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock()
             mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock()
             alerts = provider.get_alerts()
@@ -96,9 +94,7 @@ class TestGetAlertsCustomDedup(unittest.TestCase):
 
         provider = _make_provider([alert])
 
-        with patch(
-            "keep.providers.base.base_provider.tracer"
-        ) as mock_tracer:
+        with patch("keep.providers.base.base_provider.tracer") as mock_tracer:
             mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock()
             mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock()
             alerts = provider.get_alerts()
@@ -123,9 +119,7 @@ class TestGetAlertsCustomDedup(unittest.TestCase):
 
         provider = _make_provider([alert])
 
-        with patch(
-            "keep.providers.base.base_provider.tracer"
-        ) as mock_tracer:
+        with patch("keep.providers.base.base_provider.tracer") as mock_tracer:
             mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock()
             mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock()
             alerts = provider.get_alerts()

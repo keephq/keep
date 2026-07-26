@@ -3,6 +3,7 @@ DiscordProvider is a class that implements the BaseOutputProvider interface for 
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -32,7 +33,7 @@ class DiscordProvider(BaseProvider):
     """Send alert message to Discord."""
 
     PROVIDER_DISPLAY_NAME = "Discord"
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -48,9 +49,10 @@ class DiscordProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
-    def _notify(self, content: str = "", components: list = [], **kwargs: dict):
+    def _notify(
+        self, content: str = "", components: list | None = None, **kwargs: dict
+    ):
         """
         Notify alert message to Discord using the Discord Incoming Webhook API
         https://discord.com/developers/docs/resources/webhook
@@ -59,6 +61,8 @@ class DiscordProvider(BaseProvider):
             content (str): The content of the message.
             components (list): The components of the message.
         """
+        if components is None:
+            components = []
         self.logger.debug("Notifying alert message to Discord")
         webhook_url = self.authentication_config.webhook_url
 

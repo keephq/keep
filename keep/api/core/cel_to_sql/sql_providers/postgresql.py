@@ -1,10 +1,11 @@
 from datetime import datetime
-from typing import List
 from uuid import UUID
+
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     ComparisonNodeOperator,
     ConstantNode,
+    DataType,
     LogicalNode,
     LogicalNodeOperator,
     Node,
@@ -15,10 +16,9 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
-from keep.api.core.cel_to_sql.ast_nodes import DataType
+
 
 class CelToPostgreSqlProvider(BaseCelToSqlProvider):
-
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         all_columns = [column] + [f"'{item}'" for item in path]
 
@@ -113,29 +113,35 @@ class CelToPostgreSqlProvider(BaseCelToSqlProvider):
         return super()._visit_constant_node(value)
 
     def _visit_contains_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
+        self, property_path: str, method_args: list[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
-            raise ValueError(f'{property_path}.contains accepts 1 argument but got {len(method_args)}')
+            raise ValueError(
+                f"{property_path}.contains accepts 1 argument but got {len(method_args)}"
+            )
 
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]
         return f"{property_path} IS NOT NULL AND {property_path} ILIKE '%{unquoted_literal}%'"
 
     def _visit_starts_with_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
+        self, property_path: str, method_args: list[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
-            raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
+            raise ValueError(
+                f"{property_path}.startsWith accepts 1 argument but got {len(method_args)}"
+            )
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]
         return f"{property_path} IS NOT NULL AND {property_path} ILIKE '{unquoted_literal}%'"
 
     def _visit_ends_with_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
+        self, property_path: str, method_args: list[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
-            raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
+            raise ValueError(
+                f"{property_path}.endsWith accepts 1 argument but got {len(method_args)}"
+            )
         processed_literal = self.literal_proc(method_args[0].value)
         unquoted_literal = processed_literal[1:-1]
         return f"{property_path} IS NOT NULL AND {property_path} ILIKE '%{unquoted_literal}'"

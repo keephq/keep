@@ -2,6 +2,7 @@ import dataclasses
 import http
 import os
 import time
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -32,8 +33,8 @@ class GoogleChatProvider(BaseProvider):
     """Send alert message to Google Chat."""
 
     PROVIDER_DISPLAY_NAME = "Google Chat"
-    PROVIDER_TAGS = ["messaging"]
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["messaging"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -49,7 +50,6 @@ class GoogleChatProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(self, message="", **kwargs: dict):
         """

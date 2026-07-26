@@ -3,6 +3,7 @@ PrometheusProvider is a class that provides a way to read data from Prometheus.
 """
 
 import datetime
+from typing import ClassVar
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -30,7 +31,7 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
 """
 
     # Maps Azure Monitor severity to Keep's format
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "Sev0": AlertSeverity.CRITICAL,
         "Sev1": AlertSeverity.HIGH,
         "Sev2": AlertSeverity.WARNING,
@@ -39,13 +40,13 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
     }
 
     # Maps Azure Monitor monitor condition to Keep's format
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "Resolved": AlertStatus.RESOLVED,
         "Fired": AlertStatus.FIRING,
     }
 
     PROVIDER_DISPLAY_NAME = "Azure Monitor"
-    PROVIDER_CATEGORY = ["Monitoring", "Cloud Infrastructure"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring", "Cloud Infrastructure"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -57,7 +58,6 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
         Validates required configuration for Prometheus's provider.
         """
         # no config
-        pass
 
     @staticmethod
     def _format_alert(

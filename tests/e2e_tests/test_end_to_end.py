@@ -26,8 +26,8 @@ import string
 import time
 from datetime import datetime
 
-from playwright.sync_api import Page, expect
 import pytest
+from playwright.sync_api import Page, expect
 
 from tests.e2e_tests.incidents_alerts_tests.incidents_alerts_setup import (
     setup_incidents_alerts,
@@ -320,7 +320,6 @@ def test_provider_deletion(browser: Page):
     setup_console_listener(browser, log_entries)
     provider_name = "playwright_test_" + datetime.now().strftime("%Y%m%d%H%M%S")
     try:
-
         # Checking deletion after Creation
         init_e2e_test(browser, next_url="/signin")
         browser.get_by_role("link", name="Providers").hover()
@@ -368,16 +367,16 @@ def test_provider_deletion(browser: Page):
         ).click()
         browser.get_by_placeholder("Enter url").clear()
         # Use a blacklisted URL to trigger validation error
-        browser.get_by_placeholder("Enter url").fill("https://metadata.google.internal/test")
+        browser.get_by_placeholder("Enter url").fill(
+            "https://metadata.google.internal/test"
+        )
 
         browser.get_by_role("button", name="Update", exact=True).click()
         browser.wait_for_timeout(500)
         # Refreshing the scope
         browser.get_by_role("button", name="Validate Scopes", exact=True).click()
         browser.wait_for_timeout(500)
-        assert_scope_text_count(
-            browser=browser, contains_text="blacklisted", count=1
-        )
+        assert_scope_text_count(browser=browser, contains_text="blacklisted", count=1)
         browser.mouse.click(10, 10)
         delete_provider(
             browser=browser, provider_type="Webhook", provider_name=provider_name

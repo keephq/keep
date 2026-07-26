@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import List
 from uuid import UUID
+
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     ComparisonNodeOperator,
@@ -17,8 +17,8 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 )
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
-class CelToMySqlProvider(BaseCelToSqlProvider):
 
+class CelToMySqlProvider(BaseCelToSqlProvider):
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         return f"JSON_UNQUOTE({self._json_extract(column, path)})"
 
@@ -119,10 +119,12 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         return super()._visit_constant_node(value, expected_data_type)
 
     def _visit_contains_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
+        self, property_path: str, method_args: list[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
-            raise ValueError(f'{property_path}.contains accepts 1 argument but got {len(method_args)}')
+            raise ValueError(
+                f"{property_path}.contains accepts 1 argument but got {len(method_args)}"
+            )
         value = (
             method_args[0].value.lower()
             if isinstance(method_args[0].value, str)
@@ -133,10 +135,12 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         return f"{property_path} IS NOT NULL AND LOWER({property_path}) LIKE '%{unquoted_literal}%'"
 
     def _visit_starts_with_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
+        self, property_path: str, method_args: list[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
-            raise ValueError(f'{property_path}.startsWith accepts 1 argument but got {len(method_args)}')
+            raise ValueError(
+                f"{property_path}.startsWith accepts 1 argument but got {len(method_args)}"
+            )
         value = (
             method_args[0].value.lower()
             if isinstance(method_args[0].value, str)
@@ -147,10 +151,12 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
         return f"{property_path} IS NOT NULL AND LOWER({property_path}) LIKE '{unquoted_literal}%'"
 
     def _visit_ends_with_method_calling(
-        self, property_path: str, method_args: List[ConstantNode]
+        self, property_path: str, method_args: list[ConstantNode]
     ) -> str:
         if len(method_args) != 1:
-            raise ValueError(f'{property_path}.endsWith accepts 1 argument but got {len(method_args)}')
+            raise ValueError(
+                f"{property_path}.endsWith accepts 1 argument but got {len(method_args)}"
+            )
         value = (
             method_args[0].value.lower()
             if isinstance(method_args[0].value, str)

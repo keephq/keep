@@ -1,8 +1,8 @@
 # test_enrichments.py
 import time
+import uuid
 from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
-import uuid
 
 import pytest
 from sqlalchemy import text
@@ -17,12 +17,10 @@ from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.topology import TopologyService
 from keep.api.models.db.workflow import Workflow
-from keep.workflowmanager.workflowmanager import WorkflowManager
-from tests.fixtures.client import client, setup_api_key, test_app
 from tests.fixtures.workflow_manager import (
     wait_for_workflow_execution,
     wait_for_workflow_in_run_queue,
-)  # noqa
+)
 
 
 @pytest.fixture(autouse=True)
@@ -65,9 +63,7 @@ def mock_alert_dto():
 
 def test_run_extraction_rules_no_rules_applies(mock_session, mock_alert_dto):
     # Assuming there are no extraction rules
-    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = (
-        []
-    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
     result_event = enrichment_bl.run_extraction_rules(mock_alert_dto)
@@ -130,9 +126,7 @@ def test_run_extraction_rules_event_is_dict(mock_session):
 
 
 def test_run_extraction_rules_no_rules(mock_session, mock_alert_dto):
-    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = (
-        []
-    )
+    mock_session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = []
 
     enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
     result_event = enrichment_bl.run_extraction_rules(mock_alert_dto)
@@ -207,9 +201,11 @@ def test_run_extraction_rules_with_conditions(mock_session, mock_alert_dto):
     ]
 
     # Mocking the CEL environment to return True for the condition
-    with patch("chevron.render", return_value="test_source"), patch(
-        "celpy.Environment"
-    ) as mock_env, patch("celpy.celpy.json_to_cel") as mock_json_to_cel:
+    with (
+        patch("chevron.render", return_value="test_source"),
+        patch("celpy.Environment") as mock_env,
+        patch("celpy.celpy.json_to_cel") as mock_json_to_cel,
+    ):
         mock_env.return_value.compile.return_value = None
         mock_program = Mock()
         mock_env.return_value.program.return_value = mock_program
@@ -269,25 +265,25 @@ def test_run_mapping_rules_with_regex_match(mock_session, mock_alert_dto):
     mock_alert_dto.name = "keep-backend-service"
     del mock_alert_dto.service
     enrichment_bl.run_mapping_rules(mock_alert_dto)
-    assert (
-        mock_alert_dto.service == "backend_service"
-    ), "Service should match 'backend_service' for 'keep-backend-service'"
+    assert mock_alert_dto.service == "backend_service", (
+        "Service should match 'backend_service' for 'keep-backend-service'"
+    )
 
     # Test case where the alert name matches the regex pattern without 'keep-' prefix
     mock_alert_dto.name = "backend-service"
     del mock_alert_dto.service
     enrichment_bl.run_mapping_rules(mock_alert_dto)
-    assert (
-        mock_alert_dto.service == "backend_service"
-    ), "Service should match 'backend_service' for 'backend-service'"
+    assert mock_alert_dto.service == "backend_service", (
+        "Service should match 'backend_service' for 'backend-service'"
+    )
 
     # Test case where the alert name does not match any regex pattern
     mock_alert_dto.name = "unmatched-service"
     del mock_alert_dto.service
     enrichment_bl.run_mapping_rules(mock_alert_dto)
-    assert (
-        hasattr(mock_alert_dto, "service") is False
-    ), "Service should not match any entry"
+    assert hasattr(mock_alert_dto, "service") is False, (
+        "Service should not match any entry"
+    )
 
 
 def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
@@ -313,9 +309,9 @@ def test_run_mapping_rules_no_match(mock_session, mock_alert_dto):
     # Test case where no entry matches the regex pattern
     mock_alert_dto.name = "unmatched-service"
     enrichment_bl.run_mapping_rules(mock_alert_dto)
-    assert (
-        hasattr(mock_alert_dto, "service") is False
-    ), "Service should not match any entry"
+    assert hasattr(mock_alert_dto, "service") is False, (
+        "Service should not match any entry"
+    )
 
 
 def test_check_matcher_with_and_condition(mock_session, mock_alert_dto):
@@ -584,7 +580,7 @@ def test_disposable_enrichment(db_session, client, test_app, mock_alert_dto):
 
     # 4. send the alert again with firing and check that the status is reset
     mock_alert_dto.status = "firing"
-    setattr(mock_alert_dto, "avoid_dedup", "bla")
+    mock_alert_dto.avoid_dedup = "bla"
     response = client.post(
         "/alerts/event",
         headers={"x-api-key": "some-key"},
@@ -826,7 +822,7 @@ def test_disposable_enrichment_and_alert_history(
 
     # STEP 5: Send a new alert with the same fingerprint and ensure enrichment is reset
     mock_alert_dto.status = "firing"  # Reset status to firing
-    setattr(mock_alert_dto, "avoid_dedup", "test-value")  # Ensure no deduplication
+    mock_alert_dto.avoid_dedup = "test-value"  # Ensure no deduplication
     response = client.post(
         "/alerts/event",
         headers={"x-api-key": "some-key"},

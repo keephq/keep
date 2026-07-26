@@ -1,7 +1,8 @@
-import json
 import dataclasses
-import pydantic
+import json
+from typing import ClassVar
 
+import pydantic
 from openai import OpenAI
 
 from keep.contextmanager.contextmanager import ContextManager
@@ -30,7 +31,7 @@ class OpenaiProviderAuthConfig:
 
 class OpenaiProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "OpenAI"
-    PROVIDER_CATEGORY = ["AI"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["AI"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -78,8 +79,8 @@ class OpenaiProvider(BaseProvider):
 
 
 if __name__ == "__main__":
-    import os
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(

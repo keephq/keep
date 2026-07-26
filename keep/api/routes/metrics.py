@@ -1,5 +1,3 @@
-from typing import List
-
 import chevron
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse
@@ -54,7 +52,7 @@ else:
 
 @router.get("")
 def get_metrics(
-    labels: List[str] = Query(None),
+    labels: list[str] = Query(None),
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:metrics"])
     ),
@@ -95,7 +93,7 @@ def get_metrics(
 
     tenant_id = authenticated_entity.tenant_id
 
-    export = str()
+    export = ""
 
     # Exporting alerts per incidents
     export += "# HELP alerts_total The total number of alerts per incident.\n"
@@ -144,8 +142,8 @@ def get_metrics(
     export += "\n\n"
     export += "# HELP workflows_executions_total The total number of workflows.\r\n"
     export += "# TYPE workflows_executions_total counter\n"
-    export += f"workflows_executions_total {{status=\"success\"}} {workflow_execution_counts['success']}\n"
-    export += f"workflows_executions_total {{status=\"other\"}} {workflow_execution_counts['other']}\n"
+    export += f'workflows_executions_total {{status="success"}} {workflow_execution_counts["success"]}\n'
+    export += f'workflows_executions_total {{status="other"}} {workflow_execution_counts["other"]}\n'
 
     return Response(content=export, media_type=CONTENT_TYPE_LATEST)
 

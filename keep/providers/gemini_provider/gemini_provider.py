@@ -1,7 +1,9 @@
-import json
 import dataclasses
-import pydantic
+import json
+from typing import ClassVar
+
 import google.generativeai as genai
+import pydantic
 
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -21,7 +23,7 @@ class GeminiProviderAuthConfig:
 
 class GeminiProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Gemini"
-    PROVIDER_CATEGORY = ["AI"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["AI"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -48,9 +50,9 @@ class GeminiProvider(BaseProvider):
         structured_output_format=None,
     ):
         genai.configure(api_key=self.authentication_config.api_key)
-        
+
         model = genai.GenerativeModel(model)
-        
+
         # Prepare system prompt for structured output if needed
         if structured_output_format:
             schema = structured_output_format.get("json_schema", {})
@@ -66,9 +68,9 @@ class GeminiProvider(BaseProvider):
                 max_output_tokens=max_tokens,
             ),
         )
-        
+
         content = response.text
-        
+
         # Try to parse as JSON if structured output was requested
         try:
             content = json.loads(content)
@@ -81,8 +83,8 @@ class GeminiProvider(BaseProvider):
 
 
 if __name__ == "__main__":
-    import os
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(

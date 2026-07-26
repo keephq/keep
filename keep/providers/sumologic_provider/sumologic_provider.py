@@ -5,7 +5,7 @@ SumoLogic Provider is a class that allows to install webhooks in SumoLogic.
 import dataclasses
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import ClassVar
 from urllib.parse import urlencode, urljoin, urlparse
 
 import pydantic
@@ -57,8 +57,8 @@ class SumologicProvider(BaseProvider):
     """Install Webhooks and receive alerts from SumoLogic."""
 
     PROVIDER_DISPLAY_NAME = "SumoLogic"
-    PROVIDER_CATEGORY = ["Monitoring"]
-    PROVIDER_SCOPES = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authorized",
@@ -84,7 +84,6 @@ class SumologicProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -101,7 +100,9 @@ class SumologicProvider(BaseProvider):
             "Accept": "application/json",
         }
 
-    def __get_url(self, paths: List[str] = [], query_params: dict = None, **kwargs):
+    def __get_url(
+        self, paths: list[str] | None = None, query_params: dict | None = None, **kwargs
+    ):
         """
         Helper method to build the url for SumoLogic api requests.
 
@@ -112,6 +113,8 @@ class SumologicProvider(BaseProvider):
         url = __get_url("test", paths, query_params)
         # url = https://api.sumologic.com/api/v1/issue/createmeta?projectKeys=key1
         """
+        if paths is None:
+            paths = []
         if self.authentication_config.deployment.lower() != "us1":
             host = f"https://api.{self.authentication_config.deployment.lower()}.sumologic.com/api/v1/"
         else:
@@ -188,8 +191,7 @@ class SumologicProvider(BaseProvider):
                     role_info_response = role_info_response.json()
                     self.logger.info(f"Successfully fetched role: {role_id}")
                     for capability in role_info_response["capabilities"]:
-                        if capability in perms:
-                            perms.remove(capability)
+                        perms.discard(capability)
                 else:
                     role_info_response = role_info_response.json()
                     self.logger.error(
@@ -294,7 +296,7 @@ class SumologicProvider(BaseProvider):
                 raise Exception(connection_creation_response)
         except Exception as e:
             self.logger.error("Error while creating webhook connection " + str(e))
-            raise e
+            raise
 
     def __get_monitors_without_keep(self, connection_id: str):
         monitors = []
@@ -393,8 +395,8 @@ class SumologicProvider(BaseProvider):
                 self.__install_connection_in_monitor(
                     monitor=monitor, connection_id=connection_id
                 )
-        except Exception as e:
-            raise e
+        except Exception:
+            raise
 
     @staticmethod
     def __extract_severity(severity: str):

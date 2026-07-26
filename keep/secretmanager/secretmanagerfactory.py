@@ -53,5 +53,5 @@ class SecretManagerFactory:
             return DbSecretManager(context_manager, **kwargs)
 
         raise NotImplementedError(
-            f"Secret manager type {str(secret_manager_type)} not implemented"
+            f"Secret manager type {secret_manager_type!s} not implemented"
         )

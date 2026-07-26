@@ -3,7 +3,6 @@ Provider configuration model.
 """
 
 import os
-from typing import Optional
 
 import chevron
 from pydantic.dataclasses import dataclass
@@ -24,11 +23,11 @@ class ProviderScope:
     """
 
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     mandatory: bool = False
     mandatory_for_webhook: bool = False
-    documentation_url: Optional[str] = None
-    alias: Optional[str] = None
+    documentation_url: str | None = None
+    alias: str | None = None
 
 
 @dataclass
@@ -41,9 +40,9 @@ class ProviderConfig:
         authentication (dict): The configuration for the provider.
     """
 
-    authentication: Optional[dict]
-    name: Optional[str] = None
-    description: Optional[str] = None
+    authentication: dict | None
+    name: str | None = None
+    description: str | None = None
 
     def __post_init__(self):
         if not self.authentication:

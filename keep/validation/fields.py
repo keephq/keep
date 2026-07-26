@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import ClassVar
 
 from pydantic import AnyUrl, HttpUrl, conint, errors
 from pydantic.networks import MultiHostDsn, Parts
@@ -9,9 +9,9 @@ UrlPort = conint(ge=1, le=65_535)
 class HttpsUrl(HttpUrl):
     """Validate https url, coerce if no scheme, throw if wrong scheme."""
 
-    allowed_schemes = {"https"}
+    allowed_schemes: ClassVar[dict[str, str]] = {"https"}
 
-    def __new__(cls, url: Optional[str], **kwargs) -> object:
+    def __new__(cls, url: str | None, **kwargs) -> object:
         _url = url if url is not None and url.startswith("https://") else None
         return super().__new__(cls, _url, **kwargs)
 
@@ -23,7 +23,7 @@ class HttpsUrl(HttpUrl):
 class NoSchemeUrl(AnyUrl):
     """Validate url with any scheme, remove scheme in output."""
 
-    def __new__(cls, url: Optional[str], **kwargs) -> object:
+    def __new__(cls, url: str | None, **kwargs) -> object:
         _url = cls.build(**kwargs) if url is None else url
         _url = _url.split("://")[1] if "://" in _url else _url
         return super().__new__(cls, _url, **kwargs)
@@ -53,13 +53,13 @@ class MultiHostUrl(MultiHostDsn):
         cls,
         *,
         scheme: str,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        host: Optional[str] = None,
-        port: Optional[str] = None,
-        path: Optional[str] = None,
-        query: Optional[str] = None,
-        fragment: Optional[str] = None,
+        user: str | None = None,
+        password: str | None = None,
+        host: str | None = None,
+        port: str | None = None,
+        path: str | None = None,
+        query: str | None = None,
+        fragment: str | None = None,
         **_kwargs: str,
     ) -> str:
         hosts = _kwargs.get("hosts")
@@ -98,13 +98,13 @@ class MultiHostUrl(MultiHostDsn):
         *,
         position: int,
         scheme: str,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
+        user: str | None = None,
+        password: str | None = None,
         host: str,
-        port: Optional[str] = None,
-        path: Optional[str] = None,
-        query: Optional[str] = None,
-        fragment: Optional[str] = None,
+        port: str | None = None,
+        path: str | None = None,
+        query: str | None = None,
+        fragment: str | None = None,
         **_kwargs: str,
     ) -> str:
         parts = Parts(
@@ -147,7 +147,7 @@ class MultiHostUrl(MultiHostDsn):
 
 
 class NoSchemeMultiHostUrl(MultiHostUrl):
-    def __new__(cls, url: Optional[str], **kwargs) -> object:
+    def __new__(cls, url: str | None, **kwargs) -> object:
         _url = cls.build(**kwargs) if url is None else url
         _url = _url.split("://")[1] if "://" in _url else _url
         return super().__new__(cls, _url, **kwargs)

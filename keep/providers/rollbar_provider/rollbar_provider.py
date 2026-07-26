@@ -4,7 +4,7 @@ RollbarProvider is a class that allows to install webhooks and get alerts in Rol
 
 import dataclasses
 import datetime
-from typing import List
+from typing import ClassVar
 from urllib.parse import urljoin
 
 import pydantic
@@ -34,16 +34,16 @@ class RollbarProviderAuthConfig:
 
 class RollbarProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Rollbar"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
-    PROVIDER_SCOPES = [
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="User is Authenticated",
         ),
     ]
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "warning": AlertSeverity.WARNING,
         "error": AlertSeverity.HIGH,
         "info": AlertSeverity.INFO,
@@ -108,7 +108,7 @@ class RollbarProvider(BaseProvider):
 
         return scopes
 
-    def __get_occurences(self) -> List[AlertDto]:
+    def __get_occurences(self) -> list[AlertDto]:
         try:
             response = requests.get(
                 self.__get_url("instances"), headers=self.__get_headers()
@@ -142,7 +142,7 @@ class RollbarProvider(BaseProvider):
             self.logger.error("Error getting occurrences from Rollbar: %s", e)
             raise Exception(f"Error getting occurrences from Rollbar: {e}")
 
-    def _get_alerts(self) -> List[AlertDto]:
+    def _get_alerts(self) -> list[AlertDto]:
         alerts = []
         try:
             self.logger.info("Collecting alerts (occurrences) from Rollbar")

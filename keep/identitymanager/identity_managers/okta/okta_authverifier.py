@@ -12,41 +12,48 @@ logger = logging.getLogger(__name__)
 # Define constant locally instead of importing it
 DEFAULT_ROLE_NAME = "noc"  # Default role name for user access
 
+
 class OktaAuthVerifier(AuthVerifierBase):
     """Handles authentication and authorization for Okta"""
 
-    def __init__(self, scopes: list[str] = []) -> None:
+    def __init__(self, scopes: list[str] | None = None) -> None:
+        if scopes is None:
+            scopes = []
         super().__init__(scopes)
         self.okta_issuer = os.environ.get("OKTA_ISSUER")
         self.okta_audience = os.environ.get("OKTA_AUDIENCE")
         self.okta_client_id = os.environ.get("OKTA_CLIENT_ID")
         self.jwks_url = os.environ.get("OKTA_JWKS_URL")
-        
+
         # If no explicit JWKS URL is provided, we need an issuer to construct it
         if not self.jwks_url and not self.okta_issuer:
-            raise Exception("Missing both OKTA_JWKS_URL and OKTA_ISSUER environment variables")
-        
+            raise Exception(
+                "Missing both OKTA_JWKS_URL and OKTA_ISSUER environment variables"
+            )
+
         # Remove trailing slash if present on issuer
         if self.okta_issuer and self.okta_issuer.endswith("/"):
             self.okta_issuer = self.okta_issuer[:-1]
-            
+
         # Initialize JWKS client - prefer direct JWKS URL if available
         if not self.jwks_url:
             self.jwks_url = f"{self.okta_issuer}/.well-known/jwks.json"
-        
+
         # At this point, self.jwks_url is guaranteed to be a string
         assert self.jwks_url is not None
         self.jwks_client = jwt.PyJWKClient(self.jwks_url)
         logger.info(f"Initialized JWKS client with URL: {self.jwks_url}")
 
-    def _verify_bearer_token(self, token: str = Depends(oauth2_scheme)) -> AuthenticatedEntity:
+    def _verify_bearer_token(
+        self, token: str = Depends(oauth2_scheme)
+    ) -> AuthenticatedEntity:
         if not token:
             raise HTTPException(status_code=401, detail="No token provided")
-        
+
         try:
             # Get the signing key directly from the JWT
             signing_key = self.jwks_client.get_signing_key_from_jwt(token).key
-            
+
             # Decode and verify the token
             payload = jwt.decode(
                 token,
@@ -54,28 +61,34 @@ class OktaAuthVerifier(AuthVerifierBase):
                 algorithms=["RS256"],
                 audience=self.okta_audience or self.okta_client_id,
                 issuer=self.okta_issuer,
-                options={"verify_exp": True}
+                options={"verify_exp": True},
             )
-            
+
             # Extract user info from token with simplified role handling
-            tenant_id = payload.get("keep_tenant_id", "keep")  # Default to 'keep' if not specified
-            email = payload.get("email") or payload.get("sub") or payload.get("preferred_username")
-            
+            tenant_id = payload.get(
+                "keep_tenant_id", "keep"
+            )  # Default to 'keep' if not specified
+            email = (
+                payload.get("email")
+                or payload.get("sub")
+                or payload.get("preferred_username")
+            )
+
             # Look for role in standard locations with a default of "user"
             groups = payload.get("groups", [])
             role_name = (
-                payload.get("keep_role") or 
-                payload.get("role") or
-                (groups[0] if groups else None) or
-                DEFAULT_ROLE_NAME  # Use constant for consistency
+                payload.get("keep_role")
+                or payload.get("role")
+                or (groups[0] if groups else None)
+                or DEFAULT_ROLE_NAME  # Use constant for consistency
             )
-            
+
             org_id = payload.get("org_id")
             org_realm = payload.get("org_realm")
-            
+
             if not email:
                 raise HTTPException(status_code=401, detail="No email in token")
-            
+
             logger.info(f"Successfully verified token for user with email: {email}")
             return AuthenticatedEntity(
                 tenant_id=tenant_id,
@@ -83,18 +96,22 @@ class OktaAuthVerifier(AuthVerifierBase):
                 role=role_name,
                 org_id=org_id,
                 org_realm=org_realm,
-                token=token
+                token=token,
             )
-            
+
         except jwt.exceptions.InvalidKeyError as e:
-            logger.error(f"Invalid key error during token validation: {str(e)}")
-            raise HTTPException(status_code=401, detail="Invalid signing key - token validation failed")
+            logger.error(f"Invalid key error during token validation: {e!s}")
+            raise HTTPException(
+                status_code=401, detail="Invalid signing key - token validation failed"
+            )
         except jwt.ExpiredSignatureError:
             logger.warning("Token has expired")
             raise HTTPException(status_code=401, detail="Token has expired")
         except jwt.InvalidTokenError as e:
-            logger.warning(f"Invalid token: {str(e)}")
-            raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+            logger.warning(f"Invalid token: {e!s}")
+            raise HTTPException(status_code=401, detail=f"Invalid token: {e!s}")
         except Exception as e:
             logger.exception("Failed to validate token")
-            raise HTTPException(status_code=401, detail=f"Token validation failed: {str(e)}") 
+            raise HTTPException(
+                status_code=401, detail=f"Token validation failed: {e!s}"
+            )

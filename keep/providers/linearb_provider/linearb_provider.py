@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import json
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -30,8 +31,8 @@ class LinearbProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "LinearB"
     LINEARB_API = "https://public-api.linearb.io"
-    PROVIDER_CATEGORY = ["Developer Tools"]
-    PROVIDER_SCOPES = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Developer Tools"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="any", description="A way to validate the provider", mandatory=True
         )
@@ -62,7 +63,6 @@ class LinearbProvider(BaseProvider):
         """
         No need to dispose of anything.
         """
-        pass
 
     def _notify(
         self,
@@ -199,7 +199,9 @@ class LinearbProvider(BaseProvider):
                         "At least 1 team is required for creating an incident"
                     )
 
-                issued_at = issued_at or datetime.datetime.now().isoformat()
+                issued_at = (
+                    issued_at or datetime.datetime.now(tz=datetime.UTC).isoformat()
+                )
 
                 payload = {
                     "provider_id": incident_id,
@@ -275,6 +277,6 @@ if __name__ == "__main__":
         title="Test",
         teams='["All Contributors"]',
         repository_urls='["https://www.keephq.dev"]',
-        started_at=datetime.datetime.now().isoformat(),
+        started_at=datetime.datetime.now(tz=datetime.UTC).isoformat(),
         should_delete="true",
     )

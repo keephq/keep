@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import ClassVar
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
@@ -31,32 +31,32 @@ class TopologyApplication(SQLModel, table=True):
     name: str
     description: str = Field(default_factory=str)
     repository: str = Field(default_factory=str)
-    services: List["TopologyService"] = Relationship(
+    services: list["TopologyService"] = Relationship(
         back_populates="applications", link_model=TopologyServiceApplication
     )
 
 
 class TopologyService(SQLModel, table=True):
-    id: Optional[int] = Field(primary_key=True, default=None)
+    id: int | None = Field(primary_key=True, default=None)
     tenant_id: str = Field(sa_column=Column(ForeignKey("tenant.id")))
     source_provider_id: str = "unknown"
-    repository: Optional[str]
-    tags: Optional[List[str]] = Field(sa_column=Column(JSON))
+    repository: str | None
+    tags: list[str] | None = Field(sa_column=Column(JSON))
     service: str
     environment: str = Field(default="unknown")
     display_name: str
-    description: Optional[str]
-    team: Optional[str]
-    email: Optional[str]
-    slack: Optional[str]
-    ip_address: Optional[str] = None
-    mac_address: Optional[str] = None
-    category: Optional[str] = None
-    manufacturer: Optional[str] = None
-    namespace: Optional[str] = None
-    is_manual: Optional[bool] = False
+    description: str | None
+    team: str | None
+    email: str | None
+    slack: str | None
+    ip_address: str | None = None
+    mac_address: str | None = None
+    category: str | None = None
+    manufacturer: str | None = None
+    namespace: str | None = None
+    is_manual: bool | None = False
 
-    updated_at: Optional[datetime] = Field(
+    updated_at: datetime | None = Field(
         sa_column=Column(
             DateTime(timezone=True),
             name="updated_at",
@@ -65,7 +65,7 @@ class TopologyService(SQLModel, table=True):
         )
     )
 
-    dependencies: List["TopologyServiceDependency"] = Relationship(
+    dependencies: list["TopologyServiceDependency"] = Relationship(
         back_populates="service",
         sa_relationship_kwargs={
             "foreign_keys": "[TopologyServiceDependency.service_id]",
@@ -73,25 +73,30 @@ class TopologyService(SQLModel, table=True):
         },
     )
 
-    applications: List[TopologyApplication] = Relationship(
+    applications: list[TopologyApplication] = Relationship(
         back_populates="services", link_model=TopologyServiceApplication
     )
 
     class Config:
         orm_mode = True
-        unique_together = ["tenant_id", "service", "environment", "source_provider_id"]
+        unique_together: ClassVar[list[str]] = [
+            "tenant_id",
+            "service",
+            "environment",
+            "source_provider_id",
+        ]
 
 
 class TopologyServiceDependency(SQLModel, table=True):
-    id: Optional[int] = Field(primary_key=True, default=None)
+    id: int | None = Field(primary_key=True, default=None)
     service_id: int = Field(
         sa_column=Column(ForeignKey("topologyservice.id", ondelete="CASCADE"))
     )
     depends_on_service_id: int = Field(
         sa_column=Column(ForeignKey("topologyservice.id", ondelete="CASCADE"))
     )  # service_id calls deponds_on_service_id (A->B)
-    protocol: Optional[str] = "unknown"
-    updated_at: Optional[datetime] = Field(
+    protocol: str | None = "unknown"
+    updated_at: datetime | None = Field(
         sa_column=Column(
             DateTime(timezone=True),
             name="updated_at",
@@ -114,36 +119,36 @@ class TopologyServiceDependency(SQLModel, table=True):
 
 
 class TopologyServiceDtoBase(BaseModel, extra="ignore"):
-    source_provider_id: Optional[str]
-    repository: Optional[str] = None
-    tags: Optional[List[str]] = None
+    source_provider_id: str | None
+    repository: str | None = None
+    tags: list[str] | None = None
     service: str
     display_name: str
     environment: str = "unknown"
-    description: Optional[str] = None
-    team: Optional[str] = None
-    email: Optional[str] = None
-    slack: Optional[str] = None
-    ip_address: Optional[str] = None
-    mac_address: Optional[str] = None
-    category: Optional[str] = None
-    manufacturer: Optional[str] = None
-    namespace: Optional[str] = None
-    is_manual: Optional[bool] = False
+    description: str | None = None
+    team: str | None = None
+    email: str | None = None
+    slack: str | None = None
+    ip_address: str | None = None
+    mac_address: str | None = None
+    category: str | None = None
+    manufacturer: str | None = None
+    namespace: str | None = None
+    is_manual: bool | None = False
 
 
 class TopologyServiceInDto(TopologyServiceDtoBase):
     dependencies: dict[str, str] = {}  # dict of service it depends on : protocol
-    application_relations: Optional[dict[UUID, str]] = (
+    application_relations: dict[UUID, str] | None = (
         None  # An option field, pass it in the form of {application_id_1: application_name_1, application_id_2: application_name_2, ...} tha t the service belongs to, the process_topology function handles the creation/updation of the application
     )
 
 
 class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
-    id: Optional[str] = None
+    id: str | None = None
     serviceId: str
     serviceName: str
-    protocol: Optional[str] = "unknown"
+    protocol: str | None = "unknown"
 
     @classmethod
     def from_orm(cls, db_dependency: TopologyServiceDependency):
@@ -158,9 +163,9 @@ class TopologyServiceDependencyDto(BaseModel, extra="ignore"):
 class TopologyApplicationDto(BaseModel, extra="ignore"):
     id: UUID
     name: str
-    description: Optional[str] = None
-    repository: Optional[str] = None
-    services: List[TopologyService] = Relationship(
+    description: str | None = None
+    repository: str | None = None
+    services: list[TopologyService] = Relationship(
         back_populates="applications", link_model="TopologyServiceApplication"
     )
 
@@ -170,11 +175,11 @@ class TopologyServiceDtoIn(BaseModel, extra="ignore"):
 
 
 class TopologyApplicationDtoIn(BaseModel, extra="ignore"):
-    id: Optional[UUID] = None
+    id: UUID | None = None
     name: str
     description: str = ""
     repository: str = ""
-    services: List[TopologyServiceDtoIn] = []
+    services: list[TopologyServiceDtoIn] = []
 
 
 class TopologyApplicationServiceDto(BaseModel, extra="ignore"):
@@ -192,7 +197,7 @@ class TopologyApplicationServiceDto(BaseModel, extra="ignore"):
 
 
 class TopologyApplicationDtoOut(TopologyApplicationDto):
-    services: List[TopologyApplicationServiceDto] = []
+    services: list[TopologyApplicationServiceDto] = []
 
     @classmethod
     def from_orm(
@@ -212,13 +217,13 @@ class TopologyApplicationDtoOut(TopologyApplicationDto):
 
 class TopologyServiceDtoOut(TopologyServiceDtoBase):
     id: str
-    dependencies: List[TopologyServiceDependencyDto]
-    application_ids: List[UUID]
-    updated_at: Optional[datetime]
+    dependencies: list[TopologyServiceDependencyDto]
+    application_ids: list[UUID]
+    updated_at: datetime | None
 
     @classmethod
     def from_orm(
-        cls, service: "TopologyService", application_ids: List[UUID]
+        cls, service: "TopologyService", application_ids: list[UUID]
     ) -> "TopologyServiceDtoOut":
         return cls(
             id=str(service.id),
@@ -253,20 +258,20 @@ class TopologyServiceDtoOut(TopologyServiceDtoBase):
 
 
 class TopologyServiceCreateRequestDTO(BaseModel, extra="ignore"):
-    repository: Optional[str] = None
-    tags: Optional[List[str]] = None
+    repository: str | None = None
+    tags: list[str] | None = None
     service: str
     display_name: str
     environment: str = "unknown"
-    description: Optional[str] = None
-    team: Optional[str] = None
-    email: Optional[str] = None
-    slack: Optional[str] = None
-    ip_address: Optional[str] = None
-    mac_address: Optional[str] = None
-    category: Optional[str] = None
-    manufacturer: Optional[str] = None
-    namespace: Optional[str] = None
+    description: str | None = None
+    team: str | None = None
+    email: str | None = None
+    slack: str | None = None
+    ip_address: str | None = None
+    mac_address: str | None = None
+    category: str | None = None
+    manufacturer: str | None = None
+    namespace: str | None = None
 
 
 class TopologyServiceUpdateRequestDTO(TopologyServiceCreateRequestDTO, extra="ignore"):
@@ -276,22 +281,22 @@ class TopologyServiceUpdateRequestDTO(TopologyServiceCreateRequestDTO, extra="ig
 class TopologyServiceDependencyCreateRequestDto(BaseModel, extra="ignore"):
     service_id: int
     depends_on_service_id: int
-    protocol: Optional[str] = "unknown"
+    protocol: str | None = "unknown"
 
 
 class TopologyServiceDependencyUpdateRequestDto(
     TopologyServiceDependencyCreateRequestDto, extra="ignore"
 ):
-    service_id: Optional[int]
-    depends_on_service_id: Optional[int]
+    service_id: int | None
+    depends_on_service_id: int | None
     id: int
 
 
 class DeleteServicesRequest(BaseModel, extra="ignore"):
-    service_ids: List[int]
+    service_ids: list[int]
 
 
 class TopologyServiceYAML(TopologyServiceCreateRequestDTO, extra="ignore"):
     id: int
-    source_provider_id: Optional[str] = None
-    is_manual: Optional[bool] = None
+    source_provider_id: str | None = None
+    is_manual: bool | None = None

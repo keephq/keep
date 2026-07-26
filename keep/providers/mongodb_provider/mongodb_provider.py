@@ -5,6 +5,7 @@ MongodbProvider is a class that provides a way to read data from MySQL.
 import dataclasses
 import json
 import os
+from typing import ClassVar
 
 import pydantic
 from pymongo import MongoClient
@@ -58,9 +59,9 @@ class MongodbProvider(BaseProvider):
     """Enrich alerts with data from MongoDB."""
 
     PROVIDER_DISPLAY_NAME = "MongoDB"
-    PROVIDER_CATEGORY = ["Database"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Database"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="connect_to_server",
             description="The user can connect to the server",
@@ -144,7 +145,7 @@ class MongodbProvider(BaseProvider):
             raise ProviderConfigException("Please provide a value for `host`")
         if not host.strip():
             raise ProviderConfigException("Host cannot be empty")
-        if not (host.startswith("mongodb://") or host.startswith("mongodb+srv://")):
+        if not (host.startswith(("mongodb://", "mongodb+srv://"))):
             host = f"mongodb://{host}"
 
         self.authentication_config = MongodbProviderAuthConfig(
@@ -162,7 +163,7 @@ class MongodbProvider(BaseProvider):
         """
         if isinstance(query, str):
             query = json.loads(query)
-            
+
         client = self.__generate_client()
         database = client[self.authentication_config.database]
         results = list(database.cursor_command(query))

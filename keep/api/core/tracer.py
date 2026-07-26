@@ -1,4 +1,5 @@
-from typing import Optional, Sequence
+from collections.abc import Sequence
+from typing import Optional
 
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import sampling
@@ -28,9 +29,9 @@ class KeepSampler(sampling.Sampler):
         context: Optional["Context"],
         trace_id: int,
         name: str,
-        kind: Optional[SpanKind] = None,
+        kind: SpanKind | None = None,
         attributes: Attributes = None,
-        links: Optional[Sequence["Link"]] = None,
+        links: Sequence["Link"] | None = None,
         trace_state: Optional["TraceState"] = None,
     ):
         # For SQL operations

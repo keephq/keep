@@ -6,6 +6,7 @@ import dataclasses
 import datetime
 import logging
 import os
+from typing import ClassVar
 from uuid import uuid4
 
 import pydantic
@@ -50,7 +51,7 @@ class ParseableProviderAuthConfig:
 class ParseableProvider(BaseProvider):
     """Parseable provider to ingest data from Parseable."""
 
-    PROVIDER_CATEGORY = ["Monitoring"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
     webhook_description = "This is an example of how to configure an alert to be sent to Keep using Parseable's webhook feature. Post this to https://YOUR_PARSEABLE_SERVER/api/v1/logstream/YOUR_STREAM_NAME/alert"
     webhook_template = """{{
     "version": "v1",
@@ -83,14 +84,14 @@ class ParseableProvider(BaseProvider):
     ]
 }}"""
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "disaster": AlertSeverity.CRITICAL,
         "high": AlertSeverity.HIGH,
         "average": AlertSeverity.WARNING,
         "low": AlertSeverity.LOW,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "firing": AlertStatus.FIRING,
         "resolved": AlertStatus.RESOLVED,
         "acknowledged": AlertStatus.ACKNOWLEDGED,
@@ -107,7 +108,6 @@ class ParseableProvider(BaseProvider):
         """
         Dispose the provider.
         """
-        pass
 
     def validate_config(self):
         """
@@ -133,7 +133,9 @@ class ParseableProvider(BaseProvider):
             event.pop("severity", "").lower(), AlertSeverity.INFO
         )
 
-        lastReceived = event.pop("last_received", datetime.datetime.now().isoformat())
+        lastReceived = event.pop(
+            "last_received", datetime.datetime.now(tz=datetime.UTC).isoformat()
+        )
         decription = event.pop("failing_condition", "")
         tags = event.get("tags", {})
         if isinstance(tags, dict):

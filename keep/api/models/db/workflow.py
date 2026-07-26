@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import TEXT, DateTime, Index, PrimaryKeyConstraint, func
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, UniqueConstraint
@@ -13,11 +12,11 @@ class Workflow(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     name: str = Field(sa_column=Column(TEXT))
-    description: Optional[str]
+    description: str | None
     created_by: str = Field(sa_column=Column(TEXT))
-    updated_by: Optional[str] = None
+    updated_by: str | None = None
     creation_time: datetime = Field(default_factory=datetime.utcnow)
-    interval: Optional[int]
+    interval: int | None
     workflow_raw: str = Field(sa_column=Column(TEXT))
     is_deleted: bool = Field(default=False)
     is_disabled: bool = Field(default=False)
@@ -32,11 +31,11 @@ class Workflow(SQLModel, table=True):
         )
     )
     provisioned: bool = Field(default=False)
-    provisioned_file: Optional[str] = None
+    provisioned_file: str | None = None
     is_test: bool = Field(default=False)
 
-    executions: List["WorkflowExecution"] = Relationship(back_populates="workflow")
-    versions: List["WorkflowVersion"] = Relationship(back_populates="workflow")
+    executions: list["WorkflowExecution"] = Relationship(back_populates="workflow")
+    versions: list["WorkflowVersion"] = Relationship(back_populates="workflow")
 
     class Config:
         orm_mode = True
@@ -60,10 +59,10 @@ class WorkflowVersion(SQLModel, table=True):
     )
     is_valid: bool = Field(default=False)
     is_current: bool = Field(default=False)
-    comment: Optional[str] = None
+    comment: str | None = None
 
     workflow: "Workflow" = Relationship(back_populates="versions")
-    executions: List["WorkflowExecution"] = Relationship(
+    executions: list["WorkflowExecution"] = Relationship(
         back_populates="version",
         sa_relationship_kwargs={
             "primaryjoin": "and_(WorkflowVersion.workflow_id == WorkflowExecution.workflow_id, "
@@ -136,8 +135,8 @@ class WorkflowExecution(SQLModel, table=True):
         default_factory=lambda: int(datetime.utcnow().timestamp() / 120)
     )
     execution_number: int
-    error: Optional[str] = Field(max_length=10240)
-    execution_time: Optional[int]
+    error: str | None = Field(max_length=10240)
+    execution_time: int | None
     results: dict = Field(sa_column=Column(JSON), default={})
     is_test_run: bool = Field(default=False)
 
@@ -155,7 +154,7 @@ class WorkflowExecution(SQLModel, table=True):
         },
     )
 
-    logs: List["WorkflowExecutionLog"] = Relationship(
+    logs: list["WorkflowExecutionLog"] = Relationship(
         back_populates="workflowexecution"
     )
     workflow_to_alert_execution: "WorkflowToAlertExecution" = Relationship(
@@ -173,7 +172,7 @@ class WorkflowToAlertExecution(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("workflow_execution_id", "alert_fingerprint"),)
 
     # https://sqlmodel.tiangolo.com/tutorial/automatic-id-none-refresh/
-    id: Optional[int] = Field(primary_key=True, default=None)
+    id: int | None = Field(primary_key=True, default=None)
     workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
     alert_fingerprint: str
     event_id: str | None
@@ -186,7 +185,7 @@ class WorkflowToIncidentExecution(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("workflow_execution_id", "incident_id"),)
 
     # https://sqlmodel.tiangolo.com/tutorial/automatic-id-none-refresh/
-    id: Optional[int] = Field(primary_key=True, default=None)
+    id: int | None = Field(primary_key=True, default=None)
     workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
     incident_id: str | None
     workflow_execution: WorkflowExecution = Relationship(
@@ -199,7 +198,7 @@ class WorkflowExecutionLog(SQLModel, table=True):
     workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
     timestamp: datetime
     message: str = Field(sa_column=Column(TEXT))
-    workflowexecution: Optional[WorkflowExecution] = Relationship(back_populates="logs")
+    workflowexecution: WorkflowExecution | None = Relationship(back_populates="logs")
     context: dict = Field(sa_column=Column(JSON))
 
     class Config:

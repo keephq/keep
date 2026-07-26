@@ -8,7 +8,6 @@ import os
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from copy import deepcopy
-from typing import List, Optional
 
 import celpy
 from arq import ArqRedis
@@ -30,22 +29,20 @@ from keep.api.core.alerts import (
 from keep.api.core.cel_to_sql.sql_providers.base import CelToSqlException
 from keep.api.core.config import config
 from keep.api.core.db import dismiss_error_alerts as dismiss_error_alerts_db
-from keep.api.core.db import enrich_alerts_with_incidents
-from keep.api.core.db import get_alert_audit as get_alert_audit_db
 from keep.api.core.db import (
+    enrich_alerts_with_incidents,
     get_alerts_by_fingerprint,
     get_alerts_by_ids,
     get_alerts_metrics_by_provider,
     get_enrichment,
-)
-from keep.api.core.db import get_error_alerts as get_error_alerts_db
-from keep.api.core.db import (
     get_last_alerts,
     get_last_alerts_by_fingerprints,
     get_provider_by_name,
     get_session,
     is_all_alerts_resolved,
 )
+from keep.api.core.db import get_alert_audit as get_alert_audit_db
+from keep.api.core.db import get_error_alerts as get_error_alerts_db
 from keep.api.core.dependencies import extract_generic_body, get_pusher_client
 from keep.api.core.elastic import ElasticClient
 from keep.api.core.metrics import running_tasks_by_process_gauge, running_tasks_gauge
@@ -116,7 +113,7 @@ def fetch_alert_facet_options(
         )
     except CelToSqlException as e:
         logger.exception(
-            f'Error parsing CEL expression "{facet_options_query.cel}". {str(e)}'
+            f'Error parsing CEL expression "{facet_options_query.cel}". {e!s}'
         )
         raise HTTPException(
             status_code=400,
@@ -224,7 +221,7 @@ def query_alerts(
     try:
         db_alerts, total_count = query_last_alerts(tenant_id=tenant_id, query=query)
     except CelToSqlException as e:
-        logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
+        logger.exception(f'Error parsing CEL expression "{query.cel}". {e!s}')
         raise HTTPException(
             status_code=400, detail=f"Error parsing CEL expression: {query.cel}"
         ) from e
@@ -440,7 +437,11 @@ def assign_alert(
 
     # Store the most recent assignee as a flat field so the facet/filter system
     # can query it directly (the nested "assignees" dict is not queryable by facets).
-    flat_assignee = next(iter(reversed(assignees_last_receievd.values())), None) if assignees_last_receievd else None
+    flat_assignee = (
+        next(iter(reversed(assignees_last_receievd.values())), None)
+        if assignees_last_receievd
+        else None
+    )
 
     enrichments = {"assignees": assignees_last_receievd, "assignee": flat_assignee}
     if not status:
@@ -837,7 +838,7 @@ def batch_enrich_alerts(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    dispose_on_new_alert: Optional[bool] = Query(
+    dispose_on_new_alert: bool | None = Query(
         False, description="Dispose on new alert"
     ),
     session: Session = Depends(get_session),
@@ -902,9 +903,7 @@ def batch_enrich_alerts(
                 },
             )
         except CelToSqlException as e:
-            logger.exception(
-                f'Error parsing CEL expression "{enrich_data.cel}". {str(e)}'
-            )
+            logger.exception(f'Error parsing CEL expression "{enrich_data.cel}". {e!s}')
             raise HTTPException(
                 status_code=400,
                 detail=f"Error parsing CEL expression: {enrich_data.cel}",
@@ -983,7 +982,6 @@ def batch_enrich_alerts(
             logger.info("Pushed enriched alerts to elasticsearch")
         except Exception:
             logger.exception("Failed to push alerts to elasticsearch")
-            pass
 
         # use pusher to push the enriched alert to the client
         pusher_client = get_pusher_client()
@@ -998,7 +996,6 @@ def batch_enrich_alerts(
                 logger.info("Told client to poll alerts")
             except Exception:
                 logger.exception("Failed to tell client to poll alerts")
-                pass
 
         logger.info(
             "Alerts batch enriched successfully",
@@ -1049,7 +1046,7 @@ def enrich_alert(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
-    dispose_on_new_alert: Optional[bool] = Query(
+    dispose_on_new_alert: bool | None = Query(
         False, description="Dispose on new alert"
     ),
     session: Session = Depends(get_session),
@@ -1139,7 +1136,6 @@ def _enrich_alert(
             logger.info("Pushed enriched alert to elasticsearch")
         except Exception:
             logger.exception("Failed to push alert to elasticsearch")
-            pass
         # use pusher to push the enriched alert to the client
         pusher_client = get_pusher_client()
         if pusher_client:
@@ -1157,7 +1153,6 @@ def _enrich_alert(
                 logger.info("Told client to poll alerts")
             except Exception:
                 logger.exception("Failed to tell client to poll alerts")
-                pass
         logger.info(
             "Alert enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
@@ -1261,7 +1256,6 @@ def unenrich_alert(
             logger.info("Pushed un-enriched alert to elasticsearch")
         except Exception:
             logger.exception("Failed to push alert to elasticsearch")
-            pass
         # use pusher to push the enriched alert to the client
         if pusher_client:
             logger.info("Telling client to poll alerts")
@@ -1278,7 +1272,6 @@ def unenrich_alert(
                 logger.info("Told client to poll alerts")
             except Exception:
                 logger.exception("Failed to tell client to poll alerts")
-                pass
         logger.info(
             "Alert un-enriched successfully",
             extra={"fingerprint": enrich_data.fingerprint, "tenant_id": tenant_id},
@@ -1396,7 +1389,7 @@ def get_alert_quality(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
     time_stamp: TimeStampFilter = Depends(get_time_stamp_filter),
-    fields: Optional[List[str]] = Query([]),
+    fields: list[str] | None = Query([]),
 ):
     logger.info(
         "Fetching alert quality metrics per provider",

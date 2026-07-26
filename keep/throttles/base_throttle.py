@@ -1,6 +1,7 @@
 """
 Base class for all conditions.
 """
+
 import abc
 import logging
 

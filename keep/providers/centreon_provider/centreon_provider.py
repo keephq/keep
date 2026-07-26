@@ -4,6 +4,7 @@ Centreon is a class that provides a set of methods to interact with the Centreon
 
 import dataclasses
 import datetime
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -42,9 +43,9 @@ class CentreonProviderAuthConfig:
 
 class CentreonProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Centreon"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
-    PROVIDER_SCOPES = [
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(name="authenticated", description="User is authenticated"),
     ]
 
@@ -53,13 +54,13 @@ class CentreonProvider(BaseProvider):
   https://docs.centreon.com/docs/api/rest-api-v1/#realtime-information
   """
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         2: AlertStatus.FIRING,
         3: AlertStatus.FIRING,
         0: AlertStatus.RESOLVED,
     }
 
-    SEVERITY_MAP = {
+    SEVERITY_MAP: ClassVar[dict[str, str]] = {
         "CRITICAL": AlertSeverity.CRITICAL,
         "WARNING": AlertSeverity.WARNING,
         "UNKNOWN": AlertSeverity.INFO,

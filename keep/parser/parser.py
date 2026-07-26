@@ -1,10 +1,10 @@
 import copy
 import json
+import keyword
 import logging
 import os
 import re
 import typing
-import keyword
 
 from keep.actions.actions_factory import ActionsCRUD
 from keep.api.core.config import config
@@ -57,12 +57,12 @@ class Parser:
         self,
         tenant_id,
         parsed_workflow_yaml: dict,
-        providers_file: str = None,
-        actions_file: str = None,
-        workflow_db_id: str = None,
-        workflow_revision: int = None,
+        providers_file: str | None = None,
+        actions_file: str | None = None,
+        workflow_db_id: str | None = None,
+        workflow_revision: int | None = None,
         is_test: bool = False,
-    ) -> typing.List[Workflow]:
+    ) -> list[Workflow]:
         """_summary_
 
         Args:
@@ -148,11 +148,11 @@ class Parser:
         tenant_id,
         workflow: dict,
         providers_file: str,
-        workflow_revision: int = None,
-        workflow_providers: dict = None,
-        actions_file: str = None,
-        workflow_actions: dict = None,
-        workflow_db_id: str = None,
+        workflow_revision: int | None = None,
+        workflow_providers: dict | None = None,
+        actions_file: str | None = None,
+        workflow_actions: dict | None = None,
+        workflow_db_id: str | None = None,
         is_test: bool = False,
     ) -> Workflow:
         self.logger.debug("Parsing workflow")
@@ -226,7 +226,7 @@ class Parser:
         context_manager: ContextManager,
         workflow: dict,
         providers_file: str,
-        workflow_providers: dict = None,
+        workflow_providers: dict | None = None,
     ):
         self.logger.debug("Parsing providers")
         providers_file = (
@@ -244,7 +244,7 @@ class Parser:
         self.logger.debug("Providers parsed and loaded successfully")
 
     def _load_providers_from_db(
-        self, context_manager: ContextManager, tenant_id: str = None
+        self, context_manager: ContextManager, tenant_id: str | None = None
     ):
         """_summary_
 
@@ -274,8 +274,8 @@ class Parser:
             self.logger.debug("Using cached loaded providers")
             # before we can use cache, we need to check if new providers are added or deleted
             _installed_providers = get_installed_providers(tenant_id=tenant_id)
-            _installed_providers_ids = set([p.id for p in _installed_providers])
-            _cached_provider_ids = set([p.id for p in self._loaded_providers_cache])
+            _installed_providers_ids = {p.id for p in _installed_providers}
+            _cached_provider_ids = {p.id for p in self._loaded_providers_cache}
             if _installed_providers_ids != _cached_provider_ids:
                 # this should print only when provider deleted/added
                 self.logger.info("Providers cache is outdated, reloading providers")
@@ -337,7 +337,7 @@ class Parser:
                     "Error parsing providers from KEEP_PROVIDERS environment variable"
                 )
 
-        for env in os.environ.keys():
+        for env in os.environ:
             if env.startswith("KEEP_PROVIDER_"):
                 # KEEP_PROVIDER_SLACK_PROD
                 provider_name = (
@@ -403,11 +403,11 @@ class Parser:
             raise ValueError("Workflow ID is required")
         return workflow_id
 
-    def _parse_owners(self, workflow) -> typing.List[str]:
+    def _parse_owners(self, workflow) -> list[str]:
         workflow_owners = workflow.get("owners", [])
         return workflow_owners
 
-    def _parse_tags(self, workflow) -> typing.List[str]:
+    def _parse_tags(self, workflow) -> list[str]:
         workflow_tags = workflow.get("tags", [])
         return workflow_tags
 
@@ -451,13 +451,8 @@ class Parser:
     @staticmethod
     def parse_disabled(workflow_dict: dict) -> bool:
         workflow_is_disabled_in_yml = workflow_dict.get("disabled")
-        return (
-            True
-            if (
-                workflow_is_disabled_in_yml == "true"
-                or workflow_is_disabled_in_yml is True
-            )
-            else False
+        return bool(
+            workflow_is_disabled_in_yml == "true" or workflow_is_disabled_in_yml is True
         )
 
     @staticmethod
@@ -492,7 +487,7 @@ class Parser:
         workflow_id: str | None = None,
         workflow_description: str | None = None,
         workflow_db_id: str | None = None,
-    ) -> typing.List[Step]:
+    ) -> list[Step]:
         self.logger.debug("Parsing steps")
         workflow_steps = workflow.get("steps", [])
         workflow_steps_parsed = []
@@ -568,7 +563,7 @@ class Parser:
         context_manager: ContextManager,
         workflow: dict,
         actions_file: str,
-        workflow_actions: dict = None,
+        workflow_actions: dict | None = None,
     ):
         self.logger.debug("Parsing actions")
         actions_file = (
@@ -603,7 +598,7 @@ class Parser:
                     )
 
     def _load_actions_from_db(
-        self, context_manager: ContextManager, tenant_id: str = None
+        self, context_manager: ContextManager, tenant_id: str | None = None
     ):
         # If there is no tenant id, e.g. running from CLI, no db here
         if not tenant_id:
@@ -680,7 +675,7 @@ class Parser:
         workflow_id: str | None = None,
         workflow_description: str | None = None,
         workflow_db_id: str | None = None,
-    ) -> typing.List[Step]:
+    ) -> list[Step]:
         self.logger.debug("Parsing actions")
         workflow_actions_raw = workflow.get("actions", [])
         workflow_actions = self._merge_action_by_use(
@@ -702,7 +697,7 @@ class Parser:
         return workflow_actions_parsed
 
     def _load_actions_from_file(
-        self, actions_file: typing.Optional[str]
+        self, actions_file: str | None
     ) -> typing.Mapping[str, dict]:
         """load actions from file and convert results into a set of unique actions by id"""
         actions_set = {}
@@ -732,7 +727,7 @@ class Parser:
 
     def _merge_action_by_use(
         self,
-        workflow_actions: typing.List[dict],
+        workflow_actions: list[dict],
         actions_context: typing.Mapping[str, dict],
     ) -> typing.Iterable[dict]:
         """Merge actions from workflow and reusable actions file into one"""

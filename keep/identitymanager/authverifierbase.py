@@ -1,6 +1,5 @@
 import datetime
 import logging
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import (
@@ -63,7 +62,9 @@ class AuthVerifierBase:
 
     """
 
-    def __init__(self, scopes: list[str] = []) -> None:
+    def __init__(self, scopes: list[str] | None = None) -> None:
+        if scopes is None:
+            scopes = []
         ALL_RESOURCES.update([scope.split(":")[1] for scope in scopes])
         self.scopes = scopes
         self.logger = logging.getLogger(__name__)
@@ -99,9 +100,9 @@ class AuthVerifierBase:
     def __call__(
         self,
         request: Request,
-        api_key: Optional[str] = Security(auth_header),
-        authorization: Optional[HTTPAuthorizationCredentials] = Security(http_basic),
-        token: Optional[str] = Depends(oauth2_scheme),
+        api_key: str | None = Security(auth_header),
+        authorization: HTTPAuthorizationCredentials | None = Security(http_basic),
+        token: str | None = Depends(oauth2_scheme),
         body: dict | bytes | FormData = Depends(extract_generic_body),
     ) -> AuthenticatedEntity:
         """
@@ -122,14 +123,16 @@ class AuthVerifierBase:
         self.logger.debug("Starting authentication process")
         if self.read_only and api_key not in self.read_only_bypass_keys:
             # check if the scopes have scopes other than only read
-            if any([scope.split(":")[0] != "read" for scope in self.scopes]):
+            if any(scope.split(":")[0] != "read" for scope in self.scopes):
                 self.logger.error("Read only instance, but non-read scopes requested")
                 raise HTTPException(
                     status_code=403,
                     detail="Read only instance, but non-read scopes requested",
                 )
 
-        authenticated_entity = self.authenticate(request, api_key, authorization, token, body)
+        authenticated_entity = self.authenticate(
+            request, api_key, authorization, token, body
+        )
         self.logger.debug(
             f"Authentication successful for entity: {authenticated_entity}"
         )
@@ -143,10 +146,10 @@ class AuthVerifierBase:
     def authenticate(
         self,
         request: Request,
-        api_key: Optional[str],
-        authorization: Optional[HTTPAuthorizationCredentials],
-        token: Optional[str],
-        body: Optional[dict | bytes | FormData] = None,
+        api_key: str | None,
+        authorization: HTTPAuthorizationCredentials | None,
+        token: str | None,
+        body: dict | bytes | FormData | None = None,
     ) -> AuthenticatedEntity:
         """
         Authenticate the request using either token, API key, or HTTP basic auth.
@@ -198,7 +201,7 @@ class AuthVerifierBase:
             extra={
                 "headers": request.headers,
                 "body": body,
-            }
+            },
         )
         raise HTTPException(
             status_code=401, detail="Missing authentication credentials"
@@ -260,9 +263,7 @@ class AuthVerifierBase:
         api_key = api_key or request.query_params.get("api_key", None)
         if not api_key:
             if self.allow_mesh_alert_ingestion and "/alerts/event" in request.url.path:
-                service_name = request.headers.get(
-                    "X-Service-Name", "unknown"
-                )
+                service_name = request.headers.get("X-Service-Name", "unknown")
                 self.logger.info(
                     "Allowing service alert ingestion from %s on %s",
                     service_name,
@@ -281,7 +282,6 @@ class AuthVerifierBase:
                 and "Amazon Simple Notification Service Agent"
                 in request.headers.get("user-agent", "")
             ):
-
                 self.logger.warning("Got an SNS request without any auth")
                 allow_unauth = config("KEEP_CLOUDWATCH_DISABLE_API_KEY", default=False)
                 if allow_unauth and request.url.path.endswith(
@@ -368,7 +368,7 @@ class AuthVerifierBase:
                 if self.key_last_used_updates[
                     f"{tenant_api_key.tenant_id}:{tenant_api_key.reference_id}"
                 ] > (
-                    datetime.datetime.now()
+                    datetime.datetime.now(tz=datetime.UTC)
                     - datetime.timedelta(seconds=self.update_key_interval)
                 ):
                     self.logger.debug(
@@ -381,7 +381,7 @@ class AuthVerifierBase:
                 )
                 self.key_last_used_updates[
                     f"{tenant_api_key.tenant_id}:{tenant_api_key.reference_id}"
-                ] = datetime.datetime.now()
+                ] = datetime.datetime.now(tz=datetime.UTC)
             self.logger.debug("Successfully updated API Key last used")
         except Exception:
             self.logger.exception("Failed to update API Key last used")
@@ -446,8 +446,7 @@ class AuthVerifierBase:
             role: The role of the user to create.
         """
         raise NotImplementedError(
-            "User provisioning not implemented"
-            " for {}".format(self.__class__.__name__)
+            f"User provisioning not implemented for {self.__class__.__name__}"
         )
 
     def _verify_bearer_token(self, token: str) -> AuthenticatedEntity:
@@ -466,5 +465,5 @@ class AuthVerifierBase:
         self.logger.error("_verify_bearer_token() method not implemented")
         raise NotImplementedError(
             "_verify_bearer_token() method not implemented"
-            " for {}".format(self.__class__.__name__)
+            f" for {self.__class__.__name__}"
         )

@@ -1,4 +1,5 @@
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 
@@ -20,7 +21,7 @@ class SalesforceProviderAuthConfig:
 
 class SalesforceProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "Salesforce"
-    PROVIDER_CATEGORY = ["CRM"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["CRM"]
     PROVIDER_COMING_SOON = True
 
     def __init__(
@@ -37,4 +38,3 @@ class SalesforceProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass

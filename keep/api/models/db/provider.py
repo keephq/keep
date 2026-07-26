@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import ClassVar
 
 from sqlalchemy import TEXT, UniqueConstraint
 from sqlmodel import JSON, Column, Field, ForeignKey, Index, SQLModel
@@ -11,7 +11,7 @@ class Provider(SQLModel, table=True):
     id: str = Field(default=None, primary_key=True)
     tenant_id: str = Field(foreign_key="tenant.id")
     name: str
-    description: Optional[str]
+    description: str | None
     type: str
     installed_by: str
     installation_time: datetime
@@ -21,7 +21,7 @@ class Provider(SQLModel, table=True):
     )  # scope name is key and value is either True if validated or string with error message, e.g: {"read": True, "write": "error message"}
     consumer: bool = False
     pulling_enabled: bool = True
-    last_pull_time: Optional[datetime]
+    last_pull_time: datetime | None
     provisioned: bool = Field(default=False)
     provider_metadata: dict = Field(
         sa_column=Column(JSON)
@@ -29,7 +29,7 @@ class Provider(SQLModel, table=True):
 
     class Config:
         orm_mode = True
-        unique_together = ["tenant_id", "name"]
+        unique_together: ClassVar[list[str]] = ["tenant_id", "name"]
 
 
 class ProviderExecutionLog(SQLModel, table=True):
@@ -48,7 +48,7 @@ class ProviderExecutionLog(SQLModel, table=True):
     log_message: str = Field(sa_column=Column(TEXT))
     log_level: str = Field(default="INFO")  # INFO, WARNING, ERROR, DEBUG
     context: dict = Field(sa_column=Column(JSON), default={})
-    execution_id: Optional[str] = None  # To group related logs together
+    execution_id: str | None = None  # To group related logs together
 
     class Config:
         orm_mode = True

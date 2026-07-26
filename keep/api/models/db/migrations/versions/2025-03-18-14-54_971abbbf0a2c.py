@@ -119,7 +119,7 @@ def upgrade() -> None:
                 "workflowexecution (workflow_id, tenant_id, started, status)"
             )
         except Exception as e:
-            print(f"Note: Index creation skipped - {str(e)}")
+            print(f"Note: Index creation skipped - {e!s}")
 
         # Add the foreign key back
         try:
@@ -128,7 +128,7 @@ def upgrade() -> None:
                 "FOREIGN KEY (workflow_id) REFERENCES workflow(id) ON DELETE SET DEFAULT"
             )
         except Exception as e:
-            print(f"Note: Foreign key creation skipped - {str(e)}")
+            print(f"Note: Foreign key creation skipped - {e!s}")
     else:
         # For non-PostgreSQL databases, use the original approach
         with op.batch_alter_table("workflowexecution", schema=None) as batch_op:
@@ -171,7 +171,7 @@ def upgrade() -> None:
                     )
         except Exception as e:
             # Log that the index already exists, but don't fail the migration
-            print(f"Note: Index creation skipped - {str(e)}")
+            print(f"Note: Index creation skipped - {e!s}")
 
         # Add the foreign key back
         inspector = sa.inspect(connection)
@@ -193,7 +193,7 @@ def upgrade() -> None:
                         ondelete="SET DEFAULT",
                     )
             except Exception as e:
-                print(f"Note: Foreign key creation skipped - {str(e)}")
+                print(f"Note: Foreign key creation skipped - {e!s}")
 
 
 def downgrade() -> None:

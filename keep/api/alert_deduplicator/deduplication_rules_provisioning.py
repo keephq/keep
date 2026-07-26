@@ -2,7 +2,7 @@ import json
 import logging
 import re
 
-import keep.api.core.db as db
+from keep.api.core import db
 from keep.api.core.config import config
 from keep.providers.providers_factory import ProvidersFactory
 

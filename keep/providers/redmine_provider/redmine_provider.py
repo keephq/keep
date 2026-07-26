@@ -3,6 +3,7 @@ RedmineProvider is a class that implements the BaseProvider interface for Redmin
 """
 
 import dataclasses
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -51,7 +52,7 @@ class RedmineProvider(BaseProvider):
     """Enrich alerts with Redmine tickets."""
 
     PROVIDER_DISPLAY_NAME = "Redmine"
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="authenticated",
             description="Authenticated with Redmine API",
@@ -59,8 +60,8 @@ class RedmineProvider(BaseProvider):
             alias="Redmine API Access Key",
         ),
     ]
-    PROVIDER_TAGS = ["ticketing"]
-    PROVIDER_CATEGORY = ["Ticketing"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["ticketing"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Ticketing"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -143,7 +144,6 @@ class RedmineProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def __get_headers(self):
         """
@@ -155,7 +155,7 @@ class RedmineProvider(BaseProvider):
         }
 
     def __build_payload_from_kwargs(self, kwargs: dict):
-        params = dict()
+        params = {}
         for param in kwargs:
             if isinstance(kwargs[param], list):
                 params[param] = ",".join(kwargs[param])
@@ -190,7 +190,7 @@ class RedmineProvider(BaseProvider):
             resp.raise_for_status()
         except HTTPError as e:
             self.logger.error("Error While creating Redmine Issue")
-            raise Exception(f"Failed to create issue: {str(e)}")
+            raise Exception(f"Failed to create issue: {e!s}")
         self.logger.info(
             "Successfully created a Redmine Issue",
             extra={"status_code": resp.status_code},

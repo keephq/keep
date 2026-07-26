@@ -4,7 +4,7 @@ TelegramProvider is a class that implements the BaseProvider interface for Teleg
 
 import asyncio
 import dataclasses
-from typing import Literal, Optional
+from typing import ClassVar, Literal
 
 import pydantic
 import telegram
@@ -34,7 +34,7 @@ class TelegramProvider(BaseProvider):
     """Send alert message to Telegram."""
 
     PROVIDER_DISPLAY_NAME = "Telegram"
-    PROVIDER_CATEGORY = ["Collaboration"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Collaboration"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -50,17 +50,16 @@ class TelegramProvider(BaseProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(
         self,
         chat_id: str = "",
-        topic_id: Optional[int] = None,
+        topic_id: int | None = None,
         message: str = "",
-        reply_markup: Optional[dict[str, dict[str, any]]] = None,
+        reply_markup: dict[str, dict[str, any]] | None = None,
         reply_markup_layout: Literal["horizontal", "vertical"] = "horizontal",
-        parse_mode: str = None,
-        image_url: Optional[str] = None,
+        parse_mode: str | None = None,
+        image_url: str | None = None,
         caption_on_image: bool = False,
         **kwargs: dict,
     ):

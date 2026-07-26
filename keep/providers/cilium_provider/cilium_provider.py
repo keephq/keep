@@ -1,5 +1,6 @@
 import dataclasses
 from collections import defaultdict
+from typing import ClassVar
 
 import pydantic
 
@@ -73,9 +74,9 @@ class CiliumProviderAuthConfig:
 class CiliumProvider(BaseTopologyProvider):
     """Manage Cilium provider."""
 
-    PROVIDER_TAGS = ["topology"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["topology"]
     PROVIDER_DISPLAY_NAME = "Cilium"
-    PROVIDER_CATEGORY = ["Cloud Infrastructure", "Security"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Cloud Infrastructure", "Security"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -94,9 +95,7 @@ class CiliumProvider(BaseTopologyProvider):
         )
 
     def _extract_name_from_label(self, label: str) -> str:
-        if label.startswith("k8s:app="):
-            return label.split("=")[1]
-        elif label.startswith("k8s:app.kubernetes.io/name="):
+        if label.startswith(("k8s:app=", "k8s:app.kubernetes.io/name=")):
             return label.split("=")[1]
 
         return None
@@ -124,11 +123,11 @@ class CiliumProvider(BaseTopologyProvider):
 
     def pull_topology(self) -> list[TopologyServiceInDto]:
         # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
-        from keep.providers.cilium_provider.grpc.observer_pb2 import (  # noqa
+        from keep.providers.cilium_provider.grpc.observer_pb2 import (
             FlowFilter,
             GetFlowsRequest,
         )
-        from keep.providers.cilium_provider.grpc.observer_pb2_grpc import (  # noqa
+        from keep.providers.cilium_provider.grpc.observer_pb2_grpc import (
             ObserverStub,
         )
 
@@ -255,7 +254,7 @@ class CiliumProvider(BaseTopologyProvider):
                         self.logger.debug(
                             f"Adding {destination} to application {app_id}"
                         )
-                        application_to_services[app_id].add(destination)
+                        services.add(destination)
 
                 if destination not in service_map:
                     service_map[destination] = {
@@ -311,7 +310,6 @@ class CiliumProvider(BaseTopologyProvider):
                         "error": str(e),
                     },
                 )
-                pass
 
         self.logger.info(
             "Topology pulling completed",
@@ -331,7 +329,6 @@ class CiliumProvider(BaseTopologyProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
 
 if __name__ == "__main__":

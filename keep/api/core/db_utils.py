@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple, Type, TypeVar
+from typing import Any, TypeVar
 
 import pymysql
 from dotenv import find_dotenv, load_dotenv
@@ -95,30 +95,16 @@ def __get_conn_impersonate() -> pymysql.connections.Connection:
 #   becuase somehow in gunicorn it doesn't load the .env file
 load_dotenv(find_dotenv())
 
-DB_CONNECTION_STRING = config(
-    "DATABASE_CONNECTION_STRING", default=None
-)  # pylint: disable=invalid-name
-DB_POOL_SIZE = config(
-    "DATABASE_POOL_SIZE", default=5, cast=int
-)  # pylint: disable=invalid-name
-DB_MAX_OVERFLOW = config(
-    "DATABASE_MAX_OVERFLOW", default=10, cast=int
-)  # pylint: disable=invalid-name
-DB_POOL_RECYCLE = config(
-    "DATABASE_POOL_RECYCLE", default=-1, cast=int
-)  # pylint: disable=invalid-name
-DB_POOL_TIMEOUT = config(
-    "DATABASE_POOL_TIMEOUT", default=30, cast=int
-)  # pylint: disable=invalid-name
-DB_ECHO = config(
-    "DATABASE_ECHO", default=False, cast=bool
-)  # pylint: disable=invalid-name
+DB_CONNECTION_STRING = config("DATABASE_CONNECTION_STRING", default=None)  # pylint: disable=invalid-name
+DB_POOL_SIZE = config("DATABASE_POOL_SIZE", default=5, cast=int)  # pylint: disable=invalid-name
+DB_MAX_OVERFLOW = config("DATABASE_MAX_OVERFLOW", default=10, cast=int)  # pylint: disable=invalid-name
+DB_POOL_RECYCLE = config("DATABASE_POOL_RECYCLE", default=-1, cast=int)  # pylint: disable=invalid-name
+DB_POOL_TIMEOUT = config("DATABASE_POOL_TIMEOUT", default=30, cast=int)  # pylint: disable=invalid-name
+DB_ECHO = config("DATABASE_ECHO", default=False, cast=bool)  # pylint: disable=invalid-name
 KEEP_FORCE_CONNECTION_STRING = config(
     "KEEP_FORCE_CONNECTION_STRING", default=False, cast=bool
 )  # pylint: disable=invalid-name
-KEEP_DB_PRE_PING_ENABLED = config(
-    "KEEP_DB_PRE_PING_ENABLED", default=False, cast=bool
-)  # pylint: disable=invalid-name
+KEEP_DB_PRE_PING_ENABLED = config("KEEP_DB_PRE_PING_ENABLED", default=False, cast=bool)  # pylint: disable=invalid-name
 
 
 def dumps(_json) -> str:
@@ -169,7 +155,7 @@ def create_db_engine():
                 pool_timeout=DB_POOL_TIMEOUT,
                 json_serializer=dumps,
                 echo=DB_ECHO,
-                pool_pre_ping=True if KEEP_DB_PRE_PING_ENABLED else False,
+                pool_pre_ping=bool(KEEP_DB_PRE_PING_ENABLED),
             )
         # SQLite does not support pool_size
         except TypeError:
@@ -190,9 +176,9 @@ def get_json_extract_field(session, base_field, key):
     if session.bind.dialect.name == "postgresql":
         return func.json_extract_path_text(base_field, key)
     elif session.bind.dialect.name == "mysql":
-        return func.json_unquote(func.json_extract(base_field, "$.{}".format(key)))
+        return func.json_unquote(func.json_extract(base_field, f"$.{key}"))
     else:
-        return func.json_extract(base_field, "$.{}".format(key))
+        return func.json_extract(base_field, f"$.{key}")
 
 
 def get_aggreated_field(session: Session, column_name: str, alias: str):
@@ -230,10 +216,10 @@ T = TypeVar("T", bound=SQLModel)
 
 def get_or_create(
     session: Session,
-    model: Type[T],
-    defaults: Optional[Dict[str, Any]] = None,
+    model: type[T],
+    defaults: dict[str, Any] | None = None,
     **kwargs: Any,
-) -> Tuple[T, bool]:
+) -> tuple[T, bool]:
     """
     Get an instance by filter kwargs, or create one with those filters plus any defaults.
 

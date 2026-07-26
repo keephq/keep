@@ -2,7 +2,6 @@ import hashlib
 import json
 import logging
 import uuid
-from typing import Dict, List, Optional, Set, Tuple
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -45,7 +44,7 @@ class AISuggestionBl:
                 status_code=400, detail="AI service is not enabled for the client."
             )
 
-    def get_suggestion_by_input(self, suggestion_input: Dict) -> Optional[AISuggestion]:
+    def get_suggestion_by_input(self, suggestion_input: dict) -> AISuggestion | None:
         """
         Retrieve an AI suggestion by its input.
 
@@ -65,7 +64,7 @@ class AISuggestionBl:
             .first()
         )
 
-    def hash_suggestion_input(self, suggestion_input: Dict) -> str:
+    def hash_suggestion_input(self, suggestion_input: dict) -> str:
         """
         Hash the suggestion input to allow for duplicate suggestions with the same input.
 
@@ -82,9 +81,9 @@ class AISuggestionBl:
     def add_suggestion(
         self,
         user_id: str,
-        suggestion_input: Dict,
+        suggestion_input: dict,
         suggestion_type: AISuggestionType,
-        suggestion_content: Dict,
+        suggestion_content: dict,
         model: str,
     ) -> AISuggestion:
         """
@@ -143,8 +142,8 @@ class AISuggestionBl:
         suggestion_id: UUID,
         user_id: str,
         feedback_content: str,
-        rating: Optional[int] = None,
-        comment: Optional[str] = None,
+        rating: int | None = None,
+        comment: str | None = None,
     ) -> AIFeedback:
         """
         Add AI feedback to the database.
@@ -198,7 +197,7 @@ class AISuggestionBl:
 
     def get_feedback(
         self, suggestion_type: AISuggestionType | None = None
-    ) -> List[AIFeedback]:
+    ) -> list[AIFeedback]:
         """
         Retrieve AI feedback from the database.
 
@@ -232,8 +231,8 @@ class AISuggestionBl:
 
     def suggest_incidents(
         self,
-        alerts_dto: List[AlertDto],
-        topology_data: List[TopologyServiceDtoOut],
+        alerts_dto: list[AlertDto],
+        topology_data: list[TopologyServiceDtoOut],
         user_id: str,
     ) -> IncidentsClusteringSuggestion:
         """Create incident suggestions using AI."""
@@ -298,10 +297,10 @@ class AISuggestionBl:
     async def commit_incidents(
         self,
         suggestion_id: UUID,
-        incidents_with_feedback: List[Dict],
+        incidents_with_feedback: list[dict],
         user_id: str,
         incident_bl: IncidentBl,
-    ) -> List[IncidentDto]:
+    ) -> list[IncidentDto]:
         """Commit incidents with user feedback."""
         committed_incidents = []
 
@@ -344,25 +343,25 @@ class AISuggestionBl:
 
             except Exception as e:
                 self.logger.error(
-                    f"Failed to create incident {incident_with_feedback['incident']['name']}: {str(e)}"
+                    f"Failed to create incident {incident_with_feedback['incident']['name']}: {e!s}"
                 )
 
         return committed_incidents
 
     def _prepare_prompts(
-        self, alerts_dto: List[AlertDto], topology_data: List[TopologyServiceDtoOut]
-    ) -> Tuple[str, str]:
+        self, alerts_dto: list[AlertDto], topology_data: list[TopologyServiceDtoOut]
+    ) -> tuple[str, str]:
         """Prepare system and user prompts for AI."""
         alert_descriptions = "\n".join(
             [
-                f"Alert {idx+1}: {json.dumps(alert.dict())}"
+                f"Alert {idx + 1}: {json.dumps(alert.dict())}"
                 for idx, alert in enumerate(alerts_dto)
             ]
         )
 
         topology_text = "\n".join(
             [
-                f"Topology {idx+1}: {json.dumps(topology.dict(), default=str)}"
+                f"Topology {idx + 1}: {json.dumps(topology.dict(), default=str)}"
                 for idx, topology in enumerate(topology_data)
             ]
         )
@@ -466,13 +465,13 @@ class AISuggestionBl:
         )
 
     def _process_incidents(
-        self, incidents: List[IncidentCandidate], alerts_dto: List[AlertDto]
-    ) -> List[IncidentDto]:
+        self, incidents: list[IncidentCandidate], alerts_dto: list[AlertDto]
+    ) -> list[IncidentDto]:
         """Process incidents and create DTOs."""
         processed_incidents = []
         for incident in incidents:
-            alert_sources: Set[str] = set()
-            alert_services: Set[str] = set()
+            alert_sources: set[str] = set()
+            alert_services: set[str] = set()
             for alert_index in incident.alerts:
                 alert = alerts_dto[alert_index - 1]
                 if alert.source:

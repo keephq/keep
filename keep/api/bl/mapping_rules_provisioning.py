@@ -4,7 +4,7 @@ import os
 
 from sqlmodel import Session, select
 
-import keep.api.core.db as db
+from keep.api.core import db
 from keep.api.models.db.mapping import MappingRule, MappingRuleDtoIn
 from keep.functions import cyaml
 
@@ -54,7 +54,7 @@ def provision_mapping_rules_from_env(tenant_id: str):
         existing_provisioned = session.exec(
             select(MappingRule).where(
                 MappingRule.tenant_id == tenant_id,
-                MappingRule.is_provisioned == True,  # noqa: E712
+                MappingRule.is_provisioned == True,
             )
         ).all()
 
@@ -68,7 +68,9 @@ def provision_mapping_rules_from_env(tenant_id: str):
                     _delete_rule(session, rule)
                 session.commit()
             else:
-                logger.info("No mapping rules to provision and none currently provisioned")
+                logger.info(
+                    "No mapping rules to provision and none currently provisioned"
+                )
             return
 
         if not os.path.isdir(mappings_dir):
@@ -78,7 +80,9 @@ def provision_mapping_rules_from_env(tenant_id: str):
 
         manifest_paths = _collect_manifest_paths(mappings_dir)
         logger.info(
-            "Provisioning %d mapping manifest(s) from %s", len(manifest_paths), mappings_dir
+            "Provisioning %d mapping manifest(s) from %s",
+            len(manifest_paths),
+            mappings_dir,
         )
 
         # Deprovision rules whose source file is missing or outside the directory

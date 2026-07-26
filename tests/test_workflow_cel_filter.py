@@ -55,7 +55,7 @@ def create_alert():
             "name": "test-alert",
             "status": AlertStatus.FIRING,
             "severity": AlertSeverity.CRITICAL,
-            "lastReceived": datetime.datetime.now().isoformat(),
+            "lastReceived": datetime.datetime.now(tz=datetime.UTC).isoformat(),
             "fingerprint": "test-fingerprint",
         }
         alert_data.update(properties)
@@ -553,7 +553,9 @@ def test_cel_expression_with_null_field_bug(
     # This assertion should pass if the bug is fixed
     assert (
         len(workflow_manager.scheduler.workflows_to_run) == workflows_to_run_before + 1
-    ), f"Expected workflow to be triggered, but got {len(workflow_manager.scheduler.workflows_to_run) - workflows_to_run_before} new workflows"
+    ), (
+        f"Expected workflow to be triggered, but got {len(workflow_manager.scheduler.workflows_to_run) - workflows_to_run_before} new workflows"
+    )
 
     assert workflow_manager.scheduler.workflows_to_run[-1]["workflow_id"] == workflow.id
 

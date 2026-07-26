@@ -33,6 +33,7 @@ def upgrade() -> None:
             existing_nullable=True,
         )
 
+
 def downgrade() -> None:
 
     with op.batch_alter_table("incident", schema=None) as batch_op:

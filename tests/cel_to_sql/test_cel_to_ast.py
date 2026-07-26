@@ -1,4 +1,5 @@
 import datetime
+
 import pytest
 
 from keep.api.core.cel_to_sql.ast_nodes import (
@@ -171,9 +172,12 @@ def test_simple_comparison_node(
     assert actual.first_operand.path == expected_property_path
 
 
-@pytest.mark.parametrize("cel, args", [
-    ("fakeProp in ['string', 12345, true]", ["string", 12345, True]),
-])
+@pytest.mark.parametrize(
+    "cel, args",
+    [
+        ("fakeProp in ['string', 12345, true]", ["string", 12345, True]),
+    ],
+)
 def test_simple_comparison_node_in(cel, args):
     actual = CelToAstConverter.convert_to_ast(cel)
 
@@ -240,6 +244,7 @@ def test_simple_logical_node(cel, operator):
     # Check that left.operand is PropertyAccessNode
     assert isinstance(actual.right.operand, PropertyAccessNode)
     assert actual.right.operand.path == ["secondFakeProp"]
+
 
 @pytest.mark.parametrize(
     "cel, operator",

@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import json
 import logging
+from typing import ClassVar
 
 import google.api_core
 import google.api_core.exceptions
@@ -70,20 +71,20 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
 """
 
     # https://github.com/hashicorp/terraform-provider-google/blob/main/google/services/monitoring/resource_monitoring_alert_policy.go#L963
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "CRITICAL": AlertSeverity.CRITICAL,
         "ERROR": AlertSeverity.HIGH,
         "WARNING": AlertSeverity.WARNING,
     }
-    PROVIDER_CATEGORY = ["Monitoring", "Cloud Infrastructure"]
-    STATUS_MAP = {
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring", "Cloud Infrastructure"]
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "CLOSED": AlertStatus.RESOLVED,
         "OPEN": AlertStatus.FIRING,
     }
 
     PROVIDER_DISPLAY_NAME = "GCP Monitoring"
-    FINGERPRINT_FIELDS = ["incident_id"]
-    PROVIDER_SCOPES = [
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["incident_id"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="roles/logs.viewer",
             description="Read access to GCP logging",
@@ -91,7 +92,7 @@ To send alerts from GCP Monitoring to Keep, Use the following webhook url to con
             alias="Logs Viewer",
         ),
     ]
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="query",
             func_name="execute_query",

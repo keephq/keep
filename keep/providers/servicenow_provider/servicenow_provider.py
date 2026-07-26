@@ -2,22 +2,23 @@
 ServicenowProvider is a class that implements the BaseProvider interface for Service Now updates.
 """
 
-import os
 import dataclasses
 import hashlib
 import json
+import os
 import uuid
 from datetime import datetime, timezone
+from typing import ClassVar
 
 import pydantic
 import requests
 from requests.auth import HTTPBasicAuth
 
 from keep.api.models.db.topology import TopologyServiceInDto
-from keep.api.models.incident import IncidentDto, IncidentStatus, IncidentSeverity
+from keep.api.models.incident import IncidentDto, IncidentSeverity, IncidentStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
-from keep.providers.base.base_provider import BaseTopologyProvider, BaseIncidentProvider
+from keep.providers.base.base_provider import BaseIncidentProvider, BaseTopologyProvider
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
 from keep.providers.models.provider_method import ProviderMethod
 from keep.validation.fields import HttpsUrl
@@ -86,8 +87,8 @@ class ServicenowProviderAuthConfig:
 class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
     """Manage ServiceNow tickets and incidents with bidirectional activity sync."""
 
-    PROVIDER_CATEGORY = ["Ticketing", "Incident Management"]
-    PROVIDER_SCOPES = [
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Ticketing", "Incident Management"]
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="itil",
             description="The user can read/write tickets from the table",
@@ -96,29 +97,29 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             alias="Read from datahase",
         )
     ]
-    PROVIDER_TAGS = ["ticketing"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["ticketing"]
     PROVIDER_DISPLAY_NAME = "Service Now"
-    FINGERPRINT_FIELDS = ["number"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["number"]
 
     # ServiceNow incident state mapping
     # https://docs.servicenow.com/bundle/sandiego-it-service-management/page/product/incident-management/reference/r_IncidentStates.html
-    INCIDENT_STATUS_MAP = {
-        "1": IncidentStatus.FIRING,       # New
+    INCIDENT_STATUS_MAP: ClassVar[dict[str, str]] = {
+        "1": IncidentStatus.FIRING,  # New
         "2": IncidentStatus.ACKNOWLEDGED,  # In Progress
         "3": IncidentStatus.ACKNOWLEDGED,  # On Hold
-        "6": IncidentStatus.RESOLVED,      # Resolved
-        "7": IncidentStatus.RESOLVED,      # Closed
-        "8": IncidentStatus.RESOLVED,      # Canceled
+        "6": IncidentStatus.RESOLVED,  # Resolved
+        "7": IncidentStatus.RESOLVED,  # Closed
+        "8": IncidentStatus.RESOLVED,  # Canceled
     }
 
     # ServiceNow impact to severity mapping
-    INCIDENT_SEVERITY_MAP = {
+    INCIDENT_SEVERITY_MAP: ClassVar[dict[str, str]] = {
         "1": IncidentSeverity.CRITICAL,  # High
-        "2": IncidentSeverity.WARNING,   # Medium
-        "3": IncidentSeverity.LOW,       # Low
+        "2": IncidentSeverity.WARNING,  # Medium
+        "3": IncidentSeverity.LOW,  # Low
     }
 
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="Get Incidents",
             func_name="get_incidents",
@@ -279,7 +280,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
     def _query(
         self,
         table_name: str,
-        incident_id: str = None,
+        incident_id: str | None = None,
         sysparm_limit: int = 100,
         sysparm_offset: int = 0,
         **kwargs: dict,
@@ -411,23 +412,25 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
 
         if resolved_at:
             try:
-                end_time = datetime.strptime(
-                    resolved_at, "%Y-%m-%d %H:%M:%S"
-                ).replace(tzinfo=timezone.utc)
+                end_time = datetime.strptime(resolved_at, "%Y-%m-%d %H:%M:%S").replace(
+                    tzinfo=timezone.utc
+                )
             except (ValueError, TypeError):
                 pass
         elif closed_at:
             try:
-                end_time = datetime.strptime(
-                    closed_at, "%Y-%m-%d %H:%M:%S"
-                ).replace(tzinfo=timezone.utc)
+                end_time = datetime.strptime(closed_at, "%Y-%m-%d %H:%M:%S").replace(
+                    tzinfo=timezone.utc
+                )
             except (ValueError, TypeError):
                 pass
 
         # Extract service info from the assignment group or category
         assignment_group = incident.get("assignment_group", "")
         if isinstance(assignment_group, dict):
-            assignment_group = assignment_group.get("display_value", "") or assignment_group.get("value", "")
+            assignment_group = assignment_group.get(
+                "display_value", ""
+            ) or assignment_group.get("value", "")
         category = incident.get("category", "")
         service = assignment_group or category or "unknown"
 
@@ -629,8 +632,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
 
         # Otherwise, query by number
         url = (
-            f"{self.authentication_config.service_now_base_url}"
-            f"/api/now/table/incident"
+            f"{self.authentication_config.service_now_base_url}/api/now/table/incident"
         )
         params = {
             "sysparm_query": f"number={incident_id}",
@@ -681,8 +683,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             "sys_id",
             "ip_address",
             "mac_address",
-            "owned_by.name"
-            "manufacturer.name",  # Retrieve the name of the manufacturer
+            ("owned_by.namemanufacturer.name"),  # Retrieve the name of the manufacturer
             "short_description",
             "environment",
         ]
@@ -710,7 +711,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
                     "provider_id": self.provider_id,
                 },
             )
-            # Retry without params, may happen because of lack of permissions. 
+            # Retry without params, may happen because of lack of permissions.
             # The following code is tolerant to missing data.
             cmdb_response = requests.get(
                 f"{self.authentication_config.service_now_base_url}/api/now/table/cmdb_ci",
@@ -832,9 +833,8 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
-    def _notify(self, table_name: str, payload: dict = {}, **kwargs: dict):
+    def _notify(self, table_name: str, payload: dict | None = None, **kwargs: dict):
         """
         Create a ticket in ServiceNow.
         Args:
@@ -843,6 +843,8 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             ticket_id (str): The ticket ID (optional to update a ticket).
             fingerprint (str): The fingerprint of the ticket (optional to update a ticket).
         """
+        if payload is None:
+            payload = {}
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         auth = (
             (

@@ -1,5 +1,5 @@
 import dataclasses
-import typing
+from typing import ClassVar
 
 import json5
 import opsgenie_sdk
@@ -37,16 +37,16 @@ class OpsgenieProviderAuthConfig:
 class OpsGenieRecipient(pydantic.BaseModel):
     # https://github.com/opsgenie/opsgenie-python-sdk/blob/master/docs/Recipient.md
     type: str
-    id: typing.Optional[str] = None
+    id: str | None = None
 
 
 class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
     """Create incidents in OpsGenie."""
 
     PROVIDER_DISPLAY_NAME = "OpsGenie"
-    PROVIDER_CATEGORY = ["Incident Management"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Incident Management"]
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="opsgenie:create",
             description="Create OpsGenie alerts",
@@ -55,7 +55,7 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
         ),
     ]
 
-    PROVIDER_METHODS = [
+    PROVIDER_METHODS: ClassVar[list[ProviderMethod]] = [
         ProviderMethod(
             name="Close an alert",
             func_name="close_alert",
@@ -156,11 +156,11 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
         message: str | None = None,
         alias: str | None = None,
         description: str | None = None,
-        responders: typing.List[OpsGenieRecipient] | None = None,
-        visible_to: typing.List[OpsGenieRecipient] | None = None,
-        actions: typing.List[str] | None = None,
-        tags: typing.List[str] | None = None,
-        details: typing.Dict[str, str] | None = None,
+        responders: list[OpsGenieRecipient] | None = None,
+        visible_to: list[OpsGenieRecipient] | None = None,
+        actions: list[str] | None = None,
+        tags: list[str] | None = None,
+        details: dict[str, str] | None = None,
         entity: str | None = None,
         priority: str | None = None,
     ):
@@ -249,7 +249,6 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
         """
         No need to dispose of anything, so just do nothing.
         """
-        pass
 
     def _notify(
         self,
@@ -259,11 +258,11 @@ class OpsgenieProvider(BaseProvider, ProviderHealthMixin):
         message: str | None = None,
         alias: str | None = None,
         description: str | None = None,
-        responders: typing.List[OpsGenieRecipient] | None = None,
-        visible_to: typing.List[OpsGenieRecipient] | None = None,
-        actions: typing.List[str] | None = None,
-        tags: typing.List[str] | None = None,
-        details: typing.Dict[str, str] | None = None,
+        responders: list[OpsGenieRecipient] | None = None,
+        visible_to: list[OpsGenieRecipient] | None = None,
+        actions: list[str] | None = None,
+        tags: list[str] | None = None,
+        details: dict[str, str] | None = None,
         entity: str | None = None,
         priority: str | None = None,
         **kwargs: dict,

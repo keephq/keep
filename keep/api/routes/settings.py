@@ -3,7 +3,6 @@ import json
 import logging
 import smtplib
 from email.mime.text import MIMEText
-from typing import Optional, Tuple
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -38,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 class CreateUserRequest(BaseModel):
     email: str = Field(alias="username")
-    password: Optional[str] = None  # for auth0 we don't need a password
+    password: str | None = None  # for auth0 we don't need a password
     role: str
 
     class Config:
@@ -68,7 +67,7 @@ def webhook_settings(
             system_description="Webhooks API key",
         )
     except Exception as e:
-        logger.error(f"Error retrieving webhook settings: {str(e)}")
+        logger.error(f"Error retrieving webhook settings: {e!s}")
         return JSONResponse(
             status_code=502,
             content={"message": str(e)},
@@ -155,7 +154,7 @@ async def test_smtp_settings(
         return JSONResponse(status_code=400, content={"message": message, "logs": logs})
 
 
-def test_smtp_connection(settings: SMTPSettings) -> Tuple[bool, str, str]:
+def test_smtp_connection(settings: SMTPSettings) -> tuple[bool, str, str]:
     # Capture the SMTP session output
     log_stream = io.StringIO()
     try:
@@ -199,8 +198,10 @@ def test_smtp_connection(settings: SMTPSettings) -> Tuple[bool, str, str]:
                 </div>
             </body>
         </html>
-        """.format(settings.host, settings.port, "TLS/STARTTLS" if settings.secure else "None")
-        
+        """.format(
+            settings.host, settings.port, "TLS/STARTTLS" if settings.secure else "None"
+        )
+
         # Create MIMEText with HTML content
         message = MIMEText(html_content, "html")
         message["From"] = settings.from_email
@@ -290,7 +291,7 @@ async def create_key(
     except APIKeyException as e:
         raise HTTPException(
             status_code=400,
-            detail=f"Error creating API key: {str(e)}",
+            detail=f"Error creating API key: {e!s}",
         )
 
 
@@ -384,7 +385,7 @@ def delete_api_key(
         except Exception as e:
             raise HTTPException(
                 status_code=500,
-                detail=f"Unable to deactivate Api key ({keyId}) secret. Error: {str(e)}",
+                detail=f"Unable to deactivate Api key ({keyId}) secret. Error: {e!s}",
             )
 
         try:

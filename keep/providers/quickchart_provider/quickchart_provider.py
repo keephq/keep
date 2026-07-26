@@ -2,6 +2,7 @@
 import dataclasses
 import datetime
 from collections import defaultdict
+from typing import ClassVar
 
 import pydantic
 
@@ -42,7 +43,7 @@ class QuickchartProviderAuthConfig:
 
 class QuickchartProvider(BaseProvider):
     PROVIDER_DISPLAY_NAME = "QuickChart"
-    PROVIDER_CATEGORY = ["Developer Tools"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Developer Tools"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -88,7 +89,7 @@ class QuickchartProvider(BaseProvider):
             datetime.datetime.fromisoformat(alert.lastReceived) for alert in alerts
         )
 
-        title = f"First: {str(min_last_received)} | Last: {str(max_last_received)} | Total: {len(alerts)}"
+        title = f"First: {min_last_received!s} | Last: {max_last_received!s} | Total: {len(alerts)}"
 
         time_difference = (
             max_last_received - min_last_received

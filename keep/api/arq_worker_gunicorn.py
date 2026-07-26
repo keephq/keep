@@ -347,7 +347,7 @@ def create_app():
     )
 
     @app.get("/")
-    def get_status(body: dict = None):
+    def get_status(body: dict | None = None):
         data = b"ARQ Worker Running\n"
         return JSONResponse(
             content=data,

@@ -6,7 +6,7 @@ import dataclasses
 import json
 import os
 from datetime import datetime
-from typing import Optional
+from typing import ClassVar
 
 import pydantic
 import requests
@@ -43,10 +43,10 @@ class ZoomProvider(BaseProvider):
     """Create and manage Zoom meetings using REST API."""
 
     PROVIDER_DISPLAY_NAME = "Zoom"
-    PROVIDER_CATEGORY = ["Communication", "Video Conferencing"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Communication", "Video Conferencing"]
     BASE_URL = "https://api.zoom.us/v2"
 
-    PROVIDER_SCOPES = [
+    PROVIDER_SCOPES: ClassVar[list[ProviderScope]] = [
         ProviderScope(
             name="create_meeting",
             description="Create a new Zoom meeting",
@@ -96,7 +96,7 @@ class ZoomProvider(BaseProvider):
             return response.json()["access_token"]
 
         except Exception as e:
-            raise ProviderException(f"Failed to get access token: {str(e)}")
+            raise ProviderException(f"Failed to get access token: {e!s}")
 
     def _get_headers(self) -> dict:
         """
@@ -140,7 +140,7 @@ class ZoomProvider(BaseProvider):
         duration: int = 60,
         timezone: str = "UTC",
         record_meeting: bool = False,
-        host_email: Optional[str] = None,
+        host_email: str | None = None,
     ) -> dict:
         """
         Create a new Zoom meeting.
@@ -203,7 +203,7 @@ class ZoomProvider(BaseProvider):
 
             response = response.json()
             auto_recording = response.get("settings", {}).get("auto_recording")
-            if record_meeting and not auto_recording == "cloud":
+            if record_meeting and auto_recording != "cloud":
                 # Zoom API failed to set auto recording
                 self.logger.warning(
                     "Failed to set auto recording - do you have basic plan?",
@@ -216,16 +216,16 @@ class ZoomProvider(BaseProvider):
             return response
 
         except Exception as e:
-            raise ProviderException(f"Failed to create meeting: {str(e)}")
+            raise ProviderException(f"Failed to create meeting: {e!s}")
 
     def _notify(
         self,
         topic: str,
-        start_time: datetime = None,
+        start_time: datetime | None = None,
         duration: int = 60,
         timezone: str = "UTC",
         record_meeting: bool = False,
-        host_email: Optional[str] = None,
+        host_email: str | None = None,
     ) -> dict:
         """
         Create a new Zoom meeting (notification endpoint).
@@ -250,7 +250,7 @@ class ZoomProvider(BaseProvider):
             )
             return meeting
         except Exception as e:
-            raise ProviderException(f"Failed to create meeting: {str(e)}")
+            raise ProviderException(f"Failed to create meeting: {e!s}")
 
 
 if __name__ == "__main__":
@@ -313,4 +313,4 @@ if __name__ == "__main__":
         print(f"Meeting Password: {meeting.get('password')}")
 
     except Exception as e:
-        print(f"Failed to create meeting: {str(e)}")
+        print(f"Failed to create meeting: {e!s}")

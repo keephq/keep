@@ -1,5 +1,4 @@
 import logging
-from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
@@ -8,19 +7,20 @@ from sqlmodel import Session
 
 from keep.api.core.db import get_session, get_session_sync
 from keep.api.models.db.topology import (
+    DeleteServicesRequest,
     TopologyApplicationDtoIn,
     TopologyApplicationDtoOut,
+    TopologyService,
+    TopologyServiceCreateRequestDTO,
+    TopologyServiceDependencyCreateRequestDto,
+    TopologyServiceDependencyDto,
+    TopologyServiceDependencyUpdateRequestDto,
     TopologyServiceDtoIn,
     TopologyServiceDtoOut,
-    TopologyServiceCreateRequestDTO,
     TopologyServiceUpdateRequestDTO,
-    TopologyServiceDependencyCreateRequestDto,
-    TopologyServiceDependencyUpdateRequestDto,
-    TopologyServiceDependencyDto,
-    TopologyService,
-    DeleteServicesRequest,
 )
 from keep.api.tasks.process_topology_task import process_topology
+from keep.functions import cyaml
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 from keep.providers.base.base_provider import BaseTopologyProvider
@@ -28,13 +28,12 @@ from keep.providers.providers_factory import ProvidersFactory
 from keep.topologies.topologies_service import (
     ApplicationNotFoundException,
     ApplicationParseException,
+    DependencyNotFoundException,
     InvalidApplicationDataException,
     ServiceNotFoundException,
-    TopologiesService,
-    DependencyNotFoundException,
     ServiceNotManualException,
+    TopologiesService,
 )
-from keep.functions import cyaml
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -42,18 +41,18 @@ router = APIRouter()
 
 # GET all topology data
 @router.get(
-    "", description="Get all topology data", response_model=List[TopologyServiceDtoOut]
+    "", description="Get all topology data", response_model=list[TopologyServiceDtoOut]
 )
 def get_topology_data(
-    provider_ids: Optional[str] = None,
-    services: Optional[str] = None,
-    environment: Optional[str] = None,
-    include_empty_deps: Optional[bool] = True,
+    provider_ids: str | None = None,
+    services: str | None = None,
+    environment: str | None = None,
+    include_empty_deps: bool | None = True,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:topology"])
     ),
     session: Session = Depends(get_session),
-) -> List[TopologyServiceDtoOut]:
+) -> list[TopologyServiceDtoOut]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting topology data", extra={tenant_id: tenant_id})
     topology_data = TopologiesService.get_all_topology_data(
@@ -65,14 +64,14 @@ def get_topology_data(
 @router.get(
     "/applications",
     description="Get all applications",
-    response_model=List[TopologyApplicationDtoOut],
+    response_model=list[TopologyApplicationDtoOut],
 )
 def get_applications(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:topology"])
     ),
     session: Session = Depends(get_session),
-) -> List[TopologyApplicationDtoOut]:
+) -> list[TopologyApplicationDtoOut]:
     tenant_id = authenticated_entity.tenant_id
     logger.info("Getting applications", extra={"tenant_id": tenant_id})
     try:
@@ -157,10 +156,10 @@ def delete_application(
 @router.post(
     "/pull",
     description="Pull topology data on demand from providers",
-    response_model=List[TopologyServiceDtoOut],
+    response_model=list[TopologyServiceDtoOut],
 )
 def pull_topology_data(
-    provider_ids: Optional[str] = None,
+    provider_ids: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:topology"])
     ),
@@ -256,7 +255,7 @@ def pull_topology_data(
                                 )
                         except InvalidApplicationDataException as e:
                             logger.error(
-                                f"Error creating application {app.name}: {str(e)}",
+                                f"Error creating application {app.name}: {e!s}",
                                 extra=extra,
                             )
 
@@ -288,7 +287,7 @@ def pull_topology_data(
             extra={"tenant_id": tenant_id, "error": str(e)},
         )
         raise HTTPException(
-            status_code=500, detail=f"Failed to pull topology data: {str(e)}"
+            status_code=500, detail=f"Failed to pull topology data: {e!s}"
         )
 
 
@@ -308,9 +307,7 @@ def create_service(
             service=service, tenant_id=authenticated_entity.tenant_id, session=session
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to create service: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to create service: {e!s}")
 
 
 @router.put("/service", description="Updating a service manually")
@@ -334,9 +331,7 @@ def update_service(
     except ServiceNotFoundException:
         raise HTTPException(status_code=404, detail="Service not found")
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to update service: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to update service: {e!s}")
 
 
 @router.delete("/services", description="Delete a list of services manually")
@@ -364,9 +359,7 @@ def delete_services(
     except ServiceNotFoundException:
         raise HTTPException(status_code=404, detail="Service not found")
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to delete services: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to delete services: {e!s}")
 
 
 @router.post("/dependency", description="Creating a new dependency manually")
@@ -390,7 +383,7 @@ def create_dependencies(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to create Dependency: {str(e)}"
+            status_code=500, detail=f"Failed to create Dependency: {e!s}"
         )
 
 
@@ -417,7 +410,7 @@ def update_dependency(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to update Dependency: {str(e)}"
+            status_code=500, detail=f"Failed to update Dependency: {e!s}"
         )
 
 
@@ -449,7 +442,7 @@ def delete_dependency(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to delete Dependency: {str(e)}"
+            status_code=500, detail=f"Failed to delete Dependency: {e!s}"
         )
 
 
@@ -458,7 +451,7 @@ def delete_dependency(
     description="Exporting the topology map as a YAML",
 )
 async def export_topology_yaml(
-    services: Optional[str] = None,
+    services: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:topology"])
     ),
@@ -475,14 +468,16 @@ async def export_topology_yaml(
         services_dict = data.model_dump()
         del services_dict["updated_at"]
         del services_dict["tenant_id"]
-        services_dict["is_manual"] = True if services_dict["is_manual"] is True else False
+        services_dict["is_manual"] = services_dict["is_manual"] is True
         full_data["services"].append(services_dict)
         for application in data.applications:
             application_dict = application.model_dump()
             del application_dict["tenant_id"]
             application_dict["id"] = str(application_dict["id"])
             if application_dict["id"] in full_data["applications"]:
-                full_data["applications"][application_dict["id"]]["services"].append(data.id)
+                full_data["applications"][application_dict["id"]]["services"].append(
+                    data.id
+                )
             else:
                 application_dict["services"] = [data.id]
                 full_data["applications"][application_dict["id"]] = application_dict
@@ -521,6 +516,4 @@ async def import_topology_yaml(
         raise HTTPException(status_code=400, detail="Invalid YAML format")
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to import topology: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to import topology: {e!s}")

@@ -29,8 +29,9 @@ def _signin(client, username, password):
 
 
 def _get_password_hash(db_session, username):
-    from keep.api.models.db.user import User
     from sqlmodel import select
+
+    from keep.api.models.db.user import User
 
     user = db_session.exec(
         select(User)
@@ -67,7 +68,7 @@ def test_change_own_password_success(db_session, client, test_app):
     assert _signin(client, "alice", "newpassword").status_code == 200
 
     # password hash was actually updated in the db
-    expected_hash = hashlib.sha256("newpassword".encode()).hexdigest()
+    expected_hash = hashlib.sha256(b"newpassword").hexdigest()
     assert _get_password_hash(db_session, "alice") == expected_hash
 
 

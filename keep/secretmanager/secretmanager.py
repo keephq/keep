@@ -22,8 +22,7 @@ class BaseSecretManager(metaclass=abc.ABCMeta):
             str: The secret value.
         """
         raise NotImplementedError(
-            "read_secret() method not implemented"
-            " for {}".format(self.__class__.__name__)
+            f"read_secret() method not implemented for {self.__class__.__name__}"
         )
 
     @abc.abstractmethod

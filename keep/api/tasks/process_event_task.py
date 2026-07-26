@@ -7,7 +7,6 @@ import os
 import sys
 import time
 import traceback
-from typing import List
 
 # third-parties
 import dateutil
@@ -21,7 +20,11 @@ from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
-from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY, fingerprints_for_poll_payload
+from keep.api.consts import (
+    KEEP_CORRELATION_ENABLED,
+    MAINTENANCE_WINDOW_ALERT_STRATEGY,
+    fingerprints_for_poll_payload,
+)
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     enrich_alerts_with_incidents,
@@ -52,8 +55,8 @@ from keep.api.utils.enrichment_helpers import (
     calculate_firing_time_since_last_resolved,
     calculated_firing_counter,
     calculated_start_firing_time,
-    convert_db_alerts_to_dto_alerts,
     calculated_unresolved_counter,
+    convert_db_alerts_to_dto_alerts,
 )
 from keep.providers.providers_factory import ProvidersFactory
 from keep.rulesengine.rulesengine import RulesEngine
@@ -472,7 +475,7 @@ def __handle_formatted_events(
                 fields = []
                 for key, value in enriched_formatted_event.dict().items():
                     if isinstance(value, dict):
-                        for nested_key in value.keys():
+                        for nested_key in value:
                             fields.append(f"{key}.{nested_key}")
                     else:
                         fields.append(key)
@@ -525,13 +528,13 @@ def __handle_formatted_events(
         ignored_events = list(
             filter(
                 lambda event: event.status == AlertStatus.MAINTENANCE.value,
-                enriched_formatted_events
+                enriched_formatted_events,
             )
         )
         enriched_formatted_events = list(
             filter(
                 lambda event: event.status != AlertStatus.MAINTENANCE.value,
-                enriched_formatted_events
+                enriched_formatted_events,
             )
         )
 
@@ -562,7 +565,7 @@ def __handle_formatted_events(
             try:
                 rules_engine = RulesEngine(tenant_id=tenant_id)
                 # handle incidents, also handle workflow execution as
-                incidents: List[IncidentDto] = rules_engine.run_rules(
+                incidents: list[IncidentDto] = rules_engine.run_rules(
                     enriched_formatted_events, session=session
                 )
             except Exception:
@@ -597,16 +600,11 @@ def __handle_formatted_events(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    {
-                        "fingerprints": fingerprints_for_poll_payload(
-                            alert_fingerprints
-                        )
-                    },
+                    {"fingerprints": fingerprints_for_poll_payload(alert_fingerprints)},
                 )
                 logger.info("Told client to poll alerts")
             except Exception:
                 logger.exception("Failed to tell client to poll alerts")
-                pass
 
         if incidents and pusher_cache.should_notify(tenant_id, "incident-change"):
             try:
@@ -711,8 +709,7 @@ def process_event(
             if (
                 provider_type is not None
                 and isinstance(event, dict)
-                or isinstance(event, FormData)
-                or isinstance(event, list)
+                or isinstance(event, (FormData, list))
             ):
                 try:
                     provider_class = ProvidersFactory.get_provider_class(provider_type)

@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from fastapi import APIRouter, Body, Depends
 
@@ -17,7 +16,7 @@ def get_permissions(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:settings"])
     ),
-) -> List[ResourcePermission]:
+) -> list[ResourcePermission]:
     identity_manager = IdentityManagerFactory.get_identity_manager(
         authenticated_entity.tenant_id
     )
@@ -38,7 +37,7 @@ def get_permissions(
 
 @router.post("", description="Create permissions for resources")
 def create_permissions(
-    resource_permissions: List[ResourcePermission] = Body(
+    resource_permissions: list[ResourcePermission] = Body(
         ..., description="List of resource permissions"
     ),
     authenticated_entity: AuthenticatedEntity = Depends(
@@ -57,7 +56,7 @@ def get_scopes(
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:settings"])
     ),
-) -> List[str]:
+) -> list[str]:
     scopes = []
     for resource in ALL_RESOURCES:
         scopes.extend(

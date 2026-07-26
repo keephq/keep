@@ -3,6 +3,7 @@ Coralogix is a modern observability platform delivers comprehensive visibility i
 """
 
 import json
+from typing import ClassVar
 
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
@@ -29,7 +30,7 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
 8. Save the configuration.
 """
 
-    SEVERITIES_MAP = {
+    SEVERITIES_MAP: ClassVar[dict[str, str]] = {
         "debug": AlertSeverity.LOW,
         "verbose": AlertSeverity.LOW,
         "info": AlertSeverity.INFO,
@@ -38,7 +39,7 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         "critical": AlertSeverity.CRITICAL,
     }
 
-    PRIORTY_TO_SEVERITY_MAP = {
+    PRIORTY_TO_SEVERITY_MAP: ClassVar[dict[str, str]] = {
         "P1": AlertSeverity.CRITICAL,
         "P2": AlertSeverity.HIGH,
         "P3": AlertSeverity.WARNING,
@@ -46,15 +47,15 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         "P5": AlertSeverity.LOW,
     }
 
-    STATUS_MAP = {
+    STATUS_MAP: ClassVar[dict[str, str]] = {
         "resolve": AlertStatus.RESOLVED,
         "trigger": AlertStatus.FIRING,
     }
 
     PROVIDER_DISPLAY_NAME = "Coralogix"
-    PROVIDER_TAGS = ["alert"]
-    PROVIDER_CATEGORY = ["Monitoring"]
-    FINGERPRINT_FIELDS = ["alertUniqueIdentifier"]
+    PROVIDER_TAGS: ClassVar[list[str]] = ["alert"]
+    PROVIDER_CATEGORY: ClassVar[list[str]] = ["Monitoring"]
+    FINGERPRINT_FIELDS: ClassVar[list[str]] = ["alertUniqueIdentifier"]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -66,13 +67,12 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
         Validates required configuration for Coralogix's provider.
         """
         # no config
-        pass
 
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
-        fields_list = event["fields"] if "fields" in event else []
+        fields_list = event.get("fields", [])
         fields = {item["key"]: item["value"] for item in fields_list}
 
         labels = fields.get("text", fields.get("labels", {}))
@@ -95,19 +95,19 @@ To send alerts from Coralogix to Keep, Use the following webhook url to configur
 
         alert = AlertDto(
             id=fields.get("alertUniqueIdentifier"),
-            alert_id=event["alert_id"] if "alert_id" in event else None,
-            name=event["name"] if "name" in event else None,
-            description=event["description"] if "description" in event else None,
+            alert_id=event.get("alert_id", None),
+            name=event.get("name", None),
+            description=event.get("description", None),
             status=CoralogixProvider.STATUS_MAP.get(event["alert_action"]),
             severity=severity,
             lastReceived=fields.get("timestampISO"),
             alertUniqueIdentifier=fields.get("alertUniqueIdentifier"),
-            uuid=event["uuid"] if "uuid" in event else None,
-            threshold=event["threshold"] if "threshold" in event else None,
-            timewindow=event["timewindow"] if "timewindow" in event else None,
+            uuid=event.get("uuid", None),
+            threshold=event.get("threshold", None),
+            timewindow=event.get("timewindow", None),
             group_by_labels=fields.get("group_by_labels"),
-            alert_url=event["alert_url"] if "alert_url" in event else None,
-            log_url=event["log_url"] if "log_url" in event else None,
+            alert_url=event.get("alert_url", None),
+            log_url=event.get("log_url", None),
             team=fields.get("team"),
             priority=fields.get("priority"),
             computer=fields.get("computer"),

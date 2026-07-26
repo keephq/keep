@@ -27,7 +27,7 @@ def get_grafana_access_token(role: str):
         "Content-Type": "application/json",
     }
     json_data_service_account = {
-        "name": f'test-{role}-{datetime.now().strftime("%Y%m%d%H%M%S")}',
+        "name": f"test-{role}-{datetime.now().strftime('%Y%m%d%H%M%S')}",
         "role": role,
     }
     auth = ("admin", "admin")
@@ -40,11 +40,11 @@ def get_grafana_access_token(role: str):
     service_account = service_account.json()
 
     json_data__token = {
-        "name": f'test-token-{datetime.now().strftime("%Y%m%d%H%M%S")}',
+        "name": f"test-token-{datetime.now().strftime('%Y%m%d%H%M%S')}",
     }
 
     token_response = requests.post(
-        f'{GRAFANA_HOST_LOCAL}/api/serviceaccounts/{service_account["id"]}/tokens',
+        f"{GRAFANA_HOST_LOCAL}/api/serviceaccounts/{service_account['id']}/tokens",
         headers=headers,
         json=json_data__token,
         auth=("admin", "admin"),
@@ -90,14 +90,14 @@ def test_grafana_provider(browser: Page, setup_page_logging, failure_artifacts):
                 base_url = "http://localhost:3000/providers"
                 url_pattern = re.compile(f"{re.escape(base_url)}(\\?.*)?$")
                 browser.wait_for_url(url_pattern)
-                print("Providers page loaded successfully. [try: %d]" % (attempt + 1))
+                print(f"Providers page loaded successfully. [try: {attempt + 1}]")
                 break
             except Exception as e:
                 if attempt < max_attemps - 1:
                     print("Failed to load providers page. Retrying...")
                     continue
                 else:
-                    raise e
+                    raise
 
         browser.get_by_role("link", name="Providers").hover()
         browser.get_by_role("link", name="Providers").click()

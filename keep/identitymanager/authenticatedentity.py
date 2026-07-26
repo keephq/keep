@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
@@ -27,5 +25,5 @@ class AuthenticatedEntity:
 
     tenant_id: str
     email: str
-    api_key_name: Optional[str] = None
-    role: Optional[str] = None
+    api_key_name: str | None = None
+    role: str | None = None

@@ -4,13 +4,13 @@ import logging
 import random
 import time
 import uuid
-from typing import Callable, Optional
+from collections.abc import Callable
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from sqlmodel import Session, select
 from sqlalchemy.exc import NoResultFound
+from sqlmodel import Session, select
 from starlette.datastructures import UploadFile
 
 from keep.api.core.config import config
@@ -59,10 +59,7 @@ def _is_localhost():
         return True
 
     # default on localhost if no USE_NGROK
-    if "0.0.0.0" in api_url:
-        return True
-
-    return False
+    return "0.0.0.0" in api_url
 
 
 @router.get("", description="Get all providers")
@@ -83,9 +80,11 @@ def get_providers(
                 if "alert" not in provider.tags:
                     continue
                 provider.alertsDistribution = [
-                    {"hour": i, "number": random.randint(0, 100)} for i in range(0, 24)
+                    {"hour": i, "number": random.randint(0, 100)} for i in range(24)
                 ]
-                provider.last_alert_received = datetime.datetime.now().isoformat()
+                provider.last_alert_received = datetime.datetime.now(
+                    tz=datetime.UTC
+                ).isoformat()
         else:
             providers_distribution = get_provider_distribution(tenant_id)
             for provider in linked_providers + installed_providers:
@@ -126,11 +125,11 @@ def get_provider_logs(
     try:
         logs = ProvidersService.get_provider_logs(tenant_id, provider_id)
         return JSONResponse(content=jsonable_encoder(logs), status_code=200)
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(
-            f"Error getting provider logs: {str(e)}",
+            f"Error getting provider logs: {e!s}",
             extra={"tenant_id": tenant_id, "provider_id": provider_id},
         )
         raise HTTPException(status_code=500, detail=str(e))
@@ -218,8 +217,8 @@ def get_logs(
             context_manager, provider_id, provider_type, provider_config
         )
         return provider.get_logs(limit=limit)
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
     except ModuleNotFoundError:
         raise HTTPException(404, detail=f"Provider {provider_type} not found")
     except Exception:
@@ -259,8 +258,8 @@ def get_alert_count(
     provider_type: str,
     provider_id: str,
     ever: bool,
-    start_time: Optional[datetime.datetime] = None,
-    end_time: Optional[datetime.datetime] = None,
+    start_time: datetime.datetime | None = None,
+    end_time: datetime.datetime | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["read:alert"])
     ),
@@ -290,7 +289,7 @@ def add_alert(
     provider_type: str,
     provider_id: str,
     alert: dict,
-    alert_id: Optional[str] = None,
+    alert_id: str | None = None,
     authenticated_entity: AuthenticatedEntity = Depends(
         IdentityManagerFactory.get_auth_verifier(["write:alert"])
     ),
@@ -350,7 +349,8 @@ def test_provider(
     # 1. provider_type and provider id is valid
     # 2. the provider config is valid
     context_manager = ContextManager(
-        tenant_id=tenant_id, workflow_id=""  # this is not in a workflow scope
+        tenant_id=tenant_id,
+        workflow_id="",  # this is not in a workflow scope
     )
     provider = ProvidersFactory.get_provider(
         context_manager, provider_id, provider_type, provider_config

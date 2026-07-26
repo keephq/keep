@@ -1,12 +1,9 @@
 import time
 from datetime import datetime, timedelta
 
-import pytest
 import requests
-from playwright.sync_api import expect, Page
 
 from tests.e2e_tests.utils import get_token
-
 
 GRAFANA_HOST = "http://grafana:3000"
 GRAFANA_HOST_LOCAL = "http://localhost:3002"
@@ -14,7 +11,9 @@ KEEP_UI_URL = "http://localhost:3000"
 KEEP_API_URL = "http://localhost:8080"
 
 
-def query_alerts(cell_query: str = None, limit: int = None, offset: int = None):
+def query_alerts(
+    cell_query: str | None = None, limit: int | None = None, offset: int | None = None
+):
     url = f"{KEEP_API_URL}/alerts/query"
 
     query = {}
@@ -221,8 +220,12 @@ def upload_alerts():
 
         if attempt >= max_attempts:
             # Print more debugging information
-            print(f"Current alerts in system: {list(current_alerts['grouped_by_name'].keys())}")
-            print(f"Missing alerts: {[alert['alertName'] for _, alert in missing_alerts]}")
+            print(
+                f"Current alerts in system: {list(current_alerts['grouped_by_name'].keys())}"
+            )
+            print(
+                f"Missing alerts: {[alert['alertName'] for _, alert in missing_alerts]}"
+            )
 
             raise Exception(
                 f"Not all alerts were uploaded after {max_attempts} attempts. Missing alerts: "
@@ -265,7 +268,9 @@ def upload_alert(provider_type, alert):
     ).raise_for_status()
 
 
-def query_incidents(cell_query: str = None, limit: int = None, offset: int = None):
+def query_incidents(
+    cell_query: str | None = None, limit: int | None = None, offset: int | None = None
+):
     url = f"{KEEP_API_URL}/incidents"
 
     query = {}
@@ -409,7 +414,10 @@ def upload_incidents():
         # Check which incidents are still missing
         missing_incidents = []
         for simluated_incident in simulated_incidents:
-            if simluated_incident["user_generated_name"] not in current_incidents["grouped_by_name"]:
+            if (
+                simluated_incident["user_generated_name"]
+                not in current_incidents["grouped_by_name"]
+            ):
                 missing_incidents.append(simluated_incident)
 
         if not missing_incidents:
@@ -418,8 +426,12 @@ def upload_incidents():
 
         if attempt >= max_attempts:
             # Print more debugging information
-            print(f"Current incidents in system: {list(current_incidents['grouped_by_name'].keys())}")
-            print(f"Missing incidents: {[incident['user_generated_name'] for incident in missing_incidents]}")
+            print(
+                f"Current incidents in system: {list(current_incidents['grouped_by_name'].keys())}"
+            )
+            print(
+                f"Missing incidents: {[incident['user_generated_name'] for incident in missing_incidents]}"
+            )
 
             raise Exception(
                 f"Not all incidents were uploaded after {max_attempts} attempts. Missing incidents: {missing_incidents}"
@@ -467,7 +479,7 @@ def associate_alerts_with_incident(incident_id: str, alert_ids: list[str]):
         ).raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Failed to associate alerts with incident {incident_id}: {e}")
-        raise e
+        raise
 
 
 def setup_incidents_alerts():

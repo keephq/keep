@@ -1,11 +1,10 @@
 """Tests for ServiceNow provider incident sync functionality."""
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from keep.api.models.incident import IncidentDto, IncidentStatus, IncidentSeverity
+from keep.api.models.incident import IncidentDto, IncidentSeverity, IncidentStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.models.provider_config import ProviderConfig
 from keep.providers.servicenow_provider.servicenow_provider import (
@@ -140,9 +139,7 @@ class TestGetIncidents:
             },
         ]
 
-        with patch.object(
-            servicenow_provider, "_query", return_value=mock_incidents
-        ):
+        with patch.object(servicenow_provider, "_query", return_value=mock_incidents):
             incidents = servicenow_provider._get_incidents()
 
         assert len(incidents) == 2
@@ -165,9 +162,7 @@ class TestGetIncidentActivities:
         # Mock the sys_id resolution
         resolve_response = MagicMock()
         resolve_response.ok = True
-        resolve_response.json.return_value = {
-            "result": [{"sys_id": "abc123def456"}]
-        }
+        resolve_response.json.return_value = {"result": [{"sys_id": "abc123def456"}]}
 
         # Mock the journal query
         journal_response = MagicMock()
@@ -218,9 +213,7 @@ class TestAddIncidentActivity:
         """Test adding a work note to an incident."""
         resolve_response = MagicMock()
         resolve_response.ok = True
-        resolve_response.json.return_value = {
-            "result": [{"sys_id": "abc123"}]
-        }
+        resolve_response.json.return_value = {"result": [{"sys_id": "abc123"}]}
 
         patch_response = MagicMock()
         patch_response.ok = True
@@ -228,8 +221,9 @@ class TestAddIncidentActivity:
             "result": {"sys_id": "abc123", "work_notes": "Test note"}
         }
 
-        with patch("requests.get", return_value=resolve_response), patch(
-            "requests.patch", return_value=patch_response
+        with (
+            patch("requests.get", return_value=resolve_response),
+            patch("requests.patch", return_value=patch_response),
         ):
             result = servicenow_provider.add_incident_activity(
                 incident_id="INC0010001",
@@ -243,9 +237,7 @@ class TestAddIncidentActivity:
         """Test adding a comment to an incident."""
         resolve_response = MagicMock()
         resolve_response.ok = True
-        resolve_response.json.return_value = {
-            "result": [{"sys_id": "abc123"}]
-        }
+        resolve_response.json.return_value = {"result": [{"sys_id": "abc123"}]}
 
         patch_response = MagicMock()
         patch_response.ok = True
@@ -253,8 +245,9 @@ class TestAddIncidentActivity:
             "result": {"sys_id": "abc123", "comments": "Customer update"}
         }
 
-        with patch("requests.get", return_value=resolve_response), patch(
-            "requests.patch", return_value=patch_response
+        with (
+            patch("requests.get", return_value=resolve_response),
+            patch("requests.patch", return_value=patch_response),
         ):
             result = servicenow_provider.add_incident_activity(
                 incident_id="INC0010001",
@@ -289,9 +282,7 @@ class TestResolveSysId:
         """Test resolving an incident number to sys_id."""
         mock_response = MagicMock()
         mock_response.ok = True
-        mock_response.json.return_value = {
-            "result": [{"sys_id": "resolved_sys_id"}]
-        }
+        mock_response.json.return_value = {"result": [{"sys_id": "resolved_sys_id"}]}
 
         with patch("requests.get", return_value=mock_response):
             result = servicenow_provider._resolve_incident_sys_id("INC0010001")
