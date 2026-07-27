@@ -550,18 +550,11 @@ def test_get_workflow_run_logs_sorted_by_timestamp(db_session):
     db_session.commit()
     db_session.flush()
 
-    # Create logs with timestamps in random order
-    timestamps = [
-        datetime.now(tz=timezone.utc) - timedelta(seconds=10),
-        datetime.now(tz=timezone.utc) + timedelta(seconds=5),
-        datetime.now(tz=timezone.utc) - timedelta(seconds=3),
-        datetime.now(tz=timezone.utc) + timedelta(seconds=2),
-        datetime.now(tz=timezone.utc) - timedelta(seconds=1),
-        datetime.now(tz=timezone.utc),
-        datetime.now(tz=timezone.utc) - timedelta(seconds=1),
-        datetime.now(tz=timezone.utc) - timedelta(seconds=2),
-        datetime.now(tz=timezone.utc) + timedelta(seconds=3),
-    ]
+    # Create logs with timestamps in random order. Anchor on a single "now" and
+    # use distinct offsets so timestamps can't tie under coarse clock resolution.
+    now = datetime.now(tz=timezone.utc)
+    offsets = [-10, 5, -3, 2, -1, 0, 1, -2, 3]
+    timestamps = [now + timedelta(seconds=offset) for offset in offsets]
 
     for i, ts in enumerate(timestamps):
         workflow_execution_log = WorkflowExecutionLog(

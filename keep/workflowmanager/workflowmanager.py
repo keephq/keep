@@ -285,25 +285,34 @@ class WorkflowManager:
             raise
 
     def insert_events(self, tenant_id, events: typing.List[AlertDto | IncidentDto]):
+        if not events:
+            return
+
+        self.logger.info("Getting all workflows", extra={"tenant_id": tenant_id})
+        all_workflow_models = self.workflow_store.get_all_workflows(
+            tenant_id, exclude_disabled=True
+        )
+        self.logger.info(
+            "Got all workflows",
+            extra={
+                "num_of_workflows": len(all_workflow_models),
+                "tenant_id": tenant_id,
+            },
+        )
+        # Parse each workflow once and reuse it to evaluate triggers for every
+        # event, instead of re-reading and re-parsing all workflows per event.
+        parsed_workflows = []
+        for workflow_model in all_workflow_models:
+            workflow = self._get_workflow_from_store(tenant_id, workflow_model)
+
+            if workflow is None:
+                # Exception is thrown in _get_workflow_from_store, we don't need to log it here, just continue.
+                continue
+
+            parsed_workflows.append((workflow_model, workflow))
+
         for event in events:
-            self.logger.info("Getting all workflows", extra={"tenant_id": tenant_id})
-            all_workflow_models = self.workflow_store.get_all_workflows(
-                tenant_id, exclude_disabled=True
-            )
-            self.logger.info(
-                "Got all workflows",
-                extra={
-                    "num_of_workflows": len(all_workflow_models),
-                    "tenant_id": tenant_id,
-                },
-            )
-            for workflow_model in all_workflow_models:
-                workflow = self._get_workflow_from_store(tenant_id, workflow_model)
-
-                if workflow is None:
-                    # Exception is thrown in _get_workflow_from_store, we don't need to log it here, just continue.
-                    continue
-
+            for workflow_model, workflow in parsed_workflows:
                 for trigger in workflow.workflow_triggers:
                     # If the trigger is not an alert, it's not relevant for this event.
                     if not trigger.get("type") == "alert":
@@ -566,10 +575,18 @@ class WorkflowManager:
                                 },
                             )
                     """
+                    # Running a workflow mutates its context manager, so every
+                    # queued run gets its own parsed instance instead of the
+                    # shared one used for trigger evaluation.
+                    workflow_instance = self._get_workflow_from_store(
+                        tenant_id, workflow_model
+                    )
+                    if workflow_instance is None:
+                        continue
                     with self.scheduler.lock:
                         self.scheduler.workflows_to_run.append(
                             {
-                                "workflow": workflow,
+                                "workflow": workflow_instance,
                                 "workflow_id": workflow_model.id,
                                 "tenant_id": tenant_id,
                                 "triggered_by": "alert",

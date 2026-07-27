@@ -66,7 +66,9 @@ def init_test(browser: Page, alerts, max_retries=3):
             else:
                 raise e
 
-    browser.wait_for_selector("[data-testid='facet-value']", timeout=10000)
+    browser.get_by_role("main").locator("[data-testid='facet-value']").first.wait_for(
+        timeout=30000
+    )
     browser.wait_for_selector(f"text={alerts[0]['name']}", timeout=10000)
     rows_count = browser.locator("[data-testid='alerts-table'] table tbody tr").count()
     # check that required alerts are loaded and displayed
@@ -88,9 +90,10 @@ def select_one_facet_option(browser, facet_name, option_name):
 
 def assert_facet(browser, facet_name, alerts, alert_property_name: str):
     counters_dict = {}
-    expect(
-        browser.locator("[data-testid='facet']", has_text=facet_name)
-    ).to_be_visible()
+    facet_locator = browser.get_by_role("main").locator(
+        "[data-testid='facet']", has_text=facet_name
+    )
+    expect(facet_locator).to_be_visible()
     for alert in alerts:
         prop_value = None
         for prop in alert_property_name.split("."):
@@ -106,8 +109,6 @@ def assert_facet(browser, facet_name, alerts, alert_property_name: str):
         counters_dict[prop_value] += 1
 
     for facet_value, count in counters_dict.items():
-        facet_locator = browser.locator("[data-testid='facet']", has_text=facet_name)
-        expect(facet_locator).to_be_visible()
         facet_value_locator = facet_locator.locator(
             "[data-testid='facet-value']", has_text=facet_value
         )

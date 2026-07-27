@@ -51,7 +51,6 @@ export const middleware = auth(async (request) => {
   if (
     !isAuthenticated &&
     !pathname.startsWith("/signin") &&
-    !pathname.startsWith("/health") &&
     !pathname.startsWith("/error") &&
     !pathname.startsWith("/api/healthcheck")
   ) {

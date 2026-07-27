@@ -6,6 +6,7 @@ This provider requires authentication.
 - **host**: Jira Host (required: True, sensitive: False)
 - **personal_access_token**: Jira PAT (required: True, sensitive: True)
 - **ticket_creation_url**: URL for creating new tickets (required: False, sensitive: False)
+- **verify**: Verify the Jira server's TLS certificate (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **BROWSE_PROJECTS**: Browse Jira Projects (mandatory) 
