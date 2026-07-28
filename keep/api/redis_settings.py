@@ -6,6 +6,7 @@ supporting both direct Redis and Redis Sentinel configurations.
 """
 
 from arq.connections import RedisSettings
+
 from keep.api.core.config import config
 
 
@@ -22,6 +23,7 @@ def get_redis_settings() -> RedisSettings:
     For direct Redis (default):
     - REDIS_HOST=localhost (default: localhost)
     - REDIS_PORT=6379 (default: 6379)
+    - REDIS_DB=0 (default: 0)
 
     Returns:
         RedisSettings: Configured Redis settings for ARQ
@@ -49,6 +51,7 @@ def get_redis_settings() -> RedisSettings:
             sentinel_master=service_name,
             username=config("REDIS_USERNAME", default=None),
             password=config("REDIS_PASSWORD", default=None),
+            database=config("REDIS_DB", cast=int, default=0),
             ssl=ssl_enabled,
             conn_timeout=60,
             conn_retries=10,
@@ -60,6 +63,7 @@ def get_redis_settings() -> RedisSettings:
             port=config("REDIS_PORT", cast=int, default=6379),
             username=config("REDIS_USERNAME", default=None),
             password=config("REDIS_PASSWORD", default=None),
+            database=config("REDIS_DB", cast=int, default=0),
             ssl=ssl_enabled,
             conn_timeout=60,
             conn_retries=10,
