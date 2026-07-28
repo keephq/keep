@@ -28,8 +28,10 @@ jobs:
       - name: Extract Keep ID from PR description
         if: github.event_name == 'pull_request'
         id: extract_id
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          PR_DESC="${{ github.event.pull_request.body }}"
+          PR_DESC="$PR_BODY"
           INCIDENT_ID=$(echo "$PR_DESC" | grep -ioP 'close keep incident:\s*\K[a-f0-9-]+' || true)
           ALERT_FINGERPRINT=$(echo "$PR_DESC" | grep -ioP 'close keep alert:\s*\K[a-f0-9-]+' || true)
           echo "incident_id=$INCIDENT_ID" >> $GITHUB_OUTPUT
