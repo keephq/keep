@@ -126,6 +126,9 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 keep = "keep.cli.cli:cli"
 
+[tool.ruff]
+required-version = "0.11.4"
+
 [tool.ruff.lint]
 ignore = ["F405", "F811", "E712", "E711", "F403"]
 
