@@ -32,6 +32,7 @@ jobs:
       - uses: chartboost/ruff-action@v1
         with:
           src: "./keep"
+          version: 0.11.4
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v4
