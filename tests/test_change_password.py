@@ -177,3 +177,44 @@ def test_admin_can_reset_user_password_via_update(db_session, client, test_app):
     # managed_user can sign in with new password
     assert _signin(client, "managed_user", "resetpass").status_code == 200
     assert _signin(client, "managed_user", "initialpass").status_code == 401
+
+
+@pytest.mark.parametrize(
+    "test_app",
+    [{"AUTH_TYPE": "DB", "KEEP_JWT_SECRET": "somesecret"}],
+    indirect=True,
+)
+def test_admin_can_update_user_role_via_update(db_session, client, test_app):
+    """An admin can update a local user's role via the update endpoint."""
+    _create_db_user(db_session, "admin_user", "adminpass", role="admin")
+    _create_db_user(db_session, "managed_user", "managedpass", role="noc")
+
+    signin = _signin(client, "admin_user", "adminpass")
+    assert signin.status_code == 200
+    token = signin.json()["accessToken"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.put(
+        "/auth/users/managed_user",
+        json={"role": "admin"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["role"] == "admin"
+    assert _signin(client, "managed_user", "managedpass").json()["role"] == "admin"
+
+    response = client.put(
+        "/auth/users/managed_user",
+        json={"role": "admin"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["role"] == "admin"
+
+    response = client.put(
+        "/auth/users/missing_user",
+        json={"role": "admin"},
+        headers=headers,
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"

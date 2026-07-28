@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "keep"
-version = "0.54.1"
+version = "0.54.2"
 description = "Alerting. for developers, by developers."
 authors = ["Keep Alerting LTD"]
 packages = [{include = "keep"}]
@@ -125,6 +125,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 keep = "keep.cli.cli:cli"
+
+[tool.ruff]
+required-version = "0.11.4"
 
 [tool.ruff.lint]
 ignore = ["F405", "F811", "E712", "E711", "F403"]

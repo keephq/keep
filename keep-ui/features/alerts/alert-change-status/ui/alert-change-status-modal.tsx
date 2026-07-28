@@ -42,6 +42,7 @@ export function AlertChangeStatusModal({
   const api = useApi();
   const [disposeOnNewAlert, setDisposeOnNewAlert] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const revalidateMultiple = useRevalidateMultiple();
   const { alertsMutator } = useAlerts();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
@@ -82,6 +83,7 @@ export function AlertChangeStatusModal({
       showErrorToast(new Error("Batch status change should use batch handler."));
       return;
     }
+    setIsSubmitting(true);
     try {
       await api.post(
         `/alerts/enrich?dispose_on_new_alert=${disposeOnNewAlert}`,
@@ -106,14 +108,21 @@ export function AlertChangeStatusModal({
       await presetsMutator();
     } catch (error) {
       showErrorToast(error, "Failed to change alert status.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleChangeStatusBatch = async () => {
+    if (!selectedStatus) {
+      showErrorToast(new Error("Please select a new status."));
+      return;
+    }
     let fingerprints = new Set<string>();
     if (Array.isArray(alert)) {
       alert.forEach((a) => fingerprints.add(a.fingerprint));
     }
+    setIsSubmitting(true);
     try {
       await api.post(
         `/alerts/batch_enrich?dispose_on_new_alert=${disposeOnNewAlert}`,
@@ -138,6 +147,8 @@ export function AlertChangeStatusModal({
       await presetsMutator();
     } catch (error) {
       showErrorToast(error, "Failed to change alert(s) status.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -190,10 +201,20 @@ export function AlertChangeStatusModal({
           </div>
         </div>
         <div className="flex justify-end mt-4 gap-2">
-          <Button onClick={handleClose} color="orange" variant="secondary">
+          <Button
+            onClick={handleClose}
+            color="orange"
+            variant="secondary"
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button onClick={handleChangeStatus} color="orange">
+          <Button
+            onClick={handleChangeStatus}
+            color="orange"
+            loading={isSubmitting}
+            disabled={isSubmitting}
+          >
             Change Status
           </Button>
         </div>
@@ -248,10 +269,20 @@ export function AlertChangeStatusModal({
           </div>
         </div>
         <div className="flex justify-end mt-4 gap-2">
-          <Button onClick={handleClose} color="blue" variant="secondary">
+          <Button
+            onClick={handleClose}
+            color="blue"
+            variant="secondary"
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button onClick={handleChangeStatusBatch} color="blue">
+          <Button
+            onClick={handleChangeStatusBatch}
+            color="blue"
+            loading={isSubmitting}
+            disabled={isSubmitting}
+          >
             Change Status
           </Button>
         </div>

@@ -4,7 +4,7 @@ import logging
 import random
 import time
 import uuid
-from typing import Any, Callable, Dict, Optional
+from typing import Callable, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
@@ -831,43 +831,6 @@ def get_webhook_settings(
         ),
         webhookMarkdown=webhookMarkdown,
     )
-
-
-@router.post("/healthcheck", description="Run healthcheck on a provider")
-async def healthcheck_provider(
-    request: Request,
-) -> Dict[str, Any]:
-    try:
-        provider_info = await request.json()
-    except Exception:
-        form_data = await request.form()
-        provider_info = dict(form_data)
-
-    if not provider_info:
-        raise HTTPException(status_code=400, detail="No valid data provided")
-
-    try:
-        provider_id = provider_info.pop("provider_id")
-        provider_type = provider_info.pop("provider_type", None) or provider_id
-        provider_name = f"{provider_type} healthcheck"
-    except KeyError as e:
-        raise HTTPException(
-            status_code=400, detail=f"Missing required field: {e.args[0]}"
-        )
-
-    for key, value in provider_info.items():
-        if isinstance(value, UploadFile):
-            provider_info[key] = value.file.read().decode()
-
-    provider = ProvidersService.prepare_provider(
-        provider_id,
-        provider_name,
-        provider_type,
-        provider_info,
-    )
-
-    result = provider.get_health_report()
-    return result
 
 
 @router.get("/healthcheck", description="Get all providers for healthcheck")

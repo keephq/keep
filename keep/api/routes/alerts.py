@@ -1015,15 +1015,21 @@ def batch_enrich_alerts(
         # @tb add "and session" cuz I saw AttributeError: 'NoneType' object has no attribute 'add'"
         if should_check_incidents_resolution and session:
             enrich_alerts_with_incidents(tenant_id=tenant_id, alerts=alerts)
-            for alert in alerts:
-                for incident in alert._incidents:
-                    if (
-                        incident.resolve_on == ResolveOn.ALL.value
-                        and is_all_alerts_resolved(incident=incident, session=session)
-                    ):
-                        incident.status = IncidentStatus.RESOLVED.value
-                        session.add(incident)
-                    session.commit()
+            # the same incident may be linked to many of the enriched alerts,
+            # so check each incident only once and commit once at the end
+            unique_incidents = {
+                incident.id: incident
+                for alert in alerts
+                for incident in alert._incidents
+            }
+            for incident in unique_incidents.values():
+                if (
+                    incident.resolve_on == ResolveOn.ALL.value
+                    and is_all_alerts_resolved(incident=incident, session=session)
+                ):
+                    incident.status = IncidentStatus.RESOLVED.value
+                    session.add(incident)
+            session.commit()
 
         return {"status": "ok"}
     except HTTPException:
