@@ -1,4 +1,3 @@
-import { Link } from "@/components/ui";
 import { KeepApiError, KeepApiReadOnlyError } from "@/shared/api";
 import { toast, ToastOptions, ToastPosition } from "react-toastify";
 
@@ -22,20 +21,7 @@ export function showErrorToast(
     ...options,
   };
   if (error instanceof KeepApiReadOnlyError) {
-    toast.warning(
-      <>
-        You&apos;re in read-only mode. Sign up at{" "}
-        <Link
-          href="https://keephq.dev"
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          keephq.dev
-        </Link>{" "}
-        to get your own instance!
-      </>,
-      toastOptions
-    );
+    toast.warning("You're in read-only mode.", toastOptions);
   } else if (error instanceof KeepApiError) {
     toast.error(
       messageOverride ||

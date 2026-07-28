@@ -55,10 +55,10 @@ const KeepBanner = ({
                 source: bannerId,
               });
               {newWindow ? window.open(
-                "https://www.keephq.dev/meet-keep",
+                "https://docs.optes.internal/contact",
                 "_blank",
                 "noopener,noreferrer"
-              ) : window.location.href = "https://www.keephq.dev/meet-keep"}
+              ) : window.location.href = "https://docs.optes.internal/contact"}
             }}
             color="orange"
             variant="secondary"

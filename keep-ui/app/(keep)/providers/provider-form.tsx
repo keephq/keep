@@ -598,7 +598,7 @@ const ProviderForm = ({
                   >
                     <a
                       href={`${
-                        config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+                        config?.KEEP_DOCS_URL || "https://docs.optes.internal"
                       }/development/external-url`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -728,7 +728,7 @@ const ProviderForm = ({
           <Link
             className="text-orange-600 underline"
             href={`${
-              config?.KEEP_DOCS_URL || "http://docs.keephq.dev"
+              config?.KEEP_DOCS_URL || "https://docs.optes.internal"
             }/providers/documentation/${provider.docs_slug ?? provider.type}-provider`}
             target="_blank"
           >

@@ -31,7 +31,7 @@ export function ErrorComponent({
   const { data: config } = useConfig();
 
   const contactUsUrl =
-    config?.KEEP_CONTACT_US_URL || "https://slack.keephq.dev/";
+    config?.KEEP_CONTACT_US_URL || "https://docs.optes.internal/contact";
 
   useEffect(() => {
     Sentry.captureException(originalError);

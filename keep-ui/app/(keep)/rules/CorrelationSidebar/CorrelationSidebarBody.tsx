@@ -129,7 +129,7 @@ export const CorrelationSidebarBody = ({
             className="!text-orange-500 hover:!text-orange-700 ml-0.5"
             target="_blank"
             href={`${
-              config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+              config?.KEEP_DOCS_URL || "https://docs.optes.internal"
             }/overview/correlation`}
           >
             docs

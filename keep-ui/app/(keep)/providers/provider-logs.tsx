@@ -38,7 +38,7 @@ const ProviderLogs: React.FC<ProviderLogsProps> = ({ providerId }) => {
               variant="primary"
               onClick={() =>
                 window.open(
-                  `${config?.KEEP_DOCS_URL || "https://docs.keephq.dev"}`,
+                  `${config?.KEEP_DOCS_URL || "https://docs.optes.internal"}`,
                   "_blank"
                 )
               }

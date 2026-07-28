@@ -29,7 +29,7 @@ export const useFetchProviders = () => {
       <br />
       <Link
         href={`${
-          config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+          config?.KEEP_DOCS_URL || "https://docs.optes.internal"
         }/development/external-url`}
         target="_blank"
         rel="noreferrer noopener"
@@ -55,7 +55,7 @@ export const useFetchProviders = () => {
         autoClose: 10000,
         onClick: () =>
           window.open(
-            `${config?.KEEP_DOCS_URL || "https://docs.keephq.dev"}`,
+            `${config?.KEEP_DOCS_URL || "https://docs.optes.internal"}`,
             "_blank"
           ),
         style: {

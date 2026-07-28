@@ -74,7 +74,7 @@ export default function WorkflowDetailPage({
     }
   );
 
-  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
+  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.optes.internal";
 
   if (error) {
     return <ErrorComponent error={error} />;

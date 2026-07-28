@@ -4,7 +4,8 @@ import * as Sentry from "@sentry/nextjs";
 export async function register() {
   if (
     process.env.SENTRY_DISABLED === "true" ||
-    process.env.NODE_ENV === "development"
+    process.env.NODE_ENV === "development" ||
+    !process.env.NEXT_PUBLIC_SENTRY_DSN
   ) {
     return;
   }

@@ -228,7 +228,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
             <br></br>
             <a
               href={`${
-                config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+                config?.KEEP_DOCS_URL || "https://docs.optes.internal"
               }/overview/deduplication`}
               target="_blank"
               className="text-orange-600 hover:underline mt-4"

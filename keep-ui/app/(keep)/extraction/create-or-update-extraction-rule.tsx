@@ -193,7 +193,7 @@ export default function CreateOrUpdateExtractionRule({
         Extraction Definition{" "}
         <a
           href={`${
-            config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+            config?.KEEP_DOCS_URL || "https://docs.optes.internal"
           }/overview/enrichment/extraction`}
           target="_blank"
         >
@@ -246,7 +246,7 @@ export default function CreateOrUpdateExtractionRule({
           Condition
           <a
             href={`${
-              config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+              config?.KEEP_DOCS_URL || "https://docs.optes.internal"
             }/overview/presets`}
             target="_blank"
           >

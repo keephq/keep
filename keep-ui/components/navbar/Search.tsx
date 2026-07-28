@@ -100,7 +100,7 @@ export const Search = ({ session }: SearchProps) => {
   const router = useRouter();
   const comboboxInputRef = useRef<ElementRef<"input">>(null);
   const { data: configData } = useConfig();
-  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
+  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.optes.internal";
   const [isLoading, setIsLoading] = useState(false);
 
   // Log session for debugging

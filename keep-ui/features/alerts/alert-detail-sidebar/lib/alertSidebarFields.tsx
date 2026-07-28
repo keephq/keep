@@ -152,7 +152,7 @@ export const alertSidebarFieldsConfig: Record<
                 are calculated based on.{" "}
                 <Link
                   href={`${
-                    config?.KEEP_DOCS_URL || "https://docs.keephq.dev"
+                    config?.KEEP_DOCS_URL || "https://docs.optes.internal"
                   }/overview/fingerprints`}
                   className="text-white"
                 >

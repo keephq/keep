@@ -393,7 +393,7 @@ export const AlertsRulesBuilder = ({
                                 {...props}
                                 docsUrl={
                                   config?.KEEP_DOCS_URL ||
-                                  "https://docs.keephq.dev"
+                                  "https://docs.optes.internal"
                                 }
                               />
                             ),

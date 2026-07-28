@@ -55,7 +55,7 @@ export default function SettingsPage() {
   const [userSubTabIndex, setUserSubTabIndex] = useState<number>(0);
 
   const authType = configData?.AUTH_TYPE as AuthType;
-  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.keephq.dev";
+  const docsUrl = configData?.KEEP_DOCS_URL || "https://docs.optes.internal";
 
   // future: feature flags
   const usersAllowed = authType !== AuthType.NOAUTH;
