@@ -1,5 +1,4 @@
 import hashlib
-import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 import freezegun
@@ -168,20 +167,47 @@ def test_alert_dto_invalid_timestamps():
             pytest.fail(f"Expected ValueError for timestamp {timestamp}")
 
 
-def test_alert_dto_url_encoding():
-    """Test that the url is encoded correctly and no exception is raised"""
-    unencoded_urls = [
-        "https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down",
-        "https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2#[lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down",
-        " https://platform.keephq.dev?alertId=NetworkConnection-IF-HGD100000/2 [lan3] [0.0.0.0] [fswintf]<->IF-HGD100000/2 [internal] [0.0.0.0] [internal]-Down ",
-    ]
-    for url in unencoded_urls:
-        alert = create_basic_alert(
-            name="Test Alert", last_received="1970-01-01T00:00:00.000Z", url=url
-        )
-        unquoted_url = urllib.parse.unquote(str(alert.url))
-        reencoded_url = urllib.parse.quote(unquoted_url, safe="/:?=&")
-        assert alert.url == reencoded_url
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://www.google.com/search?q=%E9%93%B6%E6%B2%B3",
+            "https://www.google.com/search?q=%E9%93%B6%E6%B2%B3",
+        ),
+        (
+            "https://wazuh.example/#/agents?name=production%20server",
+            "https://wazuh.example/#/agents?name=production%20server",
+        ),
+        (
+            "https://platform.keephq.dev?alertId=service a<->service b",
+            "https://platform.keephq.dev?alertId=service%20a%3C-%3Eservice%20b",
+        ),
+        (
+            " example.com/progress/100% complete ",
+            "https://example.com/progress/100%25%20complete",
+        ),
+        (
+            "https://example.com/银河",
+            "https://example.com/%E9%93%B6%E6%B2%B3",
+        ),
+        (
+            "https://example.com/%2/%GG",
+            "https://example.com/%252/%25GG",
+        ),
+    ],
+)
+def test_alert_dto_url_encoding_is_idempotent(url, expected):
+    alert = create_basic_alert(
+        name="Test Alert", last_received="1970-01-01T00:00:00.000Z", url=url
+    )
+    reconstructed_alert = create_basic_alert(
+        name="Test Alert",
+        last_received="1970-01-01T00:00:00.000Z",
+        url=str(alert.url),
+    )
+
+    assert str(alert.url) == expected
+    assert str(reconstructed_alert.url) == expected
 
 
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)

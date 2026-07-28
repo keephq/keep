@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import json
 import logging
+import re
 import urllib.parse
 import uuid
 from enum import Enum
@@ -16,6 +17,9 @@ if TYPE_CHECKING:
     pass
 
 logger = logging.getLogger(__name__)
+
+_INVALID_PERCENT_ESCAPE = re.compile(r"%(?![0-9A-Fa-f]{2})")
+_URL_SAFE_CHARACTERS = "/:?=&%#"
 
 
 def get_fingerprint(fingerprint, values):
@@ -165,7 +169,8 @@ class AlertDto(BaseModel):
             # @tb: in some cases we drop the event because of invalid url with no scheme
             # invalid or missing URL scheme (type=value_error.url.scheme)
             url = f"https://{url}"
-        return urllib.parse.quote(url, safe="/:?=&")
+        url = _INVALID_PERCENT_ESCAPE.sub("%25", url)
+        return urllib.parse.quote(url, safe=_URL_SAFE_CHARACTERS)
 
     @validator("lastReceived", pre=True, always=True)
     def validate_last_received(cls, last_received):
