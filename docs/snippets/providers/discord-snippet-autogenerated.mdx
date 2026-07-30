@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -11,6 +11,7 @@ This provider requires authentication.
 This provider can be used in workflows.
 
 
+
 As "action" to make changes or update data, example:
 ```yaml
 actions:
@@ -18,15 +19,32 @@ actions:
       provider: discord
       config: "{{ provider.my_provider_name }}"
       with:
-        content: {value}  # The content of the message.
-        components: {value}  # The components of the message.
-        files: {value}  # Optional list of file attachments (bytes, tuple, or {base64, filename} dict).
-        message_id: {value}  # Optional - edits a previously sent message instead of posting a new one.
+        content: {value}  # Message text (up to 2000 characters).
+        components: {value}  # Interactive components (buttons, action rows).
+        files: {value}  # List of file specs, up to 10. Each element can be:
+- bytes: raw file content
+- tuple: (filename, content_bytes, content_type)
+- dict: {"base64": "...", "filename": "..."} - the way to
+  attach a file produced by an earlier workflow step, e.g. a
+  rendered chart or log excerpt returned as a base64 string
+  in that step's results and referenced here via
+  `{{ steps.<name>.results.<key> }}`. No filesystem path form
+  is supported, so a file can never be attached by pointing
+  at an arbitrary path on the server.
+        message_id: {value}  # Id of a previously sent webhook message. When
+set, edits that message instead of posting a new one. Obtain
+it from a prior call's return value (result["message_id"],
+requires wait=True) or from Discord directly.
+        # Any other Discord webhook JSON body param (embeds, username,
+avatar_url, allowed_mentions, flags, thread_name,
+applied_tags, poll, attachments) is forwarded as-is.
+`tts` is explicitly not supported (dropped, with a
+warning) - see README for rationale.
+Query string params: wait, thread_id, with_components.
 ```
 
 
 
-Additional Discord webhook params (embeds, username, avatar_url, poll, etc.) can be passed as `with:` keys and are forwarded directly to the Discord API.
 
 Check the following workflow example:
 - [discord_basic.yml](https://github.com/keephq/keep/blob/main/examples/workflows/discord_basic.yml)
