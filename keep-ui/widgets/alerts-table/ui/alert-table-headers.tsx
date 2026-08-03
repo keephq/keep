@@ -406,7 +406,7 @@ const DraggableHeaderCell = ({
       {column.getIsPinned() === false && (
         <div
           className={clsx(
-            "h-full absolute top-0 right-0 w-0.5 cursor-col-resize inline-block opacity-0 group-hover:opacity-100",
+            "h-full absolute top-0 right-0 w-2 cursor-col-resize inline-block opacity-0 group-hover:opacity-100",
             {
               "hover:w-2 bg-blue-100": column.getIsResizing() === false,
               "w-2 bg-blue-400": column.getIsResizing(),
