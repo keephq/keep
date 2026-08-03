@@ -61,7 +61,11 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
     columnHelper.display({
       id: "description",
       header: "Description",
-      cell: (context) => context.row.original.description,
+      cell: (context) => (
+        <div className="max-w-[200px] truncate" title={context.row.original.description}>
+          {context.row.original.description}
+        </div>
+      ),
     }),
     columnHelper.display({
       id: "pre",
@@ -97,7 +101,11 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
           </a>
         </div>
       ),
-      cell: (context) => context.row.original.regex,
+      cell: (context) => (
+        <div className="max-w-[200px] truncate font-mono text-xs" title={context.row.original.regex}>
+          {context.row.original.regex}
+        </div>
+      ),
     }),
     columnHelper.display({
       id: "conditon",
@@ -120,7 +128,11 @@ export default function ExtractionsTable({ extractions, editCallback }: Props) {
           </a>
         </div>
       ),
-      cell: (context) => context.row.original.condition,
+      cell: (context) => (
+        <div className="max-w-[150px] truncate" title={context.row.original.condition}>
+          {context.row.original.condition}
+        </div>
+      ),
     }),
     columnHelper.display({
       id: "newAttributes",

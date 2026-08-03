@@ -60,7 +60,7 @@ export default function Extraction() {
         </div>
       </div>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0 overflow-x-auto">
         <SidePanel
           isOpen={isSidePanelOpen}
           onClose={() => handleSidePanelExit(null)}
