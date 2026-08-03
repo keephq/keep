@@ -213,11 +213,19 @@ const DraggableHeaderCell = ({
   };
 
   const isRightmostColumn = () => {
-    const visibleColumns = table.getVisibleLeafColumns();
-
-    // the alertMenu is always the rightmost column
-    // so we need to check the second rightmost column
-    return column.id === visibleColumns[visibleColumns.length - 2].id;
+    // Use columnOrder to determine the rightmost column instead of
+    // table.getVisibleLeafColumns(), because the rendered column order
+    // may not match the actual columnOrder state (especially in preset views).
+    // The alertMenu is always the rightmost pinned column, so we check
+    // the last column in columnOrder that is not alertMenu and is visible.
+    const orderedDataColumns = columnOrder.filter(
+      (id) =>
+        id !== "alertMenu" &&
+        table.getColumn(id)?.getIsVisible() !== false
+    );
+    return (
+      column.id === orderedDataColumns[orderedDataColumns.length - 1]
+    );
   };
 
   const isLeftmostUnpinnedColumn = () => {

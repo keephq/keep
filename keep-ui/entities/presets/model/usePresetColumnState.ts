@@ -166,7 +166,26 @@ export const usePresetColumnState = ({
         };
 
         try {
-          return await updateColumnConfig(batchedUpdate);
+          const result = await updateColumnConfig(batchedUpdate);
+          // After successful backend update, also update local state immediately
+          // so the UI reflects the change without waiting for mutate() to re-fetch.
+          // This prevents the "configuration saved but column didn't move" bug.
+          if (updates.columnOrder !== undefined) {
+            setLocalColumnOrder(updates.columnOrder);
+          }
+          if (updates.columnVisibility !== undefined) {
+            setLocalColumnVisibility(updates.columnVisibility);
+          }
+          if (updates.columnRenameMapping !== undefined) {
+            setLocalColumnRenameMapping(updates.columnRenameMapping);
+          }
+          if (updates.columnTimeFormats !== undefined) {
+            setLocalColumnTimeFormats(updates.columnTimeFormats);
+          }
+          if (updates.columnListFormats !== undefined) {
+            setLocalColumnListFormats(updates.columnListFormats);
+          }
+          return result;
         } catch (err) {
           // If backend update fails, fall back to local storage
           console.warn(
