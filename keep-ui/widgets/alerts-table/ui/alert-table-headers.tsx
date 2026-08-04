@@ -128,30 +128,44 @@ const DraggableHeaderCell = ({
     [listeners, handleSortingMenuClick]
   );
 
-  const moveColumn = async (direction: "left" | "right") => {
+  /**
+   * Find the index of the nearest non-grouped column in the given direction.
+   * Grouped columns are visually hidden, so they should be skipped when
+   * determining the adjacent column for movement.
+   */
+  const findNonGroupedIndex = (direction: "left" | "right"): number => {
     const currentIndex = columnOrder.indexOf(column.id);
-    if (direction === "left" && currentIndex > 0) {
-      const newOrder = [...columnOrder];
-      [newOrder[currentIndex], newOrder[currentIndex - 1]] = [
-        newOrder[currentIndex - 1],
-        newOrder[currentIndex],
-      ];
-      try {
-        await setColumnOrder(newOrder);
-      } catch (error) {
-        console.error("Failed to update column order:", error);
+    if (currentIndex === -1) return -1;
+
+    const step = direction === "left" ? -1 : 1;
+    let targetIndex = currentIndex + step;
+
+    while (targetIndex >= 0 && targetIndex < columnOrder.length) {
+      const targetCol = table.getColumn(columnOrder[targetIndex]);
+      if (targetCol && !targetCol.getIsGrouped()) {
+        return targetIndex;
       }
-    } else if (direction === "right" && currentIndex < columnOrder.length - 1) {
-      const newOrder = [...columnOrder];
-      [newOrder[currentIndex], newOrder[currentIndex + 1]] = [
-        newOrder[currentIndex + 1],
-        newOrder[currentIndex],
-      ];
-      try {
-        await setColumnOrder(newOrder);
-      } catch (error) {
-        console.error("Failed to update column order:", error);
-      }
+      targetIndex += step;
+    }
+
+    return -1;
+  };
+
+  const moveColumn = async (direction: "left" | "right") => {
+    const targetIndex = findNonGroupedIndex(direction);
+    const currentIndex = columnOrder.indexOf(column.id);
+
+    if (targetIndex === -1 || currentIndex === -1) return;
+
+    const newOrder = [...columnOrder];
+    [newOrder[currentIndex], newOrder[targetIndex]] = [
+      newOrder[targetIndex],
+      newOrder[currentIndex],
+    ];
+    try {
+      await setColumnOrder(newOrder);
+    } catch (error) {
+      console.error("Failed to update column order:", error);
     }
   };
 
@@ -212,19 +226,35 @@ const DraggableHeaderCell = ({
     return null;
   };
 
+  /**
+   * Check if this column is the rightmost visible (non-grouped) column.
+   * Grouped columns are visually hidden, so they should not be counted.
+   */
   const isRightmostColumn = () => {
     const visibleColumns = table.getVisibleLeafColumns();
 
-    // the alertMenu is always the rightmost column
-    // so we need to check the second rightmost column
-    return column.id === visibleColumns[visibleColumns.length - 2].id;
+    // Filter out grouped columns since they are visually hidden
+    const nonGroupedColumns = visibleColumns.filter(
+      (col) => !col.getIsGrouped()
+    );
+
+    // The alertMenu is always the rightmost column
+    // so we need to check the second rightmost non-grouped column
+    if (nonGroupedColumns.length < 2) return true;
+    return column.id === nonGroupedColumns[nonGroupedColumns.length - 2].id;
   };
 
+  /**
+   * Check if this column is the leftmost unpinned (non-grouped) column.
+   * Grouped columns are visually hidden, so they should not prevent
+   * moving a column that is visually to their right.
+   */
   const isLeftmostUnpinnedColumn = () => {
     const visibleColumns = table.getVisibleLeafColumns();
 
+    // Skip grouped columns since they are visually hidden
     const firstUnpinnedIndex = visibleColumns.findIndex(
-      (col) => !col.getIsPinned()
+      (col) => !col.getIsPinned() && !col.getIsGrouped()
     );
     return column.id === visibleColumns[firstUnpinnedIndex]?.id;
   };
