@@ -5,7 +5,9 @@ import { SessionProvider } from "next-auth/react";
 
 declare global {
   interface Window {
-    __NEXT_AUTH_SESSION__?: Session | null;
+    __NEXT_AUTH?: {
+      session?: Session;
+    };
   }
 }
 
@@ -15,10 +17,13 @@ type Props = {
 };
 
 export const NextAuthProvider = ({ children, session }: Props) => {
-  // Hydrate session on mount
+  // Hydrate session on mount so useHydratedSession can read it synchronously
   if (typeof window !== "undefined" && !!session) {
-    window.__NEXT_AUTH_SESSION__ = session;
+    window.__NEXT_AUTH = { session };
   }
 
-  return <SessionProvider>{children}</SessionProvider>;
+  // Pass the server-resolved session as the initial data so SessionProvider
+  // does not need to fetch it again, preventing a flash of loading/undefined
+  // state that crashes consumers that destructure `session.data`.
+  return <SessionProvider session={session}>{children}</SessionProvider>;
 };
