@@ -236,13 +236,13 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
 
         Args:
             datasource_uid: uid of the datasource to query (required).
-            query: full query object, for datasource specific fields. Merged
-                last, so it can override anything built here.
-            expr: convenience for Prometheus-style datasources.
-            raw_sql: convenience for SQL datasources.
-            start / end: Grafana time range, absolute or relative ("now-1h").
-            instant: Prometheus instant query instead of a range query.
-            max_data_points: cap on returned points.
+            query: full query object for datasource specific fields, merged last so it overrides the arguments below.
+            expr: query expression for Prometheus-style datasources.
+            raw_sql: SQL statement for SQL datasources.
+            start: start of the Grafana time range, absolute or relative such as now-1h.
+            end: end of the Grafana time range, absolute or relative such as now.
+            instant: run a Prometheus instant query instead of a range query.
+            max_data_points: cap on the number of returned points.
 
         Returns:
             The result frames flattened into a list of row dicts.
