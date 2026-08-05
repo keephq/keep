@@ -181,6 +181,10 @@ class VictorialogsProvider(BaseProvider):
                 headers["X-Scope-OrgID"] = self.authentication_config.x_scope_orgid
             return headers
 
+        # NoAuth: no headers to add, but callers do headers.update(...) on the
+        # result, so an empty dict must be returned rather than None.
+        return {}
+
     def _convert_to_json(self, response: str) -> dict:
         """
         Convert the response string to JSON.
