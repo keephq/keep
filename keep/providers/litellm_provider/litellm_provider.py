@@ -60,6 +60,19 @@ class LitellmProvider(BaseProvider):
         """Format the prompt as a chat message."""
         return [{"role": "user", "content": prompt}]
 
+    @staticmethod
+    def _strip_code_fence(text: str) -> str:
+        """Unwrap a ```json ... ``` fence, which models add unprompted."""
+        stripped = text.strip()
+        if not stripped.startswith("```"):
+            return text
+        stripped = stripped[3:]
+        if stripped.lower().startswith("json"):
+            stripped = stripped[4:]
+        if stripped.endswith("```"):
+            stripped = stripped[:-3]
+        return stripped.strip()
+
     def _query(
         self,
         prompt: str,
@@ -105,10 +118,22 @@ class LitellmProvider(BaseProvider):
             except KeyError:
                 generated_text = ""
 
+            # Reasoning models return content=None when the whole max_tokens
+            # budget went into reasoning tokens. Without this the step would
+            # silently succeed with {"response": None}.
+            if generated_text is None:
+                finish_reason = result["choices"][0].get("finish_reason")
+                raise ProviderException(
+                    "LiteLLM API returned no content "
+                    f"(finish_reason={finish_reason!r}). Reasoning models can "
+                    "spend the whole max_tokens budget on reasoning tokens; "
+                    "raise max_tokens or use a model that does not reason."
+                )
+
             # Try to parse as JSON if it's meant to be structured
             if structured_output_format:
                 try:
-                    generated_text = json.loads(generated_text)
+                    generated_text = json.loads(self._strip_code_fence(generated_text))
                 except json.JSONDecodeError:
                     raise ProviderException(
                         f"Failed to parse generated text as JSON: {generated_text}. Model not following the structured output format. Response: {result}"
