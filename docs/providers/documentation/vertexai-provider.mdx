@@ -1,0 +1,137 @@
+---
+title: "Vertex AI"
+sidebarTitle: "Vertex AI"
+---
+
+## Overview
+
+[Vertex AI](https://cloud.google.com/vertex-ai) is Google Cloud's unified machine learning platform that provides access to foundation models including Gemini, Claude (via Model Garden), and other large language models. This provider allows you to query Vertex AI models directly from Keep workflows.
+
+## Authentication
+
+The Vertex AI provider supports two authentication methods:
+
+### Option 1: API Key (Express Mode)
+
+Use a Google AI / Vertex AI API key for quick setup. This works with Google AI Studio and Vertex AI in express mode.
+
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey) to generate an API key
+2. Enter the API key in the provider configuration
+
+### Option 2: Service Account (Full Vertex AI)
+
+For full Vertex AI access with workload identity or service account authentication:
+
+1. Create a service account in Google Cloud Console
+2. Grant the `Vertex AI User` role
+3. Download the JSON key file
+4. Paste the contents as `service_account_json`
+5. Provide your `project_id` and `region`
+
+## Configuration
+
+### API Key Authentication
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `api_key` | Yes | Google AI / Vertex AI API key |
+| `region` | No | Google Cloud region (default: `us-central1`) |
+
+### Service Account Authentication
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `service_account_json` | Yes | Service account JSON key (raw JSON or base64 encoded) |
+| `project_id` | Yes | Google Cloud project ID |
+| `region` | No | Google Cloud region (default: `us-central1`) |
+
+### Available Regions
+
+- `us-central1` (Iowa)
+- `us-east1` (South Carolina)
+- `us-east4` (Northern Virginia)
+- `us-west1` (Oregon)
+- `europe-west1` (Belgium)
+- `europe-west2` (London)
+- `europe-west3` (Frankfurt)
+- `europe-west4` (Netherlands)
+- `asia-east1` (Taiwan)
+- `asia-northeast1` (Tokyo)
+- `asia-southeast1` (Singapore)
+
+## Capabilities
+
+### Query
+
+Query Vertex AI models for text generation and AI-powered decision making within workflows.
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `prompt` | string | required | The prompt to send to the model |
+| `model` | string | `gemini-2.0-flash` | Model to use (e.g., gemini-2.0-flash, gemini-1.5-pro) |
+| `max_tokens` | integer | `1024` | Maximum tokens to generate |
+| `temperature` | float | `0.7` | Sampling temperature (0.0 - 1.0) |
+| `structured_output_format` | object | null | JSON schema for structured output |
+
+### Structured Output
+
+You can request structured JSON output by providing a JSON schema:
+
+```yaml
+actions:
+  - name: classify-alert
+    provider:
+      type: vertexai
+      config: "{{ providers.vertexai }}"
+    with:
+      prompt: "Classify this alert severity: {{ alert.message }}"
+      model: gemini-2.0-flash
+      structured_output_format:
+        type: json_schema
+        json_schema:
+          name: severity_classification
+          schema:
+            type: object
+            properties:
+              severity:
+                type: string
+                enum: ["critical", "high", "medium", "low", "info"]
+            required: ["severity"]
+            additionalProperties: false
+          strict: true
+```
+
+## Use Cases
+
+- **Alert Enrichment**: Use AI to classify or enrich incoming alerts
+- **Root Cause Analysis**: Analyze alert patterns for potential root causes
+- **Incident Triage**: Automatically determine severity and assign incidents
+- **Natural Language Workflows**: Process natural language instructions in workflows
+- **GKE Integration**: When Keep runs on GKE with workload identity, use service account auth for seamless integration
+
+## Troubleshooting
+
+### API Key Not Working
+
+- Ensure the API key is valid and has Vertex AI API enabled
+- Check that the model name is correct and available in your region
+- Verify billing is enabled on the Google Cloud project
+
+### Service Account Issues
+
+- Ensure the service account has the `Vertex AI User` role
+- Verify the project ID matches the project where Vertex AI is enabled
+- Check that the region is correct for the models you want to use
+
+### Model Not Available
+
+Not all models are available in all regions. Check the [Vertex AI model availability](https://cloud.google.com/vertex-ai/docs/general/models) for your region.
+
+## Useful Links
+
+- [Vertex AI Documentation](https://cloud.google.com/vertex-ai/docs)
+- [Gemini API Reference](https://ai.google.dev/docs)
+- [Google AI Studio](https://aistudio.google.com/)
+- [Vertex AI Pricing](https://cloud.google.com/vertex-ai/pricing)
