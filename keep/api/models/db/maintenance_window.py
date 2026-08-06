@@ -67,3 +67,29 @@ class MaintenanceRuleRead(BaseModel):
     suppress: bool = False
     enabled: bool = True
     ignore_statuses: list[str] = DEFAULT_ALERT_STATUSES_TO_IGNORE
+
+
+class MaintenanceWindowDto(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    cel_query: str
+    start_time: datetime
+    end_time: datetime
+    duration_seconds: Optional[int] = None
+    suppress: bool = False
+    enabled: bool = True
+
+    @classmethod
+    def from_orm_rule(cls, rule: "MaintenanceWindowRule") -> "MaintenanceWindowDto":
+        return cls(
+            id=rule.id,
+            name=rule.name,
+            description=rule.description,
+            cel_query=rule.cel_query,
+            start_time=rule.start_time,
+            end_time=rule.end_time,
+            duration_seconds=rule.duration_seconds,
+            suppress=rule.suppress,
+            enabled=rule.enabled,
+        )
