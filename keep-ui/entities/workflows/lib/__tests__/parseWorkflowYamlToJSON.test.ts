@@ -420,4 +420,68 @@ describe("parseWorkflowYamlToJSON", () => {
     expect(result.error).toBeUndefined();
     expect(result.success).toBe(true);
   });
+
+  // Regression for #6274: `with:` written as a sibling of `provider:` instead of
+  // nested inside it used to be accepted silently by the import path, producing a
+  // workflow that saved and fired with zero parameters. The schema is `.strict()`,
+  // so validating on import surfaces it instead.
+  it("should reject `with:` placed as a sibling of `provider:` instead of nested", () => {
+    const misplacedWithYaml = `workflow:
+  id: test-with-nesting
+  name: Test
+  description: Regression fixture for issue 6274
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: prometheus
+  actions:
+    - name: test-ntfy
+      provider:
+        type: ntfy
+        config: default
+      with:
+        message: "test"`;
+
+    const result = parseWorkflowYamlToJSON(
+      misplacedWithYaml,
+      workflowSchemaWithProviders
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "unrecognized_keys" }),
+      ])
+    );
+  });
+
+  it("should accept the same workflow once `with:` is nested under `provider:`", () => {
+    // Guard rail: the check above must reject only the misplacement, not the
+    // workflow shape itself.
+    const correctYaml = `workflow:
+  id: test-with-nesting
+  name: Test
+  description: Regression fixture for issue 6274
+  triggers:
+    - type: alert
+      filters:
+        - key: source
+          value: prometheus
+  actions:
+    - name: test-ntfy
+      provider:
+        type: ntfy
+        config: default
+        with:
+          message: "test"`;
+
+    const result = parseWorkflowYamlToJSON(
+      correctYaml,
+      workflowSchemaWithProviders
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.error).toBeUndefined();
+  });
 });
