@@ -90,6 +90,13 @@ class ZabbixProvider(BaseProvider):
             documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/event/acknowledge",
         ),
         ProviderScope(
+            name="event.get",
+            description="This method allows to retrieve events, used to attach host names to pulled problems.",
+            mandatory=True,
+            mandatory_for_webhook=False,
+            documentation_url="https://www.zabbix.com/documentation/current/en/manual/api/reference/event/get",
+        ),
+        ProviderScope(
             name="mediatype.create",
             description="This method allows to create new media types.",
             mandatory=True,
@@ -532,8 +539,29 @@ class ZabbixProvider(BaseProvider):
                 "time_from": time_from,
             },
         )
+        results = problems.get("result", [])
+
+        # problem.get doesn't support selectHosts, so hosts are fetched separately
+        # via event.get (same underlying events) and joined back in by eventid.
+        hostname_by_eventid = {}
+        eventids = [problem["eventid"] for problem in results]
+        if eventids:
+            events = self.__send_request(
+                "event.get",
+                {
+                    "eventids": eventids,
+                    "output": ["eventid"],
+                    "selectHosts": ["host", "name"],
+                },
+            )
+            for event in events.get("result", []):
+                hosts = event.get("hosts") or []
+                hostname_by_eventid[event["eventid"]] = (
+                    (hosts[0].get("name") or hosts[0].get("host")) if hosts else None
+                )
+
         formatted_alerts = []
-        for problem in problems.get("result", []):
+        for problem in results:
             name = problem.pop("name")
             problem.pop("source")
 
@@ -542,9 +570,21 @@ class ZabbixProvider(BaseProvider):
                 environment = "unknown"
 
             severity = self._convert_severity(problem.pop("severity", 1))
-            status = ZabbixProvider.STATUS_MAP.get(
-                problem.pop("status", "").lower(), AlertStatus.FIRING
-            )
+
+            # problem.get never returns a "status" field (that's a UI concept, not an
+            # API field), so this always fell through to the AlertStatus.FIRING default.
+            # problem.get only returns problems that are still open, so resolved/ok are
+            # not reachable here; acknowledged/suppressed come from their own flags.
+            suppressed = problem.pop("suppressed", "0") == "1"
+            acknowledged = problem.pop("acknowledged", "0") == "1"
+            if suppressed:
+                status = AlertStatus.SUPPRESSED
+            elif acknowledged:
+                status = AlertStatus.ACKNOWLEDGED
+            else:
+                status = AlertStatus.FIRING
+
+            hostname = hostname_by_eventid.get(problem["eventid"])
 
             formatted_alerts.append(
                 AlertDto(
@@ -559,6 +599,8 @@ class ZabbixProvider(BaseProvider):
                     message=name,
                     severity=severity,
                     environment=environment,
+                    service=hostname,
+                    hostname=hostname,
                     problem=problem,
                 )
             )
@@ -735,8 +777,18 @@ class ZabbixProvider(BaseProvider):
         event_id = event.get("id")
         trigger_id = event.get("triggerId")
         zabbix_url = event.pop("url", None)
-        hostname = event.pop("service", None) or event.get("hostName")
-        ip_address = event.get("hostIp")
+        hostname = (
+            event.pop("service", None)
+            or event.pop("host_name", None)
+            # Kept for backward compatibility with older Keep-Zabbix webhook installs
+            or event.pop("hostName", None)
+            or event.pop("HOST.NAME", None)
+        )
+        ip_address = (
+            event.pop("host_ip", None)
+            or event.pop("hostIp", None)
+            or event.pop("HOST.IP", None)
+        )
 
         if zabbix_url == "{$ZABBIX.URL}":
             # This means user did not configure $ZABBIX.URL in Zabbix probably
