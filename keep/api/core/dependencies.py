@@ -65,6 +65,18 @@ def get_pusher_client() -> Pusher | None:
         logger.debug("Pusher is disabled or missing environment variables")
         return None
 
+    try:
+        pusher_use_ssl = config("PUSHER_USE_SSL", default=False, cast=bool)
+    except ValueError:
+        # Unrecognized values previously enabled SSL, so keep SSL on
+        # (fail-secure) rather than silently downgrading to plaintext.
+        logger.warning(
+            "Invalid PUSHER_USE_SSL value, keeping SSL enabled. "
+            "Use 'true' or 'false'.",
+            extra={"pusher_use_ssl": os.environ.get("PUSHER_USE_SSL")},
+        )
+        pusher_use_ssl = True
+
     # TODO: defaults on open source no docker
     try:
         pusher = Pusher(
@@ -77,7 +89,7 @@ def get_pusher_client() -> Pusher | None:
             app_id=pusher_app_id,
             key=pusher_app_key,
             secret=pusher_app_secret,
-            ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
+            ssl=pusher_use_ssl,
             cluster=os.environ.get("PUSHER_CLUSTER"),
         )
     except ValueError:
