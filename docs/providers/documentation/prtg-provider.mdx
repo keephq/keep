@@ -1,0 +1,79 @@
+---
+title: 'PRTG'
+sidebarTitle: 'PRTG Provider'
+description: 'PRTG Network Monitor allows you to receive alerts via webhooks'
+---
+
+## Overview
+
+The PRTG Provider enables Keep to receive alerts from PRTG Network Monitor via webhooks. This allows you to centralize your PRTG alerts in Keep for better incident management.
+
+## Connecting PRTG to Keep
+
+### Setup Webhook in PRTG
+
+1. In PRTG web interface, go to **Setup** → **Notifications**.
+
+2. Click **Add new notification**.
+
+3. Set a name (e.g., "Send to Keep").
+
+4. Enable **Execute HTTP Action**.
+
+5. Configure the webhook:
+   - **URL**: `https://api.keephq.dev/alerts/event/prtg`
+   - **Method**: `POST`
+   - **Content Type**: `application/json`
+
+6. In the **Payload** field, use the following template:
+
+```json
+{
+  "sensor": "%sensor",
+  "device": "%device",
+  "group": "%group",
+  "status": "%status",
+  "message": "%message",
+  "datetime": "%datetime",
+  "sensor_id": "%sensorid",
+  "device_id": "%deviceid",
+  "group_id": "%groupid",
+  "priority": "%priority",
+  "lastvalue": "%lastvalue",
+  "probe": "%probe"
+}
+```
+
+7. Add authentication header:
+   - **Header**: `X-API-KEY`
+   - **Value**: Your Keep API key (create one in Keep Settings → API Keys)
+
+8. Save the notification.
+
+9. Add this notification to any sensor's **Notification Triggers**.
+
+## Alert Mapping
+
+### Status Mapping
+
+| PRTG Status | Keep Status |
+|-------------|-------------|
+| Up | Resolved |
+| Down | Firing |
+| Warning | Firing |
+| Unusual | Firing |
+| Paused | Suppressed |
+| Unknown | Pending |
+| Partial Down | Firing |
+
+### Severity Mapping
+
+Severity is determined by the PRTG status and priority:
+- **Down** alerts → Critical
+- **Warning/Unusual** alerts → Warning
+- **Up/Resolved** alerts → Info
+
+## Useful Links
+
+- [PRTG Website](https://www.paessler.com/prtg)
+- [PRTG Notification Documentation](https://www.paessler.com/manuals/prtg/notifications_settings)
