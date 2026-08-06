@@ -46,6 +46,17 @@ class MailgunProviderAuthConfig:
         },
         default="",
     )
+    api_region: str = dataclasses.field(
+        metadata={
+            "required": False,
+            "description": "Mailgun API region",
+            "hint": "Select 'US' for api.mailgun.net or 'EU' for api.eu.mailgun.net (uses env MAILGUN_REGION if not set)",
+            "sensitive": False,
+            "type": "select",
+            "options": ["US", "EU"],
+        },
+        default="",
+    )
     extraction: typing.Optional[list[dict[str, str]]] = dataclasses.field(
         default=None,
         metadata={
@@ -60,6 +71,7 @@ class MailgunProviderAuthConfig:
 class MailgunProvider(BaseProvider):
     MAILGUN_API_KEY = os.environ.get("MAILGUN_API_KEY")
     MAILGUN_DOMAIN = os.environ.get("MAILGUN_DOMAIN", "mails.keephq.dev")
+    MAILGUN_REGION = os.environ.get("MAILGUN_REGION", "US")  # US or EU
     WEBHOOK_INSTALLATION_REQUIRED = True
     PROVIDER_CATEGORY = ["Collaboration"]
 
@@ -207,31 +219,48 @@ class MailgunProvider(BaseProvider):
                 sender = f"{sender}>"
             expression = f'({expression} and match_header("from", "{sender}"))'
 
-        url = "https://api.mailgun.net/v3/routes"
+        # Use correct API endpoint based on region (UI field takes priority, then env variable)
+        region = (
+            self.authentication_config.api_region 
+            or MailgunProvider.MAILGUN_REGION
+            or "US"
+        ).upper()
+        api_base = "https://api.mailgun.net" if region == "US" else "https://api.eu.mailgun.net"
+        url = f"{api_base}/v3/routes"
+        
+        # Mailgun expects form data with multiple action fields
         payload = {
             "priority": 0,
             "expression": expression,
             "description": f"Keep {self.provider_id} alerting",
-            "action": [
-                f"forward('{keep_api_url}&api_key={api_key}')",
-                "stop()",
-            ],
         }
 
         route_id = self.config.authentication.get("route_id")
         if route_id:
+            # Update existing route
             response = requests.put(
-                f"{url}/{self.config.authentication.get('route_id')}",
-                files=payload,
+                f"{url}/{route_id}",
                 auth=("api", MailgunProvider.MAILGUN_API_KEY),
-                data=payload,
+                data={
+                    **payload,
+                    "action": [
+                        f"forward('{keep_api_url}&api_key={api_key}')",
+                        "stop()",
+                    ],
+                },
             )
         else:
+            # Create new route
             response = requests.post(
                 url,
-                files=payload,
                 auth=("api", MailgunProvider.MAILGUN_API_KEY),
-                data=payload,
+                data={
+                    **payload,
+                    "action": [
+                        f"forward('{keep_api_url}&api_key={api_key}')",
+                        "stop()",
+                    ],
+                },
             )
         response.raise_for_status()
         response_json = response.json()
