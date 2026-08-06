@@ -34,16 +34,17 @@ def _build_provider() -> LitellmProvider:
     return LitellmProvider(ContextManager(tenant_id="test"), "litellm-test", config)
 
 
-def _response(content, finish_reason="stop"):
+def _response(content, finish_reason="stop", usage=None, model=None):
     response = MagicMock()
     response.raise_for_status = MagicMock()
-    response.json = MagicMock(
-        return_value={
-            "choices": [
-                {"message": {"content": content}, "finish_reason": finish_reason}
-            ]
-        }
-    )
+    payload = {
+        "choices": [{"message": {"content": content}, "finish_reason": finish_reason}]
+    }
+    if usage is not None:
+        payload["usage"] = usage
+    if model is not None:
+        payload["model"] = model
+    response.json = MagicMock(return_value=payload)
     return response
 
 
@@ -88,3 +89,35 @@ def test_plain_text_response_still_works():
     provider = _build_provider()
     with patch("requests.post", return_value=_response("plain answer")):
         assert provider._query(prompt="hi")["response"] == "plain answer"
+
+
+def test_usage_is_returned_alongside_the_response():
+    """A workflow needs the token count and cost to report what a run spent."""
+    provider = _build_provider()
+    usage = {
+        "prompt_tokens": 256,
+        "completion_tokens": 98,
+        "total_tokens": 354,
+        "cost": 0.00042,
+    }
+    with patch(
+        "requests.post", return_value=_response("hi", usage=usage, model="gpt-4o")
+    ):
+        result = provider._query(prompt="hi")
+    assert result["response"] == "hi"
+    assert result["prompt_tokens"] == 256
+    assert result["completion_tokens"] == 98
+    assert result["total_tokens"] == 354
+    assert result["cost"] == 0.00042
+    assert result["model"] == "gpt-4o"
+
+
+def test_missing_usage_does_not_break_the_response():
+    """Not every OpenAI-compatible backend reports usage."""
+    provider = _build_provider()
+    with patch("requests.post", return_value=_response("hi")):
+        result = provider._query(prompt="hi", model="local-model")
+    assert result["response"] == "hi"
+    assert result["prompt_tokens"] is None
+    assert result["cost"] is None
+    assert result["model"] == "local-model"

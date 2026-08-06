@@ -139,8 +139,16 @@ class LitellmProvider(BaseProvider):
                         f"Failed to parse generated text as JSON: {generated_text}. Model not following the structured output format. Response: {result}"
                     )
 
+            # Surface usage so a workflow can report what a run cost. Absent
+            # on some OpenAI-compatible backends, hence the .get() chain.
+            usage = result.get("usage") or {}
             return {
                 "response": generated_text,
+                "model": result.get("model", model),
+                "prompt_tokens": usage.get("prompt_tokens"),
+                "completion_tokens": usage.get("completion_tokens"),
+                "total_tokens": usage.get("total_tokens"),
+                "cost": usage.get("cost"),
             }
 
         except requests.exceptions.RequestException as e:
