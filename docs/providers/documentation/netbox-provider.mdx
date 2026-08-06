@@ -81,6 +81,16 @@ X-API-KEY: your-api-key
 
 Now, you have successfully connected NetBox to Keep. You will start receiving the events in Keep based on the event rules you have created.
 
+## Pulling topology from NetBox
+
+Besides receiving alerts, Keep can pull your physical infrastructure from the NetBox DCIM API and show it on the service topology map. Devices become services (with their primary IP, role, manufacturer and site), and cables between devices become dependencies.
+
+To enable it, set the `NetBox instance URL` and a `NetBox API token` in the provider configuration. A read-only token is enough. Without these fields the provider keeps working in webhook-only mode.
+
+Optionally, enable `Group devices of the same rack into an application` so that devices sharing a rack are grouped into an application named after the rack. Combined with Keep's topology-based correlation, this lets alerts from many devices in the same rack (for example after a rack power loss) be correlated into a single incident.
+
+The number of pulled objects is limited by `Maximum number of devices to pull` (default 5000).
+
 ## Useful Links
 
 - [NetBox](https://netboxlabs.com/)
