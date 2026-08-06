@@ -418,9 +418,27 @@ class JiraProvider(BaseProvider):
                 fields.update(filtered_fields)
             
             # Also handle priority that might come through kwargs
+            # Filter out Keep-internal workflow fields that should not be passed to Jira API
             if kwargs:
+                # Keep-internal fields that are not valid Jira fields
+                keep_internal_fields = {
+                    "enrich_alert",
+                    "enrich_incident",
+                    "dispose_on_new_alert",
+                    "audit_enabled",
+                    "if",
+                    "name",
+                    "condition",
+                    "foreach",
+                    "throttle",
+                    "provider",
+                }
                 filtered_kwargs = {}
                 for key, value in kwargs.items():
+                    # Skip Keep-internal fields
+                    if key in keep_internal_fields:
+                        self.logger.debug(f"Skipping Keep-internal field '{key}' - not a valid Jira field")
+                        continue
                     if key == "priority" and (not value or str(value).lower() in ["none", "", "null"]):
                         self.logger.info(f"Skipping priority field from kwargs with value '{value}' as it may not be available on the issue screen")
                         continue
