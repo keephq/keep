@@ -23,6 +23,7 @@ from keep.providers.base.base_provider import (
     BaseTopologyProvider,
     ProviderHealthMixin,
 )
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.provider_exceptions import GetAlertException
 from keep.providers.grafana_provider.grafana_alert_format_description import (
     GrafanaAlertFormatDescription,
@@ -67,6 +68,7 @@ class GrafanaProviderAuthConfig:
 
 class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
     PROVIDER_DISPLAY_NAME = "Grafana"
+    QUERY_TIMEOUT = 60
     """Pull/Push alerts & Topology map from Grafana."""
 
     PROVIDER_CATEGORY = ["Monitoring", "Developer Tools"]
@@ -189,6 +191,96 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
             "version": version,
         }
 
+    @staticmethod
+    def _frames_to_rows(frames: list[dict]) -> list[dict]:
+        """Flatten Grafana data frames into plain rows.
+
+        A frame is columnar - `schema.fields` names the columns and
+        `data.values` holds one array per column - which is awkward to
+        consume from a workflow, so turn it into a list of dicts.
+        """
+        rows = []
+        for frame in frames or []:
+            fields = frame.get("schema", {}).get("fields", [])
+            columns = frame.get("data", {}).get("values", [])
+            if not fields or not columns:
+                continue
+            names = [field.get("name") for field in fields]
+            for index in range(len(columns[0])):
+                rows.append(
+                    {
+                        name: columns[column_index][index]
+                        for column_index, name in enumerate(names)
+                        if column_index < len(columns)
+                    }
+                )
+        return rows
+
+    def _query(
+        self,
+        datasource_uid: str = "",
+        query: dict | None = None,
+        expr: str = "",
+        raw_sql: str = "",
+        start: str = "now-1h",
+        end: str = "now",
+        instant: bool = False,
+        max_data_points: int | None = None,
+        **kwargs: dict,
+    ) -> list[dict]:
+        """Query any datasource configured in Grafana via /api/ds/query.
+
+        This makes every datasource Grafana already knows about reachable
+        from a workflow with a single service account token, including ones
+        that have no dedicated Keep provider.
+
+        Args:
+            datasource_uid: uid of the datasource to query (required).
+            query: full query object for datasource specific fields, merged last so it overrides the arguments below.
+            expr: query expression for Prometheus-style datasources.
+            raw_sql: SQL statement for SQL datasources.
+            start: start of the Grafana time range, absolute or relative such as now-1h.
+            end: end of the Grafana time range, absolute or relative such as now.
+            instant: run a Prometheus instant query instead of a range query.
+            max_data_points: cap on the number of returned points.
+
+        Returns:
+            The result frames flattened into a list of row dicts.
+        """
+        if not datasource_uid:
+            raise ProviderException("datasource_uid is required")
+
+        target: dict = {"refId": "A", "datasource": {"uid": datasource_uid}}
+        if expr:
+            target["expr"] = expr
+        if raw_sql:
+            target["rawSql"] = raw_sql
+        if instant:
+            target["instant"] = True
+        if max_data_points:
+            target["maxDataPoints"] = max_data_points
+        if query:
+            target.update(query)
+
+        response = requests.post(
+            f"{self.authentication_config.host}/api/ds/query",
+            headers={"Authorization": f"Bearer {self.authentication_config.token}"},
+            json={"queries": [target], "from": start, "to": end},
+            timeout=self.QUERY_TIMEOUT,
+        )
+        if not response.ok:
+            raise ProviderException(
+                f"Failed to query datasource {datasource_uid}: "
+                f"{response.status_code} {response.text}"
+            )
+
+        result = response.json().get("results", {}).get(target["refId"], {})
+        if result.get("error"):
+            raise ProviderException(
+                f"Datasource {datasource_uid} returned an error: {result['error']}"
+            )
+        return self._frames_to_rows(result.get("frames", []))
+
     def get_alerts_configuration(self, alert_id: str | None = None):
         api = f"{self.authentication_config.host}/api/v1/provisioning/alert-rules"
         headers = {"Authorization": f"Bearer {self.authentication_config.token}"}
@@ -249,7 +341,7 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         if fingerprint:
             logger.debug("Fingerprint provided in alert")
             return fingerprint
-        
+
         labels = alert.get("labels", {})
         fingerprint = labels.get("fingerprint", "")
         if fingerprint:

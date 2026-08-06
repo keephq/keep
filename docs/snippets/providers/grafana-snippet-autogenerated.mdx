@@ -1,4 +1,4 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
@@ -16,20 +16,46 @@ Certain scopes may be required to perform specific actions or queries via the pr
 
 ## In workflows
 
-This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
+This provider can be used in workflows.
 
 
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query grafana
+      provider: grafana
+      config: "{{ provider.my_provider_name }}"
+      with:
+        datasource_uid: {value}  # uid of the datasource to query (required).
+        query: {value}  # full query object for datasource specific fields, merged last so it overrides the arguments below.
+        expr: {value}  # query expression for Prometheus-style datasources.
+        raw_sql: {value}  # SQL statement for SQL datasources.
+        start: {value}  # start of the Grafana time range, absolute or relative such as now-1h.
+        end: {value}  # end of the Grafana time range, absolute or relative such as now.
+        instant: {value}  # run a Prometheus instant query instead of a range query.
+        max_data_points: {value}  # cap on the number of returned points.
+```
+
+
+
+
+
+Check the following workflow examples:
+- [create-new-incident-grafana-incident.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/create-new-incident-grafana-incident.yaml)
+- [create_service_now_ticket_upon_alerts.yml](https://github.com/keephq/keep/blob/main/examples/workflows/create_service_now_ticket_upon_alerts.yml)
+- [query_grafana_loki.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/query_grafana_loki.yaml)
+- [update-incident-grafana-incident.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/update-incident-grafana-incident.yaml)
 
 
 ## Topology
-This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology) 
-and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context 
+This provider pulls [topology](/overview/servicetopology) to Keep. It could be used in [correlations](/overview/correlation-topology)
+and [mapping](/overview/enrichment/mapping#mapping-with-topology-data), and as a context
 for [alerts](/alerts/sidebar#7-alert-topology-view) and [incidents](/overview#17-incident-topology).
 ## Connecting via Webhook (omnidirectional)
 This provider supports webhooks.
 
 If your Grafana is unreachable from Keep, you can use the following webhook url to configure Grafana to send alerts to Keep:
-    
+
     1. In Grafana, go to the Alerting tab in the Grafana dashboard.
     2. Click on Contact points in the left sidebar and create a new one.
     3. Give it a name and select Webhook as kind of contact point with webhook url as KEEP_BACKEND_URL/alerts/event/grafana.
