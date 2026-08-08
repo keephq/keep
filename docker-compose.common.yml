@@ -45,9 +45,5 @@ services:
     ports:
       - "8090:8090"
     environment:
-      - KEEP_MCP_TRANSPORT=streamable-http
-      - KEEP_MCP_HTTP_HOST=0.0.0.0
-      - KEEP_MCP_HTTP_PORT=8090
       - KEEP_MCP_KEEP_API_URL=http://keep-backend:8080
       - KEEP_MCP_KEEP_API_KEY=${KEEP_MCP_KEEP_API_KEY:-keepappkey}
-      - KEEP_MCP_LOG_LEVEL=INFO

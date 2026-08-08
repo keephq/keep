@@ -38,7 +38,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.mcp
-    image: us-central1-docker.pkg.dev/keephq/keep/keep-mcp
     depends_on:
       - keep-backend
 

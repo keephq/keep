@@ -1,0 +1,53 @@
+name: Unit Tests - MCP
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "keep-mcp/**"
+  pull_request:
+    paths:
+      - "keep-mcp/**"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: ${{ github.event_name }}-${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: 3.11
+
+jobs:
+  unit-tests-mcp:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: keep-mcp
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: chartboost/ruff-action@v1
+        with:
+          src: "./keep-mcp"
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies using poetry
+        run: poetry install --no-interaction --with dev
+
+      - name: Run unit tests
+        run: poetry run pytest
