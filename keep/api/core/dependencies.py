@@ -67,6 +67,10 @@ def get_pusher_client() -> Pusher | None:
 
     # TODO: defaults on open source no docker
     try:
+        pusher_use_ssl = os.environ.get("PUSHER_USE_SSL", "false")
+        if isinstance(pusher_use_ssl, str):
+            pusher_use_ssl = pusher_use_ssl.lower() in ("1", "true", "yes", "on")
+        
         pusher = Pusher(
             host=pusher_host,
             port=(
@@ -77,7 +81,7 @@ def get_pusher_client() -> Pusher | None:
             app_id=pusher_app_id,
             key=pusher_app_key,
             secret=pusher_app_secret,
-            ssl=False if os.environ.get("PUSHER_USE_SSL", False) is False else True,
+            ssl=pusher_use_ssl,
             cluster=os.environ.get("PUSHER_CLUSTER"),
         )
     except ValueError:
