@@ -1,6 +1,6 @@
 import os
 
-
+from keep.api.core.db import get_users as get_users_from_db
 from keep.api.models.user import Group, Role, User
 from keep.contextmanager.contextmanager import ContextManager
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
@@ -67,9 +67,18 @@ class OktaIdentityManager(BaseIdentityManager):
         return f"{self.okta_issuer}/sso/{tenant_id}"
     
     def get_users(self) -> list[User]:
-        """Get all users from Okta - disabled"""
-        self.logger.info("get_users called but management functions are disabled")
-        return []
+        """Get users from Keep's local DB (Okta user management is not used)"""
+        db_users = get_users_from_db()
+        return [
+            User(
+                email=user.username,
+                name=user.username,
+                role=user.role,
+                last_login=str(user.last_sign_in) if user.last_sign_in else None,
+                created_at=str(user.created_at),
+            )
+            for user in db_users
+        ]
 
     def create_user(self, user_email: str, user_name: str, password: str, role: str, groups: list[str] = []) -> dict:
         """Create a new user in Okta - disabled"""
