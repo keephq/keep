@@ -3,8 +3,17 @@ import { useWebsocket } from "@/utils/hooks/usePusher";
 import { Observable } from "rxjs";
 import { v4 as generateGuid } from "uuid";
 
+type AlertTransition = {
+  fingerprint: string;
+  status: string;
+  previous_status: string | null;
+};
+
 type PollAlertsPayload = {
   fingerprints?: string[];
+  alerts?: AlertTransition[];
+  statuses?: Record<string, string>;
+  resolved_fingerprints?: string[];
 };
 
 export function parsePollAlertsPayload(data: unknown): string[] {

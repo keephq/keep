@@ -62,3 +62,37 @@ def fingerprints_for_poll_payload(fingerprints: list[str]) -> list[str]:
     if len(fingerprints) <= FINGERPRINT_PAYLOAD_LIMIT:
         return fingerprints
     return []
+
+
+def poll_alerts_payload(
+    fingerprints: list[str],
+    alert_transitions: list[dict] | None = None,
+) -> dict:
+    """Build the poll-alerts Pusher payload with optional status-transition metadata.
+
+    Args:
+        fingerprints: List of alert fingerprints that changed.
+        alert_transitions: Optional list of dicts with keys:
+            fingerprint, status, previous_status.
+
+    Returns:
+        A dict suitable for Pusher trigger. If over FINGERPRINT_PAYLOAD_LIMIT,
+        returns {"fingerprints": []} and omits transition fields.
+    """
+    if len(fingerprints) > FINGERPRINT_PAYLOAD_LIMIT:
+        return {"fingerprints": []}
+
+    payload: dict = {"fingerprints": fingerprints}
+
+    if alert_transitions is not None:
+        payload["alerts"] = alert_transitions
+        payload["statuses"] = {
+            t["fingerprint"]: t["status"] for t in alert_transitions
+        }
+        payload["resolved_fingerprints"] = [
+            t["fingerprint"]
+            for t in alert_transitions
+            if t["status"] == "resolved"
+        ]
+
+    return payload
