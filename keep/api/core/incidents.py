@@ -33,6 +33,7 @@ from keep.api.models.facet import FacetDto, FacetOptionDto, FacetOptionsQueryDto
 from keep.api.models.incident import IncidentSorting
 from keep.api.models.query import SortOptionsDto
 from keep.api.core.cel_to_sql.ast_nodes import DataType
+from keep.api.utils.cel_utils import preprocess_cel_expression
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +205,7 @@ def __build_base_incident_query(
     is_visible_filter_present = False
 
     if cel:
+        cel = preprocess_cel_expression(cel)
         cel_to_sql_result = cel_to_sql_instance.convert_to_sql_str_v2(cel)
         sql_filter = cel_to_sql_result.sql
         involved_fields = cel_to_sql_result.involved_fields
@@ -567,6 +569,9 @@ def get_incident_facets_data(
         )
     else:
         facets = static_facets
+
+    if facet_options_query and facet_options_query.cel:
+        facet_options_query.cel = preprocess_cel_expression(facet_options_query.cel)
 
     def base_query_factory(
         facet_property_path: str,
