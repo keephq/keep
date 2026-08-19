@@ -45,7 +45,7 @@ class GrokProvider(BaseProvider):
     def _query(
         self,
         prompt,
-        model="grok-1",
+        model="grok-4.5",
         max_tokens=1024,
         structured_output_format=None,
     ):
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     print(
         provider.query(
             prompt="Here is an alert, define environment for it: Clients are panicking, nothing works.",
-            model="grok-1",
+            model="grok-4.5",
             structured_output_format={
                 "type": "json_schema",
                 "json_schema": {
