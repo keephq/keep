@@ -166,12 +166,12 @@ export function ManualRunWorkflowModal({
           </div>
         );
       }
+      clearAndClose();
     } catch (error) {
       showErrorToast(error, "Failed to start workflow");
     } finally {
       setIsRunning(false);
     }
-    clearAndClose();
   };
 
   const WorkflowSelect = (props: any) => {
