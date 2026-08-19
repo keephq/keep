@@ -1,0 +1,25 @@
+  name: "Build and Push Backend Image to ECR"
+
+  on:
+    push:
+    pull_request:
+
+  jobs:
+    build-and-push:
+      uses: inContact/acddevops-reusable-workflows/.github/workflows/code-build-and-deploy.yml@v0
+      with:
+        application-name: "keepbackend"
+        project-name: "keephq"
+        code-type: python
+        aws-accountis: >-
+          [
+            {"account":"300813158921","region":"us-west-2","gitBranchRegex":"main"}
+          ]
+        artifact-image-tag: ${{ github.sha }}
+        deploy-to-ecr: true
+        ecr-resource-tags: '[{"Key":"Product","Value":"ACD-Routing"},{"Key":"Service","Value":"Advanced\u0020Routing"},{"Key":"ApplicationOwner","Value":"sre@nice.com"},{"Key":"InfrastructureOwner","Value":"sre@nice.com"},{"Key":"CreatedBy","Value":"https://github.com/inContact/mon-keephq"}]'
+        application-root-path: '.'
+        enable-sonar-scan: false
+        enable-blackduck-scan: false
+        nable-veracode-scan: false
+    secrets: inherit
