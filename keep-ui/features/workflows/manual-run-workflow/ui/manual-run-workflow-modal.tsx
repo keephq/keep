@@ -300,7 +300,12 @@ export function ManualRunWorkflowModal({
       ) : null}
 
       <div className="flex justify-end gap-2 mt-4">
-        <Button onClick={clearAndClose} color="orange" variant="secondary">
+        <Button
+          onClick={clearAndClose}
+          color="orange"
+          variant="secondary"
+          disabled={isRunning}
+        >
           Cancel
         </Button>
         <Button
