@@ -52,7 +52,7 @@ class OpenaiProvider(BaseProvider):
     def _query(
         self,
         prompt,
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         max_tokens=1024,
         structured_output_format=None,
     ):
