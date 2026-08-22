@@ -331,15 +331,11 @@ class IOHandler:
                                 pass
                     else:
                         _arg = arg.id
-                    # if the value is empty '', we still need to pass it to the function
-                    # also, if the value is 0 or 0.0, we need to pass it to the function
-                    # 0 == False, so we need to check if the value is not False explicitly
-                    if (
-                        _arg
-                        or _arg == ""
-                        or (_arg == 0 or _arg == 0.0)
-                        and _arg is not False
-                    ):
+                    # _arg only ever stays None when none of the branches above
+                    # produced a value (e.g. a nested keep.* call returned nothing).
+                    # Any other parsed value - including "", 0, 0.0, False, [], {},
+                    # and () - is a legitimate argument and must be passed through.
+                    if _arg is not None:
                         _args.append(_arg)
 
                 # Parse keyword args
