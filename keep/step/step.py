@@ -127,7 +127,7 @@ class Step:
             foreach_items.append(items)
         if not foreach_items:
             return []
-        return len(foreach_items) == 1 and foreach_items[0] or zip(*foreach_items)
+        return foreach_items[0] if len(foreach_items) == 1 else zip(*foreach_items)
 
     def _run_foreach(self):
         """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
