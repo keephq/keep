@@ -232,8 +232,15 @@ class TopologyProcessor:
     ) -> Optional[Incident]:
         """Get the incident for an application"""
         with existed_or_new_session() as session:
+            # Exclude deleted incidents: deletion marks the incident as deleted
+            # but keeps the row (and its incident_application link), so without
+            # this filter a new alert would reuse the deleted incident instead
+            # of creating a new one.
             incident = session.exec(
-                select(Incident).where(Incident.incident_application == application.id)
+                select(Incident).where(
+                    Incident.incident_application == application.id,
+                    Incident.status != IncidentStatus.DELETED.value,
+                )
             ).first()
             return incident
 
