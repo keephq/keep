@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -141,17 +142,18 @@ class WorkflowManager:
             if workflow is None:
                 continue
 
-            # Using list comprehension instead of pandas flatten() for better performance
-            # and to avoid pandas dependency
-            # @tb: I removed pandas so if we'll have performance issues we can revert to pandas
-            incident_triggers = [
-                event
-                for trigger in workflow.workflow_triggers
-                if trigger["type"] == "incident"
-                for event in trigger.get("events", [])
-            ]
+            # Find the incident trigger (if any) that declares interest in this event name.
+            matching_trigger = next(
+                (
+                    workflow_trigger
+                    for workflow_trigger in workflow.workflow_triggers
+                    if workflow_trigger.get("type") == "incident"
+                    and trigger in workflow_trigger.get("events", [])
+                ),
+                None,
+            )
 
-            if trigger not in incident_triggers:
+            if matching_trigger is None:
                 self.logger.debug(
                     "workflow does not contain trigger %s, skipping", trigger
                 )
@@ -161,6 +163,46 @@ class WorkflowManager:
             if incident_enrichment:
                 for k, v in incident_enrichment.enrichments.items():
                     setattr(incident, k, v)
+
+            # Evaluate the trigger's CEL (if any) against the (now enrichment-merged)
+            # incident, mirroring how insert_events() gates alert triggers. Without this,
+            # a trigger's "cel" is parsed but never enforced for incident events.
+            cel = matching_trigger.get("cel", "")
+            if cel:
+                try:
+                    cel = preprocess_cel_expression(cel)
+                    compiled_ast = self.cel_environment.compile(cel)
+                    program = self.cel_environment.program(compiled_ast)
+                    # incident.dict() leaves UUID/enum fields as native Python objects,
+                    # which celpy.json_to_cel rejects; round-trip through JSON first.
+                    incident_payload = json.loads(incident.json())
+                    activation = celpy.json_to_cel(incident_payload)
+                    should_run = program.evaluate(activation)
+                except Exception as e:
+                    self.logger.exception(
+                        "Error evaluating CEL for incident trigger",
+                        extra={
+                            "exception": e,
+                            "incident_id": str(incident.id),
+                            "trigger": matching_trigger,
+                            "workflow_id": workflow_model.id,
+                            "tenant_id": tenant_id,
+                            "cel": cel,
+                        },
+                    )
+                    continue
+
+                if bool(should_run) is False:
+                    self.logger.debug(
+                        "Workflow should not run for incident, skipping",
+                        extra={
+                            "incident_id": str(incident.id),
+                            "workflow_id": workflow_model.id,
+                            "tenant_id": tenant_id,
+                            "cel": cel,
+                        },
+                    )
+                    continue
 
             self.logger.info("Adding workflow to run")
             with self.scheduler.lock:
