@@ -57,6 +57,7 @@ export default function ExtractionExecutionsPage(props: {
             offset: pagination.offset,
           }}
           setPagination={setPagination}
+          basePath="extraction"
         />
       </Card>
     </div>
