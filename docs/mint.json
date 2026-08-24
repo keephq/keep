@@ -236,6 +236,7 @@
             "providers/documentation/quickchart-provider",
             "providers/documentation/redmine-provider",
             "providers/documentation/resend-provider",
+            "providers/documentation/rocketchat-provider",
             "providers/documentation/rollbar-provider",
             "providers/documentation/sendgrid-provider",
             "providers/documentation/sentry-provider",
