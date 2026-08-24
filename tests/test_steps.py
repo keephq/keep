@@ -145,3 +145,33 @@ def test_continue_on_error_explicit_false():
         {},
     )
     assert step.continue_on_error is False
+
+
+@pytest.mark.parametrize(
+    "resolved,expected",
+    [
+        (0, [0]),  # falsy scalar: used to hit zip(0) -> TypeError (#6721)
+        (False, [False]),
+        (None, [None]),
+        (5, [5]),  # truthy non-iterable also crashed before via for-loop
+        ([1, 2], [1, 2]),  # iterables keep their semantics
+        (["a", "b"], ["a", "b"]),
+        ([], []),
+    ],
+)
+def test_get_foreach_items_single_reference(sample_step, resolved, expected):
+    sample_step.config["foreach"] = "{{ steps.check-count.results }}"
+    sample_step.context_manager.get_full_context = Mock(
+        return_value={"steps": {"check-count": {"results": resolved}}}
+    )
+
+    assert sample_step._get_foreach_items() == expected
+
+
+def test_get_foreach_items_multiple_references_zip(sample_step):
+    sample_step.config["foreach"] = "{{ steps.a.results }} && {{ steps.b.results }}"
+    sample_step.context_manager.get_full_context = Mock(
+        return_value={"steps": {"a": {"results": [1, 2]}, "b": {"results": ["x", "y"]}}}
+    )
+
+    assert list(sample_step._get_foreach_items()) == [(1, "x"), (2, "y")]
