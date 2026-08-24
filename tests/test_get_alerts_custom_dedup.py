@@ -106,6 +106,33 @@ class TestGetAlertsCustomDedup(unittest.TestCase):
         self.assertEqual(alerts[0].fingerprint, "original-fp")
 
     @patch("keep.providers.base.base_provider.get_custom_deduplication_rule")
+    def test_custom_dedup_on_fingerprint_field_preserves_tool_fingerprint(
+        self, mock_get_rule
+    ):
+        """A custom rule whose only field is "fingerprint" should keep the
+        tool-provided fingerprint verbatim instead of hashing it."""
+        alert = _make_alert(
+            "HighCPU",
+            labels={"alertname": "HighCPU"},
+            fingerprint="grafana-native-fp",
+        )
+
+        rule = MagicMock()
+        rule.fingerprint_fields = ["fingerprint"]
+        mock_get_rule.return_value = rule
+
+        provider = _make_provider([alert])
+
+        with patch(
+            "keep.providers.base.base_provider.tracer"
+        ) as mock_tracer:
+            mock_tracer.start_as_current_span.return_value.__enter__ = MagicMock()
+            mock_tracer.start_as_current_span.return_value.__exit__ = MagicMock()
+            alerts = provider.get_alerts()
+
+        self.assertEqual(alerts[0].fingerprint, "grafana-native-fp")
+
+    @patch("keep.providers.base.base_provider.get_custom_deduplication_rule")
     def test_custom_dedup_with_dot_notation_fields(self, mock_get_rule):
         """Custom dedup should support dot-notation to access nested dict fields."""
         alert = _make_alert(
