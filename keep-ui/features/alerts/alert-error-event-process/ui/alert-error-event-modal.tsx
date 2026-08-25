@@ -13,6 +13,7 @@ import {
   Button,
 } from "@tremor/react";
 import { DynamicImageProviderIcon } from "@/components/ui/DynamicProviderIcon";
+import { toast } from "react-toastify";
 
 interface ErrorAlert {
   id: string;
@@ -32,9 +33,10 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
   onClose,
 }) => {
   const { useErrorAlerts } = useAlerts();
-  const { data: errorAlerts, dismissErrorAlerts } = useErrorAlerts();
+  const { data: errorAlerts, dismissErrorAlerts, reprocessErrorAlerts } = useErrorAlerts();
   const [selectedAlertId, setSelectedAlertId] = useState<string>("");
   const [isDismissing, setIsDismissing] = useState<boolean>(false);
+  const [isReprocessing, setIsReprocessing] = useState<boolean>(false);
 
   // Set the first alert as selected when data loads or changes
   React.useEffect(() => {
@@ -93,6 +95,61 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
       console.error("Failed to dismiss all alerts:", error);
     } finally {
       setIsDismissing(false);
+    }
+  };
+
+  const handleReprocessSelected = async () => {
+    if (selectedAlert) {
+      setIsReprocessing(true);
+      try {
+        const result = await reprocessErrorAlerts(selectedAlert.id);
+        if (result.success) {
+          toast.success(
+            `Reprocessed successfully! ${result.message || ""}`,
+            { position: "top-right" }
+          );
+
+          // Handle navigation after successful reprocessing
+          if (errorAlerts?.length === 1) {
+            setSelectedAlertId("");
+            onClose();
+          } else if (parseInt(selectedAlertId, 10) === errorAlerts.length - 1) {
+            setSelectedAlertId((parseInt(selectedAlertId, 10) - 1).toString());
+          }
+        } else {
+          toast.error(`Reprocessing failed: ${result.message}`, {
+            position: "top-right",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to reprocess alert:", error);
+        toast.error("Failed to reprocess alert", { position: "top-right" });
+      } finally {
+        setIsReprocessing(false);
+      }
+    }
+  };
+
+  const handleReprocessAll = async () => {
+    setIsReprocessing(true);
+    try {
+      const result = await reprocessErrorAlerts();
+      if (result.success) {
+        toast.success(
+          `Reprocessed ${result.successful || 0} alert(s) successfully!`,
+          { position: "top-right" }
+        );
+        onClose();
+      } else {
+        toast.error(`Reprocessing failed: ${result.message}`, {
+          position: "top-right",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to reprocess alerts:", error);
+      toast.error("Failed to reprocess alerts", { position: "top-right" });
+    } finally {
+      setIsReprocessing(false);
     }
   };
 
@@ -155,9 +212,26 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
             <div className="flex space-x-2">
               <Button
                 size="xs"
+                color="blue"
+                onClick={handleReprocessSelected}
+                disabled={isReprocessing || !selectedAlert || isDismissing}
+              >
+                {isReprocessing ? "Reprocessing..." : "Reprocess current alert"}
+              </Button>
+              <Button
+                size="xs"
+                color="blue"
+                variant="secondary"
+                onClick={handleReprocessAll}
+                disabled={isReprocessing || isDismissing}
+              >
+                {isReprocessing ? "Reprocessing..." : `Reprocess All (${errorAlerts.length})`}
+              </Button>
+              <Button
+                size="xs"
                 color="orange"
                 onClick={handleDismissSelected}
-                disabled={isDismissing || !selectedAlert}
+                disabled={isDismissing || !selectedAlert || isReprocessing}
               >
                 {isDismissing ? "Dismissing..." : "Dismiss current alert"}
               </Button>
@@ -166,7 +240,7 @@ export const AlertErrorEventModal: React.FC<AlertErrorEventModalProps> = ({
                 color="orange"
                 variant="secondary"
                 onClick={handleDismissAll}
-                disabled={isDismissing}
+                disabled={isDismissing || isReprocessing}
               >
                 {isDismissing ? "Dismissing..." : "Dismiss All"}
               </Button>
