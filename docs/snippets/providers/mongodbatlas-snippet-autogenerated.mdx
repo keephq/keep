@@ -1,0 +1,35 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_public_key**: Atlas API public key (required: True, sensitive: False)
+- **api_private_key**: Atlas API private key (required: True, sensitive: True)
+- **group_id**: Atlas project (group) ID (required: True, sensitive: False)
+- **api_url**: Atlas API base URL (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **Project Read Only**: Read access to the project, required to list alerts (mandatory) ([Documentation](https://www.mongodb.com/docs/atlas/reference/user-roles/#mongodb-authrole-Project-Read-Only))
+
+
+
+## In workflows
+
+This provider can't be used as a "step" or "action" in workflows. If you want to use it, please let us know by creating an issue in the [GitHub repository](https://github.com/keephq/keep/issues).
+
+
+
+## Connecting via Webhook (omnidirectional)
+This provider supports webhooks.
+
+
+To send alerts from MongoDB Atlas to Keep:
+
+1. In Atlas, go to your project and click Integrations.
+2. Choose Webhook and click Configure.
+3. Set the URL to KEEP_BACKEND_URL/alerts/event/mongodbatlas?api_key={api_key}
+4. Leave the secret empty (Keep authenticates via the api_key query parameter) and save.
+5. In Alerts > Alert Settings, add or edit alert configurations and select Webhook as a notification method.
+
+Atlas does not include a severity in webhook payloads, so alerts arrive with warning severity and can be re-mapped in Keep.
+
