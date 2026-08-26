@@ -34,7 +34,7 @@ function mergeOptions<T extends Record<string, unknown>>(
 const error = (msg: string) => ({ success: false, msg });
 const urlError = error("Please provide a valid URL");
 const protocolError = error("A valid URL protocol is required");
-const relProtocolError = error("A protocol-relavie URL is not allowed");
+const relProtocolError = error("A protocol-relative URL is not allowed");
 const multiProtocolError = error("URL cannot have more than one protocol");
 const missingPortError = error("A URL with a port number is required");
 const portError = error("Invalid port number");

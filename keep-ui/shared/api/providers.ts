@@ -1,26 +1,36 @@
 import type { ApiClient } from "./ApiClient";
 
+export type ProviderAuthValidationType =
+  | "any_url"
+  | "any_http_url"
+  | "https_url"
+  | "no_scheme_url"
+  | "multihost_url"
+  | "no_scheme_multihost_url"
+  | "port"
+  | "tld";
+
+export type ProviderAuthFieldType =
+  | "text"
+  | "select"
+  | "form"
+  | "file"
+  | "switch";
+
 export interface ProviderAuthConfig {
   description: string;
   hint?: string;
   placeholder?: string;
-  validation?:
-    | "any_url"
-    | "any_http_url"
-    | "https_url"
-    | "no_scheme_url"
-    | "multihost_url"
-    | "no_scheme_multihost_url"
-    | "port"
-    | "tld";
+  validation?: ProviderAuthValidationType;
   required?: boolean;
   value?: string;
   default: string | number | boolean | null;
   options?: Array<string | number>;
   sensitive?: boolean;
   hidden?: boolean;
-  type?: "select" | "form" | "file" | "switch";
+  type?: ProviderAuthFieldType;
   file_type?: string;
+  documentation_url?: string;
   config_main_group?: string;
   config_sub_group?: string;
 }
