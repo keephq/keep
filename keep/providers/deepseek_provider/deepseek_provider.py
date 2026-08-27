@@ -1,5 +1,5 @@
-import json
 import dataclasses
+import json
 import pydantic
 
 from openai import OpenAI
@@ -80,6 +80,11 @@ class DeepseekProvider(BaseProvider):
             max_tokens=max_tokens,
             response_format=structured_output_format,
         )
+
+        if not response.choices:
+            self.logger.warning("DeepSeek returned an empty choices list.")
+            return {"response": ""}
+
         response = response.choices[0].message.content
         try:
             response = json.loads(response)
@@ -92,8 +97,8 @@ class DeepseekProvider(BaseProvider):
 
 
 if __name__ == "__main__":
-    import os
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(
