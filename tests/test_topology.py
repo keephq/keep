@@ -1,9 +1,11 @@
 from datetime import datetime
+from unittest.mock import patch
 import uuid
 import pytest
 from sqlmodel import select
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
+from keep.api.models.alert import AlertDto, AlertStatus, AlertSeverity
 from keep.api.models.db.topology import (
     TopologyApplication,
     TopologyApplicationDtoIn,
@@ -451,3 +453,153 @@ def test_get_application_based_incident_skips_deleted_incident(db_session):
         processor._get_application_based_incident(SINGLE_TENANT_UUID, application)
         is None
     )
+
+
+def test_create_service_based_incident_sets_is_predicted(db_session):
+    service = create_service(db_session, SINGLE_TENANT_UUID, "1")
+
+    processor = TopologyProcessor()
+    processor._create_service_based_incident(SINGLE_TENANT_UUID, service.service, [])
+
+    incident = db_session.exec(
+        select(Incident).where(
+            Incident.user_generated_name == f"Service incident: {service.service}"
+        )
+    ).first()
+
+    assert incident is not None
+    assert incident.incident_type == "topology"
+    assert incident.incident_application is None
+    assert incident.is_predicted is True
+    assert incident.is_visible is True
+    assert incident.is_candidate is False
+
+
+def test_get_service_based_incident_skips_deleted_incident(db_session):
+    """Same reasoning as test_get_application_based_incident_skips_deleted_incident,
+    for the standalone-service incident path."""
+    service = create_service(db_session, SINGLE_TENANT_UUID, "1")
+
+    processor = TopologyProcessor()
+    processor._create_service_based_incident(SINGLE_TENANT_UUID, service.service, [])
+
+    incident = db_session.exec(
+        select(Incident).where(
+            Incident.user_generated_name == f"Service incident: {service.service}"
+        )
+    ).first()
+    assert incident is not None
+
+    incident.status = IncidentStatus.DELETED.value
+    db_session.add(incident)
+    db_session.commit()
+
+    assert (
+        processor._get_service_based_incident(SINGLE_TENANT_UUID, service.service)
+        is None
+    )
+
+
+def test_get_service_based_incident_ignores_application_based_incident(db_session):
+    """An application-based incident (incident_application set) must never be
+    picked up by the service-based lookup, even for a service that's also a
+    member of that application - the two incident kinds are keyed differently
+    on purpose."""
+    service = create_service(db_session, SINGLE_TENANT_UUID, "1")
+    application = TopologyApplication(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test App",
+        services=[service],
+    )
+    db_session.add(application)
+    db_session.commit()
+
+    processor = TopologyProcessor()
+    processor._create_application_based_incident(SINGLE_TENANT_UUID, application, {})
+
+    assert (
+        processor._get_service_based_incident(SINGLE_TENANT_UUID, service.service)
+        is None
+    )
+
+
+def _alert_for_service(service: str) -> AlertDto:
+    return AlertDto(
+        name=f"alert for {service}",
+        status=AlertStatus.FIRING,
+        severity=AlertSeverity.CRITICAL,
+        lastReceived=datetime.now().isoformat(),
+        service=service,
+        fingerprint=f"fingerprint-{service}",
+    )
+
+
+def test_process_tenant_creates_incident_for_standalone_service(db_session):
+    """Regression test for #6702: a service with no dependency edges and no
+    application still needs an incident when it has a firing alert - previously
+    _process_tenant returned immediately whenever the tenant had no applications
+    at all, so this alert would never produce an incident."""
+    service = create_service(db_session, SINGLE_TENANT_UUID, "1")
+    alert = _alert_for_service(service.service)
+
+    processor = TopologyProcessor()
+    with patch(
+        "keep.topologies.topology_processor.get_last_alerts", return_value=[]
+    ), patch(
+        "keep.topologies.topology_processor.convert_db_alerts_to_dto_alerts",
+        return_value=[alert],
+    ):
+        processor._process_tenant(SINGLE_TENANT_UUID)
+
+    incident = db_session.exec(
+        select(Incident).where(
+            Incident.user_generated_name == f"Service incident: {service.service}"
+        )
+    ).first()
+    assert incident is not None
+    assert incident.incident_application is None
+
+
+def test_process_tenant_handles_application_and_standalone_services_independently(
+    db_session,
+):
+    """An application-scoped alert and a standalone-service alert firing in the
+    same processing pass must each get their own incident, and neither path
+    should interfere with the other."""
+    app_service = create_service(db_session, SINGLE_TENANT_UUID, "1")
+    standalone_service = create_service(db_session, SINGLE_TENANT_UUID, "2")
+    application = TopologyApplication(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test App",
+        services=[app_service],
+    )
+    db_session.add(application)
+    db_session.commit()
+
+    alerts = [
+        _alert_for_service(app_service.service),
+        _alert_for_service(standalone_service.service),
+    ]
+
+    processor = TopologyProcessor()
+    with patch(
+        "keep.topologies.topology_processor.get_last_alerts", return_value=[]
+    ), patch(
+        "keep.topologies.topology_processor.convert_db_alerts_to_dto_alerts",
+        return_value=alerts,
+    ):
+        processor._process_tenant(SINGLE_TENANT_UUID)
+
+    app_incident = processor._get_application_based_incident(
+        SINGLE_TENANT_UUID, application
+    )
+    assert app_incident is not None
+
+    service_incident = db_session.exec(
+        select(Incident).where(
+            Incident.user_generated_name
+            == f"Service incident: {standalone_service.service}"
+        )
+    ).first()
+    assert service_incident is not None
+    assert service_incident.id != app_incident.id
