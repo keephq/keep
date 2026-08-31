@@ -9,7 +9,8 @@ import { useWorkflowStore } from "@/entities/workflows";
 import { WorkflowMetadataModal } from "@/features/workflows/edit-metadata";
 import { WorkflowEnabledSwitch } from "@/features/workflows/enable-disable";
 import { WorkflowSyncStatus } from "@/app/(keep)/workflows/[workflow_id]/workflow-sync-status";
-import { parseWorkflowYamlStringToJSON } from "@/entities/workflows/lib/yaml-utils";
+import { parseWorkflowYamlToJSON } from "@/entities/workflows/lib/yaml-utils";
+import { fromZodError } from "zod-validation-error";
 import clsx from "clsx";
 import { WorkflowTestRunButton } from "@/features/workflows/test-run/ui/workflow-test-run-button";
 import { useUIBuilderUnsavedChanges } from "@/entities/workflows/model/workflow-store";
@@ -59,7 +60,15 @@ export function WorkflowBuilderWidget({
       setFileName(fName);
       const contents = event.target!.result as string;
       try {
-        const _ = parseWorkflowYamlStringToJSON(contents);
+        // Validate against the workflow schema rather than doing a bare YAML
+        // parse. The schema is `.strict()`, so a misplaced key — most commonly
+        // `with:` written as a sibling of `provider:` instead of nested inside
+        // it — is reported here instead of being silently dropped and saved as
+        // a workflow that runs with no parameters.
+        const result = parseWorkflowYamlToJSON(contents);
+        if (!result.success) {
+          throw new Error(fromZodError(result.error).toString());
+        }
         setFileContents(contents);
       } catch (error) {
         showErrorToast(error, "Failed to parse workflow");
