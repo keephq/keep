@@ -63,6 +63,7 @@ class ZabbixProvider(BaseProvider):
     """
 
     PROVIDER_CATEGORY = ["Monitoring"]
+    FINGERPRINT_FIELDS = ["id"]
     KEEP_ZABBIX_WEBHOOK_INTEGRATION_NAME = "keep"  # keep-zabbix
     KEEP_ZABBIX_WEBHOOK_SCRIPT_FILENAME = (
         "zabbix_provider_script.js"  # zabbix mediatype script file
