@@ -3,6 +3,8 @@ import http
 import os
 import re
 import time
+import typing
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import pydantic
 import requests
@@ -18,11 +20,12 @@ from keep.validation.fields import HttpsUrl
 class GoogleChatProviderAuthConfig:
     """Google Chat authentication configuration."""
 
-    webhook_url: HttpsUrl = dataclasses.field(
+    webhook_url: typing.Optional[HttpsUrl] = dataclasses.field(
+        default=None,
         metadata={
             "name": "webhook_url",
-            "description": "Google Chat Webhook Url",
-            "required": True,
+            "description": "Default Google Chat Webhook Url. Optional when every notification passes its own webhook_url",
+            "required": False,
             "sensitive": True,
             "validation": "https_url",
         },
@@ -36,9 +39,10 @@ class GoogleChatProvider(BaseProvider):
     PROVIDER_TAGS = ["messaging"]
     PROVIDER_CATEGORY = ["Collaboration"]
 
-    # A webhook URL carries "key" and "token" in its query string, and Google
-    # quotes the request URL in some of its errors, so anything coming back from
-    # the API goes through __redact before it is logged or raised.
+    # Webhook URLs are credentials, they carry "key" and "token" in the query
+    # string. Accepting one per notification means the host has to be checked,
+    # otherwise the provider becomes an open relay.
+    WEBHOOK_HOST = "chat.googleapis.com"
     SENSITIVE_QUERY_PARAMS = ("key", "token")
 
     def __init__(
@@ -59,31 +63,85 @@ class GoogleChatProvider(BaseProvider):
 
     @classmethod
     def __redact(cls, text: str) -> str:
-        """Redact webhook credentials from a text before it is reported."""
+        """Redact webhook credentials from a text before it reaches the logs."""
         params = "|".join(cls.SENSITIVE_QUERY_PARAMS)
         return re.sub(rf"([?&](?:{params})=)[^&\s\"']+", r"\1<redacted>", text)
 
-    def _notify(self, message="", **kwargs: dict):
+    @classmethod
+    def __validate_webhook_url(cls, webhook_url: str) -> str:
+        parsed = urlparse(webhook_url)
+        if parsed.scheme != "https":
+            raise ProviderException(
+                f"Refusing to send a message over {parsed.scheme or 'an empty scheme'}, "
+                "only https is allowed"
+            )
+        if parsed.netloc != cls.WEBHOOK_HOST:
+            # userinfo is a credential of its own, keep it out of the message
+            netloc = parsed.netloc
+            if "@" in netloc:
+                netloc = f"<redacted>@{netloc.rsplit('@', 1)[-1]}"
+            raise ProviderException(
+                f"Refusing to send a message to {netloc or 'an empty host'}, "
+                f"only {cls.WEBHOOK_HOST} is allowed"
+            )
+        return webhook_url
+
+    @staticmethod
+    def __get_space_name(webhook_url: str) -> str:
+        """Extract the space name from /v1/spaces/<space>/messages, for logging."""
+        path = urlparse(webhook_url).path.strip("/").split("/")
+        return path[2] if len(path) > 2 else "unknown"
+
+    @staticmethod
+    def __add_query_params(webhook_url: str, params: dict) -> str:
+        """Merge query params into the webhook URL, keeping "key" and "token"."""
+        parsed = urlparse(webhook_url)
+        query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+        query.update(params)
+        return urlunparse(parsed._replace(query=urlencode(query)))
+
+    def _notify(
+        self,
+        message: str = "",
+        webhook_url: str = "",
+        cards_v2: list = None,
+        thread_key: str = "",
+        **kwargs: dict,
+    ):
         """
-        Notify a message to a Google Chat room using a webhook URL.
+        Notify a message to a Google Chat space using a webhook URL.
 
         Args:
             message (str): The text message to send.
+            webhook_url (str): Webhook URL of the space to post to, overrides the one from the provider configuration.
+            cards_v2 (list): Google Chat cardsV2 payload, can be sent with or instead of the text message.
+            thread_key (str): Arbitrary key that groups messages into a thread, a new thread is started if it is unknown.
 
         Raises:
             ProviderException: If the message could not be sent successfully.
         """
-        self.logger.debug("Notifying message to Google Chat")
-        webhook_url = self.authentication_config.webhook_url
+        webhook_url = webhook_url or self.authentication_config.webhook_url
+        if not webhook_url:
+            raise ProviderException(
+                "webhook_url is required, either in the provider configuration or in the notify parameters"
+            )
+        webhook_url = self.__validate_webhook_url(str(webhook_url))
 
-        if not message:
-            raise ProviderException("Message is required")
+        if not message and not cards_v2:
+            raise ProviderException("Either message or cards_v2 is required")
+
+        self.logger.debug(
+            "Notifying message to Google Chat",
+            extra={"space": self.__get_space_name(webhook_url)},
+        )
 
         def __send_message(url, body, headers, retries=3):
             last_error = ""
             for attempt in range(retries):
                 try:
-                    resp = requests.post(url, json=body, headers=headers)
+                    resp = requests.post(
+                        url, json=body, headers=headers, allow_redirects=False
+                    )
                     if resp.status_code == http.HTTPStatus.OK:
                         return resp
 
@@ -105,9 +163,17 @@ class GoogleChatProvider(BaseProvider):
                 f"Failed to notify message after {retries} attempts, last error: {last_error}"
             )
 
-        payload = {
-            "text": message,
-        }
+        payload = {}
+        if message:
+            payload["text"] = message
+        if cards_v2:
+            payload["cardsV2"] = cards_v2
+        if thread_key:
+            payload["thread"] = {"threadKey": thread_key}
+            webhook_url = self.__add_query_params(
+                webhook_url,
+                {"messageReplyOption": "REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"},
+            )
 
         request_headers = {"Content-Type": "application/json; charset=UTF-8"}
 

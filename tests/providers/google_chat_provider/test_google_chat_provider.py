@@ -1,21 +1,29 @@
 """
-Tests for the send path of the Google Chat provider.
+Tests for the Google Chat provider.
 
-The retry loop had no coverage, and covering it is what surfaced the failure
-path: the provider gave up with "Failed to notify message after 3 attempts" and
-dropped whatever Google said about the rejection.
+The provider used to read the webhook URL from its configuration only, so a
+space could only be addressed by standing up one provider per space. It now
+takes a `webhook_url` per notification, which means it also has to keep the
+promise that comes with accepting a caller-supplied address: only Google Chat
+is ever contacted, and the URL never reaches the logs, since it carries the
+`key` and `token` credentials in its query string.
+
+The send path and its retry loop are covered here too.
 """
 
 from unittest.mock import MagicMock, patch
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 import requests
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.google_chat_provider.google_chat_provider import GoogleChatProvider
 from keep.providers.models.provider_config import ProviderConfig
 
 DEFAULT_WEBHOOK = "https://chat.googleapis.com/v1/spaces/AAAADefault/messages?key=default-key&token=default-token"
+OTHER_WEBHOOK = "https://chat.googleapis.com/v1/spaces/AAAAOther/messages?key=other-key&token=other-token"
 
 
 def _build_provider(**authentication) -> GoogleChatProvider:
@@ -42,6 +50,157 @@ def post():
     with patch("requests.post") as mocked_post:
         mocked_post.return_value = MagicMock(status_code=200, text="{}")
         yield mocked_post
+
+
+class TestWebhookUrlResolution:
+    def test_configured_webhook_url_is_the_default(self, post):
+        _build_provider(webhook_url=DEFAULT_WEBHOOK).notify(message="hello")
+
+        assert post.call_args.args[0] == DEFAULT_WEBHOOK
+
+    def test_notify_webhook_url_overrides_the_default(self, post):
+        _build_provider(webhook_url=DEFAULT_WEBHOOK).notify(
+            message="hello", webhook_url=OTHER_WEBHOOK
+        )
+
+        assert post.call_args.args[0] == OTHER_WEBHOOK
+
+    def test_provider_validates_without_a_webhook_url(self):
+        provider = _build_provider()
+
+        assert provider.authentication_config.webhook_url is None
+
+    def test_notify_webhook_url_is_enough_on_its_own(self, post):
+        _build_provider().notify(message="hello", webhook_url=OTHER_WEBHOOK)
+
+        assert post.call_args.args[0] == OTHER_WEBHOOK
+
+    def test_no_webhook_url_anywhere_raises(self, post):
+        with pytest.raises(ProviderException, match="webhook_url is required"):
+            _build_provider().notify(message="hello")
+
+        post.assert_not_called()
+
+
+class TestWebhookUrlValidation:
+    @pytest.mark.parametrize(
+        "webhook_url",
+        [
+            "https://evil.example.com/v1/spaces/AAAA/messages",
+            "https://chat.googleapis.com.evil.example.com/v1/spaces/AAAA/messages",
+            "https://chat.googleapis.com:8443/v1/spaces/AAAA/messages",
+            "https://user:password@chat.googleapis.com/v1/spaces/AAAA/messages",
+        ],
+    )
+    def test_foreign_host_raises(self, post, webhook_url):
+        with pytest.raises(ProviderException, match="Refusing to send a message to"):
+            _build_provider().notify(message="hello", webhook_url=webhook_url)
+
+        post.assert_not_called()
+
+    def test_userinfo_is_not_echoed_back(self, post):
+        with pytest.raises(ProviderException) as exc_info:
+            _build_provider().notify(
+                message="hello",
+                webhook_url="https://user:password@chat.googleapis.com/v1/spaces/AAAA/messages",
+            )
+
+        assert "password" not in str(exc_info.value)
+
+    def test_plain_http_raises(self, post):
+        with pytest.raises(ProviderException, match="only https is allowed"):
+            _build_provider().notify(
+                message="hello",
+                webhook_url="http://chat.googleapis.com/v1/spaces/AAAA/messages",
+            )
+
+        post.assert_not_called()
+
+    def test_redirects_are_not_followed(self, post):
+        _build_provider().notify(message="hello", webhook_url=DEFAULT_WEBHOOK)
+
+        assert post.call_args.kwargs["allow_redirects"] is False
+
+
+class TestPayload:
+    def test_message_is_sent_as_text(self, post):
+        _build_provider(webhook_url=DEFAULT_WEBHOOK).notify(message="hello")
+
+        assert post.call_args.kwargs["json"] == {"text": "hello"}
+
+    def test_cards_v2_is_sent_on_its_own(self, post):
+        cards = [{"cardId": "alert", "card": {"header": {"title": "Alert"}}}]
+
+        _build_provider(webhook_url=DEFAULT_WEBHOOK).notify(cards_v2=cards)
+
+        assert post.call_args.kwargs["json"] == {"cardsV2": cards}
+
+    def test_message_and_cards_v2_are_sent_together(self, post):
+        cards = [{"cardId": "alert", "card": {"header": {"title": "Alert"}}}]
+
+        _build_provider(webhook_url=DEFAULT_WEBHOOK).notify(
+            message="hello", cards_v2=cards
+        )
+
+        assert post.call_args.kwargs["json"] == {"text": "hello", "cardsV2": cards}
+
+    def test_empty_message_without_cards_v2_raises(self, post):
+        with pytest.raises(ProviderException, match="Either message or cards_v2"):
+            _build_provider(webhook_url=DEFAULT_WEBHOOK).notify()
+
+        post.assert_not_called()
+
+
+class TestThreading:
+    def test_thread_key_is_sent_in_the_body(self, post):
+        _build_provider(webhook_url=DEFAULT_WEBHOOK).notify(
+            message="hello", thread_key="alert-fingerprint"
+        )
+
+        assert post.call_args.kwargs["json"]["thread"] == {
+            "threadKey": "alert-fingerprint"
+        }
+
+    def test_thread_key_adds_the_reply_option_and_keeps_the_credentials(self, post):
+        _build_provider(webhook_url=DEFAULT_WEBHOOK).notify(
+            message="hello", thread_key="alert-fingerprint"
+        )
+
+        query = parse_qs(urlparse(post.call_args.args[0]).query)
+        assert query["messageReplyOption"] == ["REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"]
+        assert query["key"] == ["default-key"]
+        assert query["token"] == ["default-token"]
+
+    def test_no_thread_key_leaves_the_url_alone(self, post):
+        _build_provider(webhook_url=DEFAULT_WEBHOOK).notify(message="hello")
+
+        assert post.call_args.args[0] == DEFAULT_WEBHOOK
+
+
+class TestCredentialsAreNotLogged:
+    def test_request_failure_is_logged_without_the_credentials(self, post, caplog):
+        post.side_effect = requests.exceptions.ConnectionError(
+            f"Failed to establish a new connection to {DEFAULT_WEBHOOK}"
+        )
+
+        with pytest.raises(Exception):
+            _build_provider(webhook_url=DEFAULT_WEBHOOK).notify(message="hello")
+
+        assert "default-key" not in caplog.text
+        assert "default-token" not in caplog.text
+        assert "key=<redacted>" in caplog.text
+
+    def test_space_is_logged_instead_of_the_url(self, post, caplog):
+        # the provider pins its own log level on init, so build it first
+        provider = _build_provider(webhook_url=DEFAULT_WEBHOOK)
+
+        with caplog.at_level("DEBUG", logger=provider.provider_id):
+            provider.notify(message="hello")
+
+        assert "default-token" not in caplog.text
+        assert any(
+            getattr(record, "space", None) == "AAAADefault" for record in caplog.records
+        )
 
 
 class TestSendingAndRetries:
