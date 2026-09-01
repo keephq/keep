@@ -1,5 +1,6 @@
 import dataclasses
 import http
+import json
 import os
 import re
 import time
@@ -30,6 +31,17 @@ class GoogleChatProviderAuthConfig:
             "validation": "https_url",
         },
     )
+    webhook_urls: typing.Union[str, dict] = dataclasses.field(
+        default="",
+        metadata={
+            "name": "webhook_urls",
+            "description": "JSON object mapping a space name to its webhook URL, so a notification can name a space instead of carrying its URL",
+            "required": False,
+            "sensitive": True,
+            "type": "file",
+            "file_type": "application/json",
+        },
+    )
 
 
 class GoogleChatProvider(BaseProvider):
@@ -53,6 +65,9 @@ class GoogleChatProvider(BaseProvider):
     def validate_config(self):
         self.authentication_config = GoogleChatProviderAuthConfig(
             **self.config.authentication
+        )
+        self.webhook_urls = self.__parse_webhook_urls(
+            self.authentication_config.webhook_urls
         )
 
     def dispose(self):
@@ -86,6 +101,32 @@ class GoogleChatProvider(BaseProvider):
             )
         return webhook_url
 
+    @classmethod
+    def __parse_webhook_urls(cls, webhook_urls: typing.Union[str, dict]) -> dict:
+        """Parse the space -> webhook URL map and validate every URL in it."""
+        if not webhook_urls:
+            return {}
+
+        if isinstance(webhook_urls, str):
+            try:
+                webhook_urls = json.loads(webhook_urls)
+            except json.JSONDecodeError as e:
+                raise ProviderException(f"webhook_urls is not valid JSON: {e}")
+
+        if not isinstance(webhook_urls, dict):
+            raise ProviderException(
+                "webhook_urls must be a JSON object mapping a space name to its webhook URL"
+            )
+
+        for space, webhook_url in webhook_urls.items():
+            if not isinstance(webhook_url, str):
+                raise ProviderException(
+                    f"webhook_urls[{space}] must be a webhook URL string"
+                )
+            cls.__validate_webhook_url(webhook_url)
+
+        return webhook_urls
+
     @staticmethod
     def __get_space_name(webhook_url: str) -> str:
         """Extract the space name from /v1/spaces/<space>/messages, for logging."""
@@ -100,9 +141,31 @@ class GoogleChatProvider(BaseProvider):
         query.update(params)
         return urlunparse(parsed._replace(query=urlencode(query)))
 
+    def __resolve_webhook_url(self, space: str, webhook_url: str) -> str:
+        """Resolve the space to post to, most explicit source first."""
+        if webhook_url:
+            return str(webhook_url)
+
+        if space:
+            if not self.webhook_urls:
+                raise ProviderException(
+                    f"Cannot resolve space {space}, no webhook_urls configured"
+                )
+            if space not in self.webhook_urls:
+                raise ProviderException(f"Unknown space {space}")
+            return self.webhook_urls[space]
+
+        if self.authentication_config.webhook_url:
+            return str(self.authentication_config.webhook_url)
+
+        raise ProviderException(
+            "No space to post to, pass space or webhook_url, or configure a default webhook_url"
+        )
+
     def _notify(
         self,
         message: str = "",
+        space: str = "",
         webhook_url: str = "",
         cards_v2: list = None,
         thread_key: str = "",
@@ -113,19 +176,17 @@ class GoogleChatProvider(BaseProvider):
 
         Args:
             message (str): The text message to send.
-            webhook_url (str): Webhook URL of the space to post to, overrides the one from the provider configuration.
+            space (str): Name of the space to post to, looked up in the webhook_urls of the provider configuration.
+            webhook_url (str): Webhook URL of the space to post to, overrides both space and the provider configuration.
             cards_v2 (list): Google Chat cardsV2 payload, can be sent with or instead of the text message.
             thread_key (str): Arbitrary key that groups messages into a thread, a new thread is started if it is unknown.
 
         Raises:
             ProviderException: If the message could not be sent successfully.
         """
-        webhook_url = webhook_url or self.authentication_config.webhook_url
-        if not webhook_url:
-            raise ProviderException(
-                "webhook_url is required, either in the provider configuration or in the notify parameters"
-            )
-        webhook_url = self.__validate_webhook_url(str(webhook_url))
+        webhook_url = self.__validate_webhook_url(
+            self.__resolve_webhook_url(space, webhook_url)
+        )
 
         if not message and not cards_v2:
             raise ProviderException("Either message or cards_v2 is required")
