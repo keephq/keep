@@ -1,10 +1,14 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
 This provider requires authentication.
 - **host_url**: Centreon Host URL (required: True, sensitive: False)
 - **api_token**: Centreon API Token (required: True, sensitive: True)
+- **verify**: Verify SSL certificates (required: False, sensitive: False)
+- **ca_certificate**: CA certificate (PEM) used to verify the Centreon server (required: False, sensitive: True)
+- **client_certificate**: Client certificate (PEM) for mutual TLS (required: False, sensitive: True)
+- **client_key**: Client private key (PEM) for mutual TLS (required: False, sensitive: True)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **authenticated**: User is authenticated  
