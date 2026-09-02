@@ -4,6 +4,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from keep.api.models.incident import IncidentDto, IncidentStatus, IncidentSeverity
 from keep.contextmanager.contextmanager import ContextManager
@@ -332,3 +333,151 @@ class TestProviderConfig:
         """Test that all ServiceNow impact levels are mapped."""
         for impact in ["1", "2", "3"]:
             assert impact in ServicenowProvider.INCIDENT_SEVERITY_MAP
+
+
+class TestQueryPagination:
+    """Regression tests for the _query sysparm_offset bug."""
+
+    def test_query_forwards_requested_offset(self, servicenow_provider):
+        """_query must send the caller's offset, not always 0."""
+        response = MagicMock()
+        response.ok = True
+        response.json.return_value = {"result": []}
+
+        with patch("requests.get", return_value=response) as mock_get:
+            servicenow_provider._query(
+                "incident", sysparm_limit=50, sysparm_offset=150
+            )
+
+        params = mock_get.call_args.kwargs["params"]
+        assert params["sysparm_offset"] == 150
+        assert params["sysparm_limit"] == 50
+
+    def test_query_returns_empty_list_on_request_exception(self, servicenow_provider):
+        """Network failures should be caught, not raised."""
+        with patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("connection refused"),
+        ):
+            result = servicenow_provider._query("incident")
+
+        assert result == []
+
+
+class TestGetIncidentsPagination:
+    """Regression tests ensuring _get_incidents advances through pages."""
+
+    def _make_raw_incident(self, number):
+        return {
+            "number": number,
+            "sys_id": number,
+            "state": "1",
+            "impact": "1",
+            "sys_created_on": "2025-01-01 00:00:00",
+        }
+
+    def test_paginates_across_multiple_pages(self, servicenow_provider):
+        page1 = [self._make_raw_incident(f"INC{i:04d}") for i in range(100)]
+        page2 = [self._make_raw_incident("INC0100")]
+
+        with patch.object(
+            servicenow_provider, "_query", side_effect=[page1, page2]
+        ) as mock_query:
+            incidents = servicenow_provider._get_incidents()
+
+        assert len(incidents) == 101
+        calls = mock_query.call_args_list
+        assert len(calls) == 2
+        assert calls[0].kwargs["sysparm_offset"] == 0
+        assert calls[1].kwargs["sysparm_offset"] == 100
+
+    def test_stops_when_page_smaller_than_limit(self, servicenow_provider):
+        page1 = [self._make_raw_incident("INC0001")]
+
+        with patch.object(
+            servicenow_provider, "_query", side_effect=[page1]
+        ) as mock_query:
+            incidents = servicenow_provider._get_incidents()
+
+        assert len(incidents) == 1
+        assert mock_query.call_count == 1
+
+
+class TestNotifyUpdate:
+    """Tests for _notify_update auth handling and error propagation."""
+
+    def test_basic_auth_used_when_no_access_token(self, servicenow_provider):
+        get_response = MagicMock()
+        get_response.status_code = 200
+        get_response.text = json.dumps(
+            {"result": {"sys_id": "abc123", "number": "INC0010001"}}
+        )
+
+        with patch("requests.get", return_value=get_response) as mock_get:
+            result = servicenow_provider._notify_update(
+                "incident", "abc123", fingerprint="fp1"
+            )
+
+        assert result["sys_id"] == "abc123"
+        assert result["fingerprint"] == "fp1"
+        assert mock_get.call_args.kwargs["auth"] == ("admin", "admin")
+
+    def test_oauth_does_not_raise_nameerror(self, servicenow_provider):
+        """Regression test: auth must not reference an undefined variable
+        when an OAuth access token is in use."""
+        servicenow_provider._access_token = "faketoken"
+        get_response = MagicMock()
+        get_response.status_code = 200
+        get_response.text = json.dumps({"result": {"sys_id": "abc123"}})
+
+        with patch("requests.get", return_value=get_response) as mock_get:
+            result = servicenow_provider._notify_update(
+                "incident", "abc123", fingerprint="fp2"
+            )
+
+        assert result["fingerprint"] == "fp2"
+        assert mock_get.call_args.kwargs["auth"] is None
+        assert mock_get.call_args.kwargs["headers"]["Authorization"] == "Bearer faketoken"
+
+    def test_failure_raises_http_error(self, servicenow_provider):
+        """Regression test: failures must raise HTTPError, not NameError."""
+        get_response = MagicMock()
+        get_response.status_code = 500
+        get_response.text = "Internal Server Error"
+        get_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "500 Server Error"
+        )
+
+        with patch("requests.get", return_value=get_response):
+            with pytest.raises(requests.exceptions.HTTPError):
+                servicenow_provider._notify_update(
+                    "incident", "abc123", fingerprint="fp3"
+                )
+
+
+class TestPullTopologyFields:
+    """Regression test for the missing comma in the CMDB fields list."""
+
+    def test_cmdb_fields_are_separate_entries(self, servicenow_provider):
+        cmdb_response = MagicMock()
+        cmdb_response.ok = True
+        cmdb_response.json.return_value = {"result": []}
+        rel_type_response = MagicMock()
+        rel_type_response.ok = True
+        rel_type_response.json.return_value = {"result": []}
+        rel_response = MagicMock()
+        rel_response.ok = True
+        rel_response.json.return_value = {"result": []}
+
+        with patch(
+            "requests.get",
+            side_effect=[cmdb_response, rel_type_response, rel_response],
+        ) as mock_get:
+            servicenow_provider.pull_topology()
+
+        cmdb_call = mock_get.call_args_list[0]
+        fields = cmdb_call.kwargs["params"]["sysparm_fields"].split(",")
+
+        assert "owned_by.name" in fields
+        assert "manufacturer.name" in fields
+        assert "owned_by.namemanufacturer.name" not in fields
