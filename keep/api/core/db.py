@@ -48,6 +48,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from keep.api.consts import STATIC_PRESETS
 from keep.api.core.config import config
+from keep.api.utils.incident_expiry import compute_incident_expired
 from keep.api.core.db_utils import (
     create_db_engine,
     custom_serialize,
@@ -2244,6 +2245,7 @@ def create_rule(
     multi_level_property_name=None,
     threshold=1,
     assignee=None,
+    max_incident_window=None,
 ):
     grouping_criteria = grouping_criteria or []
     with Session(engine) as session:
@@ -2267,6 +2269,7 @@ def create_rule(
             multi_level_property_name=multi_level_property_name,
             threshold=threshold,
             assignee=assignee,
+            max_incident_window=max_incident_window,
         )
         session.add(rule)
         session.commit()
@@ -2293,6 +2296,7 @@ def update_rule(
     multi_level_property_name,
     threshold,
     assignee=None,
+    max_incident_window=None,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -2321,6 +2325,7 @@ def update_rule(
             rule.multi_level_property_name = multi_level_property_name
             rule.threshold = threshold
             rule.assignee = assignee
+            rule.max_incident_window = max_incident_window
             session.commit()
             session.refresh(rule)
             return rule
@@ -2392,23 +2397,31 @@ def get_incident_for_grouping_rule(
             .order_by(Incident.creation_time.desc())
         ).first()
 
-        # if the last alert in the incident is older than the timeframe, create a new incident
-        is_incident_expired = False
-        if incident and incident.status in [
-            IncidentStatus.RESOLVED.value,
-            IncidentStatus.MERGED.value,
-            IncidentStatus.DELETED.value,
-        ]:
-            is_incident_expired = True
-        elif incident and incident.alerts_count > 0:
-            enrich_incidents_with_alerts(tenant_id, [incident], session)
-            is_incident_expired = max(
-                alert.timestamp for alert in incident.alerts
-            ) < datetime.utcnow() - timedelta(seconds=rule.timeframe)
-
-        # if there is no incident with the rule_fingerprint, create it or existed is already expired
+        # if there is no incident with the rule_fingerprint, create it
         if not incident:
             return None, None
+
+        # an expired incident is replaced by a fresh one on the next matching alert
+        latest_alert_timestamp = None
+        if incident.alerts_count > 0:
+            enrich_incidents_with_alerts(tenant_id, [incident], session)
+            latest_alert_timestamp = max(
+                alert.timestamp for alert in incident.alerts
+            )
+
+        is_incident_expired = compute_incident_expired(
+            is_terminal=incident.status
+            in [
+                IncidentStatus.RESOLVED.value,
+                IncidentStatus.MERGED.value,
+                IncidentStatus.DELETED.value,
+            ],
+            latest_alert_timestamp=latest_alert_timestamp,
+            creation_time=incident.creation_time,
+            timeframe=rule.timeframe,
+            max_window=rule.max_incident_window,
+            now=datetime.utcnow(),
+        )
 
     return incident, is_incident_expired
 
