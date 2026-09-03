@@ -306,16 +306,20 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
                 sysparm_limit  # Limit number of records per request
             )
         if sysparm_offset:
-            params["sysparm_offset"] = 0  # Start from beginning
+            params["sysparm_offset"] = sysparm_offset  # use the recevied offset
 
-        response = requests.get(
-            request_url,
-            headers=headers,
-            auth=auth,
-            params=params,
-            verify=False,
-            timeout=10,
-        )
+        try:
+            response = requests.get(
+                request_url,
+                headers=headers,
+                auth=auth,
+                params=params,
+                verify=False,
+                timeout=10,
+            )
+        except requests.exceptions.RequestException:
+            self.logger.exception(f"Failed to query {table_name}")
+            return []
 
         if not response.ok:
             self.logger.error(
@@ -681,7 +685,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             "sys_id",
             "ip_address",
             "mac_address",
-            "owned_by.name"
+            "owned_by.name",
             "manufacturer.name",  # Retrieve the name of the manufacturer
             "short_description",
             "environment",
@@ -899,16 +903,14 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
     def _notify_update(self, table_name: str, ticket_id: str, fingerprint: str):
         url = f"{self.authentication_config.service_now_base_url}/api/now/table/{table_name}/{ticket_id}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        auth = (
-            (
+        auth = None
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+        else:
+            auth = (
                 self.authentication_config.username,
                 self.authentication_config.password,
             )
-            if self._access_token
-            else None
-        )
-        if self._access_token:
-            headers["Authorization"] = f"Bearer {self._access_token}"
 
         response = requests.get(
             url,
@@ -932,7 +934,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             return resp
         else:
             self.logger.info("Failed to update ticket", extra={"resp": response.text})
-            resp.raise_for_status()
+            response.raise_for_status()
 
 
 if __name__ == "__main__":

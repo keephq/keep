@@ -100,7 +100,7 @@ class VllmProvider(BaseProvider):
             # Adjust this based on your vLLM API response structure
             try:
                 generated_text = result["choices"][0]['text']
-            except KeyError:
+            except (KeyError, IndexError):
                 generated_text = ""
             
             # Try to parse as JSON if it's meant to be structured
