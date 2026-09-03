@@ -88,6 +88,37 @@ def test_run_single_and_trigger_keep_function(sample_step, mocked_context_manage
         assert mock_len.call_count == 1
 
 
+def test_run_single_if_false_skips_alias_evaluation(sample_step, mocked_context_manager):
+    # Regression test: when a step's "if" condition evaluates to false, its "alias"
+    # block must NOT be evaluated at all - just like the provider call is skipped.
+    #
+    # Here the alias expression references another step's result
+    # ("steps.get-incident.results.body") that is missing from the context (e.g.
+    # because that other step was itself skipped), which renders as an empty string
+    # and turns "keep.dictget({{ ... }}, ...)" into the syntactically invalid
+    # "keep.dictget(, ...)". If the alias were evaluated despite "if" being false,
+    # this would raise a SyntaxError instead of the step being cleanly skipped.
+    sample_step.config["if"] = "'{{ steps.get-incident.results.body }}' != ''"
+    sample_step.config["alias"] = {
+        "incident_name": (
+            "keep.dictget({{ steps.get-incident.results.body }}, "
+            "'user_generated_name', 'Untitled incident')"
+        )
+    }
+
+    sample_step.io_handler.context_manager = mocked_context_manager
+    sample_step.provider.query = Mock(return_value="result")
+    sample_step.provider.notify = Mock(return_value="result")
+
+    # Should not raise (the alias must never be rendered), and the step should be
+    # reported as not having run.
+    result = sample_step._run_single()
+
+    assert result is None
+    sample_step.provider.query.assert_not_called()
+    sample_step.provider.notify.assert_not_called()
+
+
 def test_run_single_exception(sample_step):
     # Simulate an exception
     sample_step.provider.query = Mock(side_effect=Exception("Test exception"))
