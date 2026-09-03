@@ -1,11 +1,19 @@
-from datetime import datetime
 import inspect
+from datetime import datetime
 from typing import Optional, Union
+from unittest.mock import patch
+
+import pytest
 
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.db.provider import Provider
 from keep.providers.providers_factory import ProvidersFactory
-from unittest.mock import patch
+
+
+@pytest.fixture
+def isolated_provider_factory_caches(monkeypatch):
+    monkeypatch.setattr(ProvidersFactory, "_loaded_providers_cache", None)
+    monkeypatch.setattr(ProvidersFactory, "_loaded_deduplication_rules_cache", None)
 
 
 class TestProviderFactoryMethodParam:
@@ -65,3 +73,19 @@ def test_provider_factory_is_using_config_key_from_db(db_session):
         ProvidersFactory.get_installed_providers(tenant_id=SINGLE_TENANT_UUID)
         assert mock_secret_manager.return_value.read_secret.call_args[1]['secret_name'] == custom_configuration_key
 
+
+def test_zabbix_default_fingerprint_fields_and_rule(isolated_provider_factory_caches):
+    assert ProvidersFactory._loaded_providers_cache is None
+    assert ProvidersFactory._loaded_deduplication_rules_cache is None
+
+    providers = ProvidersFactory.get_all_providers(ignore_cache_file=True)
+    zabbix_provider = next(
+        provider for provider in providers if provider.type == "zabbix"
+    )
+
+    assert zabbix_provider.default_fingerprint_fields == ["id"]
+
+    default_rules = ProvidersFactory.get_default_deduplication_rules()
+    zabbix_rule = next(rule for rule in default_rules if rule.provider_type == "zabbix")
+
+    assert zabbix_rule.fingerprint_fields == ["id"]
