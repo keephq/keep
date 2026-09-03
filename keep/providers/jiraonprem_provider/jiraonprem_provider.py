@@ -590,7 +590,15 @@ class JiraonpremProvider(BaseProvider):
             }
             raise ProviderException(f"Failed to notify jira: {e} - Params: {context}")
 
-    def _query(self, ticket_id="", board_id="", **kwargs: dict):
+    def _query(
+        self,
+        ticket_id="",
+        board_id="",
+        jql="",
+        max_results=0,
+        fields="",
+        **kwargs: dict,
+    ):
         """
         API for fetching issues:
         https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-issue-get
@@ -598,8 +606,47 @@ class JiraonpremProvider(BaseProvider):
         Args:
             ticket_id (str): The ticket id.
             board_id (str): The board id.
+            jql (str): A JQL query to search the issues with.
+            max_results (int): How many issues to return alongside the total. Zero, the default, returns the total and an empty issues list.
+            fields (str): Comma separated Jira fields to return for each issue, or a list of them. All fields when empty.
         """
-        if not ticket_id:
+        if jql:
+            try:
+                max_results = int(max_results)
+            except (TypeError, ValueError):
+                raise ProviderException(
+                    f"{self.__class__.__name__} got a non-numeric max_results: {max_results!r}"
+                )
+
+            if isinstance(fields, list):
+                fields = ",".join(fields)
+
+            # Jira returns the total whatever maxResults is, and no issues at all
+            # when it is zero.
+            query_params = {"jql": jql, "maxResults": max_results}
+            if fields:
+                query_params["fields"] = fields
+
+            request_url = self.__get_url(paths=["search"], query_params=query_params)
+            response = requests.get(
+                request_url,
+                headers=self.__get_auth_header(),
+                verify=self.authentication_config.verify,
+                timeout=10,
+            )
+            if not response.ok:
+                raise ProviderException(
+                    f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
+                )
+            search = response.json()
+            # issues is always a list, empty when max_results is zero, so a foreach
+            # over it in a workflow is a no-op and never a missing key
+            return {
+                "total": search.get("total", 0),
+                "jql": jql,
+                "issues": search.get("issues", []),
+            }
+        elif not ticket_id:
             request_url = (
                 f"https://{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
             )

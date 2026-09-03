@@ -3,6 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.jira_provider.jira_provider import JiraProvider
 from keep.providers.jiraonprem_provider.jiraonprem_provider import JiraonpremProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -355,3 +356,87 @@ class TestJiraProvider:
 
                 # If we get here without the "string indices must be integers" error, the fix worked
                 assert result is not None
+
+    @patch("requests.get")
+    def test_jiraonprem_query_with_jql(self, mock_get, jiraonprem_provider):
+        """Test that a jql query returns only the count of matching issues"""
+        mock_get.return_value.ok = True
+        mock_get.return_value.json.return_value = {"total": 7, "issues": []}
+
+        jql = "project = TEST AND status = Open"
+        result = jiraonprem_provider.query(jql=jql)
+
+        # issues is always present, empty here, so a foreach over it in a workflow
+        # that left max_results out iterates over nothing
+        assert result == {"total": 7, "jql": jql, "issues": []}
+
+        request_url = mock_get.call_args[0][0]
+        assert "/rest/api/2/search" in request_url
+        assert "maxResults=0" in request_url
+        assert "fields" not in request_url
+        assert mock_get.call_args[1]["verify"] is False
+
+    @patch("requests.get")
+    def test_jiraonprem_query_with_jql_failure(self, mock_get, jiraonprem_provider):
+        """Test that a failed jql query raises with Jira's error text"""
+        mock_get.return_value.ok = False
+        mock_get.return_value.text = "Error in the JQL Query"
+
+        with pytest.raises(ProviderException, match="Error in the JQL Query"):
+            jiraonprem_provider.query(jql="status = Nope")
+
+    @patch("requests.get")
+    def test_jiraonprem_query_with_ticket_id_fetches_the_issue(
+        self, mock_get, jiraonprem_provider
+    ):
+        """Test that a ticket_id query fetches that issue by key"""
+        mock_get.return_value.ok = True
+        mock_get.return_value.json.return_value = {"key": "TEST-1", "id": "1"}
+
+        result = jiraonprem_provider.query(ticket_id="TEST-1")
+
+        assert result == {"issue": {"key": "TEST-1", "id": "1"}}
+        assert "/rest/api/2/issue/TEST-1" in mock_get.call_args[0][0]
+
+    @patch("requests.get")
+    def test_jiraonprem_query_with_jql_returning_issues(
+        self, mock_get, jiraonprem_provider
+    ):
+        """Test that max_results asks Jira for the issues and returns them"""
+        mock_get.return_value.ok = True
+        mock_get.return_value.json.return_value = {
+            "total": 2,
+            "issues": [{"key": "TEST-1"}, {"key": "TEST-2"}],
+        }
+
+        result = jiraonprem_provider.query(jql="status = Open", max_results=50)
+
+        assert result["total"] == 2
+        assert [issue["key"] for issue in result["issues"]] == ["TEST-1", "TEST-2"]
+        assert "maxResults=50" in mock_get.call_args[0][0]
+
+    @patch("requests.get")
+    def test_jiraonprem_query_with_jql_fields(self, mock_get, jiraonprem_provider):
+        """Test that fields are passed through, as a string or as a list"""
+        mock_get.return_value.ok = True
+        mock_get.return_value.json.return_value = {"total": 1, "issues": [{}]}
+
+        jiraonprem_provider.query(
+            jql="status = Open", max_results=1, fields="summary,status"
+        )
+        assert "fields=summary%2Cstatus" in mock_get.call_args[0][0]
+
+        jiraonprem_provider.query(
+            jql="status = Open", max_results=1, fields=["summary", "status"]
+        )
+        assert "fields=summary%2Cstatus" in mock_get.call_args[0][0]
+
+    @patch("requests.get")
+    def test_jiraonprem_query_with_non_numeric_max_results(
+        self, mock_get, jiraonprem_provider
+    ):
+        """Test that a max_results that is not a number is refused before the request"""
+        with pytest.raises(ProviderException, match="non-numeric max_results"):
+            jiraonprem_provider.query(jql="status = Open", max_results="fifty")
+
+        mock_get.assert_not_called()
