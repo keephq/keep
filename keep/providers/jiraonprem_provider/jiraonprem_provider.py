@@ -5,7 +5,7 @@ JiraonpremProvider is a class that implements the BaseProvider interface for Jir
 import dataclasses
 import json
 from typing import List
-from urllib.parse import urlencode, urljoin
+from urllib.parse import urlencode, urljoin, urlsplit, urlunsplit
 
 import pydantic
 import requests
@@ -43,7 +43,7 @@ class JiraonpremProviderAuthConfig:
     ticket_creation_url: str = dataclasses.field(
         metadata={
             "required": False,
-            "description": "URL for creating new tickets",
+            "description": "URL for creating new tickets, also used as the public base for the ticket links Keep returns",
             "sensitive": False,
             "hint": "https://jira.onprem.com/secure/CreateIssue.jspa",
         },
@@ -203,6 +203,42 @@ class JiraonpremProvider(BaseProvider):
         # should happen only if the user supplied invalid host, so just let validate_config fail
         except Exception:
             return self.authentication_config.host
+
+    @property
+    def browse_host(self) -> str:
+        """Base url for the links a human clicks.
+
+        The client sometimes has to connect through an internal address - a cluster
+        shim, a reverse proxy - and a link built from that address is unreachable for
+        anyone outside. ticket_creation_url carries the public address, so the base
+        comes from there, with the connection host standing in when it is unset.
+        """
+        configured = (self.authentication_config.ticket_creation_url or "").strip()
+        if not configured:
+            return self.jira_host
+
+        parts = urlsplit(configured)
+        if not parts.scheme or not parts.netloc:
+            # urlsplit sees a host only behind a scheme, so a bare one gets https;
+            # a value naming no host keeps an empty netloc either way
+            parts = urlsplit(f"https://{configured}")
+        # without a host there is nothing to build a link from, and the connection
+        # host is at least a link that opens
+        if not parts.netloc or any(char.isspace() for char in parts.netloc):
+            return self.jira_host
+
+        # the field points at the new-issue form, and Jira spells that form in more
+        # than one way - CreateIssue.jspa, CreateIssue!default.jspa, either of them
+        # behind a context path and carrying a ?pid= - so drop a trailing .jspa page
+        # together with the /secure/ holding it, and keep whatever is left as the base
+        segments = [segment for segment in parts.path.split("/") if segment]
+        if segments and segments[-1].lower().endswith(".jspa"):
+            segments.pop()
+            if segments and segments[-1].lower() == "secure":
+                segments.pop()
+
+        path = "/" + "/".join(segments) if segments else ""
+        return urlunsplit((parts.scheme, parts.netloc, path, "", ""))
 
     def dispose(self):
         """
@@ -554,7 +590,7 @@ class JiraonpremProvider(BaseProvider):
 
                 issue_key = self._extract_issue_key_from_issue_id(issue_id)
 
-                result["ticket_url"] = f"{self.jira_host}/browse/{issue_key}"
+                result["ticket_url"] = f"{self.browse_host}/browse/{issue_key}"
 
                 self.logger.info("Updated a jira issue: " + str(result))
                 return result
@@ -577,7 +613,7 @@ class JiraonpremProvider(BaseProvider):
                 priority=priority,
                 **kwargs,
             )
-            result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
+            result["ticket_url"] = f"{self.browse_host}/browse/{result['issue']['key']}"
             self.logger.info("Notified jira!")
 
             return result
