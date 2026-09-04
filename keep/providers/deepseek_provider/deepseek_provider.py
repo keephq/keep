@@ -80,7 +80,13 @@ class DeepseekProvider(BaseProvider):
             max_tokens=max_tokens,
             response_format=structured_output_format,
         )
-        response = response.choices[0].message.content
+        # An OpenAI-compatible backend can return HTTP 200 with an empty
+        # choices list (for example a content-filter block), so choices[0]
+        # would raise. Degrade to an empty string instead of crashing the step.
+        try:
+            response = response.choices[0].message.content
+        except IndexError:
+            response = ""
         try:
             response = json.loads(response)
         except Exception:
