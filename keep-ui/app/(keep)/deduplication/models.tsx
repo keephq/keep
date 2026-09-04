@@ -18,4 +18,5 @@ export interface DeduplicationRule {
   full_deduplication: boolean;
   ignore_fields: string[];
   is_provisioned: boolean;
+  rule_type: "split" | "correlate";
 }
