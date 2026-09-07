@@ -163,14 +163,13 @@ class Step:
         # Initialize all conditions
         conditions = []
 
-        aliases = self.config.get("alias", {})
-
-        # if aliases are defined, set them in the context
-        for alias_key, alias_val in aliases.items():
-            aliases[alias_key] = self.io_handler.render(alias_val)
-
+        # set the step's vars in the context so they're available for condition/if evaluation
+        # note: aliases are intentionally NOT rendered/set here - they are only computed
+        # once we know the step is actually going to run (see below), since rendering them
+        # can fail/throw if the step (and its "if") is meant to be skipped (e.g. because they
+        # reference results of another step that was itself skipped)
         self.context_manager.set_step_vars(
-            self.step_id, _vars=self.vars, _aliases=aliases
+            self.step_id, _vars=self.vars, _aliases={}
         )
 
         for condition in self.conditions:
@@ -300,6 +299,18 @@ class Step:
                     "step_id": self.step_id,
                 },
             )
+
+        # Now that we know the step is actually going to run, render and set its aliases.
+        # This must happen after the "if" check above (and not before, and not
+        # unconditionally) since aliases are only meaningful/safe to compute when the
+        # step runs - e.g. they may reference results of another step that was skipped,
+        # in which case rendering them here (before the "if" gate) could throw.
+        aliases = self.config.get("alias", {})
+        for alias_key, alias_val in aliases.items():
+            aliases[alias_key] = self.io_handler.render(alias_val)
+        self.context_manager.set_step_vars(
+            self.step_id, _vars=self.vars, _aliases=aliases
+        )
 
         # Third, check throttling
         # Now check if throttling is enabled

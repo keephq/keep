@@ -121,3 +121,22 @@ def test_missing_usage_does_not_break_the_response():
     assert result["prompt_tokens"] is None
     assert result["cost"] is None
     assert result["model"] == "local-model"
+
+
+def _empty_choices_response():
+    """Some OpenAI-compatible backends (e.g. Azure content filtering) return
+    HTTP 200 with an empty ``choices`` list. ``raise_for_status`` passes, so the
+    provider still has to read ``choices[0]``."""
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json = MagicMock(return_value={"choices": []})
+    return response
+
+
+def test_empty_choices_does_not_crash():
+    # choices[0] on an empty list raises IndexError, which the old
+    # ``except KeyError`` did not catch, so the step died with an opaque
+    # traceback instead of an empty response.
+    provider = _build_provider()
+    with patch("requests.post", return_value=_empty_choices_response()):
+        assert provider._query(prompt="hi")["response"] == ""

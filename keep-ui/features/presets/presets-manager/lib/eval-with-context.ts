@@ -9,8 +9,19 @@ const getAllMatches = (pattern: RegExp, string: string) =>
   // make sure string is a String, and make sure pattern has the /g flag
   String(string).match(new RegExp(pattern, "g"));
 const sanitizeCELIntoJS = (celExpression: string): string => {
-  // First, replace "contains" with "includes"
-  let jsExpression = celExpression.replace(/contains/g, "includes");
+  // Rewrite the CEL `contains` operator to JS `includes`.
+  //
+  // Matching the call form `.contains(` rather than the bare word: an
+  // unanchored /contains/g also rewrote the inside of quoted search strings
+  // and any identifier that merely contained those letters, so
+  // `description.contains("contains")` searched for "includes", and a label
+  // named `contains_pii` became `includes_pii` -- a field that does not
+  // exist, which then evaluated to undefined and quietly matched nothing.
+  //
+  // A search string holding the literal `.contains(` is still rewritten;
+  // separating code from string literals properly needs a tokenizer rather
+  // than a regex.
+  let jsExpression = celExpression.replace(/\.contains\(/g, ".includes(");
 
   // Replace severity comparisons with mapped values
   jsExpression = jsExpression.replace(

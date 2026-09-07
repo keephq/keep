@@ -423,6 +423,13 @@ def test_add_workflow(browser: Page, setup_page_logging, failure_artifacts):
         page.get_by_placeholder("message", exact=True).fill("Hello world!")
         page.get_by_test_id("wf-editor-configure-save-button").click()
         page.wait_for_url(re.compile("http://localhost:3000/workflows/.*"))
+        # wait_for_url returns as soon as the URL changes, which is before the
+        # workflow detail fetch resolves. Until it does, WorkflowDetailHeader
+        # renders a skeleton and wf-name is absent from the DOM rather than
+        # empty, so an immediate text assertion spends its default 5s window
+        # waiting for an element that does not exist yet. Wait for the heading
+        # to attach first, then assert on what it says.
+        expect(page.get_by_test_id("wf-name")).to_be_visible(timeout=15000)
         expect(page.get_by_test_id("wf-name")).to_contain_text(
             "Example Console Workflow"
         )

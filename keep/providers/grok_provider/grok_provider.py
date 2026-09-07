@@ -45,7 +45,7 @@ class GrokProvider(BaseProvider):
     def _query(
         self,
         prompt,
-        model="grok-1",
+        model="grok-4.5",
         max_tokens=1024,
         structured_output_format=None,
     ):
@@ -71,7 +71,14 @@ class GrokProvider(BaseProvider):
                 json=payload
             )
             response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"]
+            result = response.json()
+            # An OpenAI-compatible backend can return HTTP 200 with an empty
+            # choices list (e.g. a content-filter block), so raise_for_status
+            # passes but choices[0] would raise. Degrade to an empty string.
+            try:
+                content = result["choices"][0]["message"]["content"]
+            except (KeyError, IndexError):
+                content = ""
 
             # Try to parse as JSON if structured output was requested
             if structured_output_format:
@@ -116,7 +123,7 @@ if __name__ == "__main__":
     print(
         provider.query(
             prompt="Here is an alert, define environment for it: Clients are panicking, nothing works.",
-            model="grok-1",
+            model="grok-4.5",
             structured_output_format={
                 "type": "json_schema",
                 "json_schema": {

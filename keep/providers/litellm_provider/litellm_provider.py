@@ -115,7 +115,7 @@ class LitellmProvider(BaseProvider):
             # Extract the generated text from the response
             try:
                 generated_text = result["choices"][0]["message"]["content"]
-            except KeyError:
+            except (KeyError, IndexError):
                 generated_text = ""
 
             # Reasoning models return content=None when the whole max_tokens

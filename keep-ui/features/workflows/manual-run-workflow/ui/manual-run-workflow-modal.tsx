@@ -48,6 +48,7 @@ export function ManualRunWorkflowModal({
   >(undefined);
   const [workflowInputs, setWorkflowInputs] = useState<WorkflowInput[]>([]);
   const [inputValues, setInputValues] = useState<Record<string, any>>({});
+  const [isRunning, setIsRunning] = useState(false);
   const { workflows } = useWorkflowsV2({
     ...DEFAULT_WORKFLOWS_QUERY,
     limit: 100, // Fetch more workflows at once for the dropdown
@@ -128,6 +129,10 @@ export function ManualRunWorkflowModal({
   };
 
   const handleRun = async () => {
+    if (isRunning) {
+      return;
+    }
+    setIsRunning(true);
     try {
       if (onSubmit) {
         // If onSubmit prop is provided, use it (for WorkflowDetailHeader usage)
@@ -161,10 +166,12 @@ export function ManualRunWorkflowModal({
           </div>
         );
       }
+      clearAndClose();
     } catch (error) {
       showErrorToast(error, "Failed to start workflow");
+    } finally {
+      setIsRunning(false);
     }
-    clearAndClose();
   };
 
   const WorkflowSelect = (props: any) => {
@@ -293,13 +300,20 @@ export function ManualRunWorkflowModal({
       ) : null}
 
       <div className="flex justify-end gap-2 mt-4">
-        <Button onClick={clearAndClose} color="orange" variant="secondary">
+        <Button
+          onClick={clearAndClose}
+          color="orange"
+          variant="secondary"
+          disabled={isRunning}
+        >
           Cancel
         </Button>
         <Button
           onClick={handleRun}
           color="orange"
+          loading={isRunning}
           disabled={
+            isRunning ||
             !effectiveWorkflow ||
             (workflowInputs.length > 0 &&
               !areRequiredInputsFilled(workflowInputs, inputValues))

@@ -18,6 +18,7 @@ from keep.topologies.topologies_service import (
     ServiceNotFoundException,
 )
 from keep.api.models.db.alert import Incident
+from keep.api.models.db.incident import IncidentStatus
 from keep.topologies.topology_processor import TopologyProcessor
 from tests.fixtures.client import setup_api_key, client, test_app  # noqa: F401
 
@@ -415,3 +416,38 @@ def test_create_application_based_incident_sets_is_predicted(db_session):
     assert incident.is_predicted is True
     assert incident.is_visible is True
     assert incident.is_candidate is False
+
+
+def test_get_application_based_incident_skips_deleted_incident(db_session):
+    """
+    Deleting an incident only marks it as deleted; the row keeps its
+    incident_application link. _get_application_based_incident must not
+    return a deleted incident, or the next alert reuses it instead of
+    creating a new one (issue #6732).
+    """
+    service = create_service(db_session, SINGLE_TENANT_UUID, "1")
+    application = TopologyApplication(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test App",
+        services=[service],
+    )
+    db_session.add(application)
+    db_session.commit()
+
+    processor = TopologyProcessor()
+    processor._create_application_based_incident(SINGLE_TENANT_UUID, application, {})
+
+    incident = db_session.exec(
+        select(Incident).where(Incident.incident_application == application.id)
+    ).first()
+    assert incident is not None
+
+    # Delete marks the incident as deleted but keeps the row.
+    incident.status = IncidentStatus.DELETED.value
+    db_session.add(incident)
+    db_session.commit()
+
+    assert (
+        processor._get_application_based_incident(SINGLE_TENANT_UUID, application)
+        is None
+    )
