@@ -1,5 +1,6 @@
 import datetime
 import json
+import time
 from datetime import timedelta
 
 import pytest
@@ -1262,3 +1263,61 @@ def test_dict_merge():
     result = functions.dict_merge(d1, "invalid", {"e": 7})
     assert result == {"a": 1, "b": 2, "e": 7}
 
+
+
+@pytest.fixture
+def host_timezone(request, monkeypatch):
+    """Run the test as if Keep were deployed in the given timezone.
+
+    time.tzset reads TZ into process-global state, so it has to be called
+    again on the way out or the setting leaks into every test that follows.
+    """
+    monkeypatch.setenv("TZ", request.param)
+    time.tzset()
+    yield request.param
+    monkeypatch.undo()
+    time.tzset()
+
+
+@pytest.mark.parametrize(
+    "host_timezone", ["UTC", "America/New_York", "Asia/Kolkata"], indirect=True
+)
+def test_to_utc_reads_an_offsetless_string_as_utc(host_timezone):
+    """An offsetless timestamp must not be read in the host's timezone.
+
+    This is the example the workflow function docs give for to_utc. Before the
+    fix astimezone applied the host offset, so the same string converted on a
+    UTC server and on a server in Asia/Kolkata came out 5.5 hours apart.
+    """
+    assert functions.to_utc("2024-01-01T00:00:00") == datetime.datetime(
+        2024, 1, 1, 0, 0, tzinfo=datetime.timezone.utc
+    )
+
+
+@pytest.mark.parametrize(
+    "host_timezone", ["UTC", "America/New_York", "Asia/Kolkata"], indirect=True
+)
+def test_to_timestamp_reads_an_offsetless_string_as_utc(host_timezone):
+    assert functions.to_timestamp("2024-01-01T00:00:00") == 1704067200
+
+
+@pytest.mark.parametrize(
+    "host_timezone", ["UTC", "America/New_York", "Asia/Kolkata"], indirect=True
+)
+def test_to_utc_keeps_an_explicit_offset(host_timezone):
+    """A string that states its offset is unaffected by either the host or the fix."""
+    assert functions.to_utc("2024-01-01T02:00:00+02:00") == datetime.datetime(
+        2024, 1, 1, 0, 0, tzinfo=datetime.timezone.utc
+    )
+
+
+@pytest.mark.parametrize(
+    "host_timezone", ["UTC", "America/New_York", "Asia/Kolkata"], indirect=True
+)
+def test_is_business_hours_reads_an_offsetless_string_as_utc(host_timezone):
+    """The routing decision must not depend on where Keep runs.
+
+    18:00 UTC is inside the default 08:00-20:00 window, and it is a Monday.
+    Read as New York local time the same string is 23:00 UTC, which is outside.
+    """
+    assert functions.is_business_hours("2024-01-01T18:00:00") is True
