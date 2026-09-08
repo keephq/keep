@@ -155,8 +155,8 @@ def __save_to_db(
         enrichments_bl = EnrichmentsBl(tenant_id, session)
         # add audit to the deduplicated events
         # TODO: move this to the alert deduplicator
-        if KEEP_AUDIT_EVENTS_ENABLED:
-            for event in deduplicated_events:
+        for event in deduplicated_events:
+            if KEEP_AUDIT_EVENTS_ENABLED:
                 audit = AlertAudit(
                     tenant_id=tenant_id,
                     fingerprint=event.fingerprint,
@@ -167,15 +167,22 @@ def __save_to_db(
                 )
                 session.add(audit)
 
-                __validate_last_received(event)
-                enrichments_bl.enrich_entity(
-                    event.fingerprint,
-                    enrichments={"lastReceived": event.lastReceived},
-                    dispose_on_new_alert=True,
-                    action_type=ActionType.GENERIC_ENRICH,
-                    action_callee="system",
-                    action_description="Alert lastReceived enriched on deduplication",
-                )
+            __validate_last_received(event)
+            # Propagate correlation detected on this (discarded) occurrence to the
+            # stored alert - apply_deduplication may have just computed is_correlated
+            # for an event that never becomes its own Alert row.
+            enrichments = {"lastReceived": event.lastReceived}
+            if event.is_correlated:
+                enrichments["is_correlated"] = True
+                enrichments["correlated_to"] = event.correlated_to
+            enrichments_bl.enrich_entity(
+                event.fingerprint,
+                enrichments=enrichments,
+                dispose_on_new_alert=True,
+                action_type=ActionType.GENERIC_ENRICH,
+                action_callee="system",
+                action_description="Alert lastReceived enriched on deduplication",
+            )
 
         enriched_formatted_events = []
         saved_alerts = []
@@ -435,6 +442,46 @@ def __handle_formatted_events(
             event = alert_deduplicator.apply_deduplication(
                 event, deduplication_rules, last_alerts_fingerprint_to_hash
             )
+
+        # Correlate alerts within the same batch: the DB lookup inside
+        # apply_deduplication cannot see sibling alerts that arrived in the same
+        # payload because they are not committed yet.
+        batch_correlation_groups: dict[str, list[AlertDto]] = {}
+        for event in formatted_events:
+            if event.correlation_fingerprint and event.status not in (
+                AlertStatus.RESOLVED.value,
+                AlertStatus.SUPPRESSED.value,
+            ):
+                batch_correlation_groups.setdefault(
+                    event.correlation_fingerprint, []
+                ).append(event)
+
+        for correlation_fingerprint, group in batch_correlation_groups.items():
+            # If any member was already correlated, a representative exists in the
+            # DB and apply_deduplication has done the work for this group.
+            if any(event.is_correlated for event in group):
+                continue
+            # Distinct fingerprints only - repeated occurrences of the same alert
+            # in one payload must not correlate to themselves.
+            distinct = list({event.fingerprint: event for event in group}.values())
+            if len(distinct) < 2:
+                continue
+            # First event in payload order becomes the representative; it will get
+            # the earliest LastAlert.first_timestamp, matching the ordering used by
+            # get_last_alert_by_correlation_fingerprint on subsequent receipts.
+            representative = distinct[0]
+            for event in distinct[1:]:
+                event.is_correlated = True
+                event.correlated_to = representative.fingerprint
+                logger.info(
+                    "Alert correlated to sibling alert in the same batch",
+                    extra={
+                        "alert_id": event.id,
+                        "correlated_to": representative.fingerprint,
+                        "correlation_fingerprint": correlation_fingerprint,
+                        "tenant_id": tenant_id,
+                    },
+                )
 
         # filter out the deduplicated events
         deduplicated_events = list(

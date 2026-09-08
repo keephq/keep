@@ -48,6 +48,7 @@ class LastAlert(SQLModel, table=True):
     timestamp: datetime = Field(nullable=False, index=True)
     first_timestamp: datetime = Field(nullable=False, index=True)
     alert_hash: str | None = Field(nullable=True, index=True)
+    correlation_fingerprint: str | None = Field(default=None, nullable=True)
 
     __table_args__ = (
         # Original indexes from MySQL
@@ -59,6 +60,11 @@ class LastAlert(SQLModel, table=True):
             "first_timestamp",
             "alert_id",
             "fingerprint",
+        ),
+        Index(
+            "idx_lastalert_tenant_correlation_fingerprint",
+            "tenant_id",
+            "correlation_fingerprint",
         ),
         {},
     )
@@ -219,6 +225,7 @@ class AlertDeduplicationRule(SQLModel, table=True):
     ignore_fields: list[str] = Field(sa_column=Column(JSON), default=[])
     priority: int = Field(default=0)  # for future use
     is_provisioned: bool = Field(default=False)
+    rule_type: str = Field(default="split")  # "split" or "correlate"
 
     class Config:
         arbitrary_types_allowed = True

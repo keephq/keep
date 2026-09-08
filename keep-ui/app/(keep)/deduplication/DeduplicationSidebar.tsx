@@ -40,7 +40,27 @@ interface DeduplicationSidebarProps {
   onSubmit: (data: Partial<DeduplicationRule>) => Promise<void>;
   mutateDeduplicationRules: KeyedMutator<DeduplicationRule[]>;
   providers: { installed_providers: Providers; linked_providers: Providers };
+  deduplicationRules: DeduplicationRule[];
 }
+
+const RULE_TYPE_OPTIONS: {
+  value: "split" | "correlate";
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "split",
+    label: "Split",
+    description:
+      "Each unique combination of these fields is a distinct alert event. Use this to prevent old resolved alerts from being reused when the same alert re-fires.",
+  },
+  {
+    value: "correlate",
+    label: "Correlate",
+    description:
+      "Alerts sharing the same values for these fields are correlated together, without merging them. Use this to group related alerts and notify only once per correlation group.",
+  },
+];
 
 const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   isOpen,
@@ -49,6 +69,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   onSubmit,
   mutateDeduplicationRules,
   providers,
+  deduplicationRules,
 }) => {
   const {
     control,
@@ -68,6 +89,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
       fingerprint_fields: [],
       full_deduplication: false,
       ignore_fields: [],
+      rule_type: "split" as "split" | "correlate",
     },
   });
 
@@ -92,6 +114,26 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
   const selectedProviderId = watch("provider_id");
   const fingerprintFields = watch("fingerprint_fields");
   const ignoreFields = watch("ignore_fields");
+  const ruleType = watch("rule_type");
+
+  const typeConflict = useMemo(() => {
+    if (!selectedProviderType || !ruleType) return null;
+    return (
+      deduplicationRules.find(
+        (r) =>
+          r.id !== selectedDeduplicationRule?.id &&
+          r.rule_type === ruleType &&
+          r.provider_type === selectedProviderType &&
+          (r.provider_id ?? null) === (selectedProviderId ?? null)
+      ) ?? null
+    );
+  }, [
+    ruleType,
+    selectedProviderType,
+    selectedProviderId,
+    deduplicationRules,
+    selectedDeduplicationRule,
+  ]);
 
   const availableFields = useMemo(() => {
     const defaultFields = [
@@ -125,7 +167,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
 
   useEffect(() => {
     if (isOpen && selectedDeduplicationRule) {
-      reset(selectedDeduplicationRule);
+      reset({ ...selectedDeduplicationRule, rule_type: selectedDeduplicationRule.rule_type ?? "split" });
     } else if (isOpen) {
       reset({
         name: "",
@@ -135,6 +177,7 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
         fingerprint_fields: [],
         full_deduplication: false,
         ignore_fields: [],
+        rule_type: "split",
       });
     }
   }, [isOpen, selectedDeduplicationRule, reset]);
@@ -375,8 +418,56 @@ const DeduplicationSidebar: React.FC<DeduplicationSidebarProps> = ({
                 )}
               </div>
               <div>
+                <Text className="block text-sm font-medium text-gray-700 mb-2">
+                  Rule type
+                </Text>
+                <Controller
+                  name="rule_type"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="grid grid-cols-2 gap-2">
+                      {RULE_TYPE_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          disabled={!!selectedDeduplicationRule?.is_provisioned}
+                          onClick={() => field.onChange(option.value)}
+                          className={`text-left p-3 rounded-tremor-default border text-sm transition-colors ${
+                            field.value === option.value
+                              ? "border-orange-500 bg-orange-50 text-orange-900"
+                              : "border-tremor-border bg-white text-gray-700 hover:bg-gray-50"
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          <span className="font-semibold block mb-1">
+                            {option.label}
+                          </span>
+                          <span className="text-xs text-gray-500 leading-snug">
+                            {option.description}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                />
+                {typeConflict && (
+                  <Callout
+                    className="mt-2"
+                    title={`A ${ruleType} rule already exists for this provider`}
+                    icon={ExclamationTriangleIcon}
+                    color="yellow"
+                  >
+                    Rule &quot;{typeConflict.name}&quot; is already a{" "}
+                    <strong>{ruleType}</strong> rule for this provider. Only one
+                    rule of each type is allowed per provider. Delete or update
+                    the existing rule first.
+                  </Callout>
+                )}
+              </div>
+              <div>
                 <span className="text-sm font-medium text-gray-700 flex items-center mb-2">
-                  Fields to use for fingerprint
+                  {ruleType === "correlate"
+                    ? "Fields to use for correlation"
+                    : "Fields to use for fingerprint"}
                   <span className="ml-1 relative inline-flex items-center">
                     <span className="group relative flex items-center">
                       <Icon

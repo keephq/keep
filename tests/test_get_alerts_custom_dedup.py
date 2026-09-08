@@ -42,6 +42,16 @@ def _make_provider(alerts):
 
 
 class TestGetAlertsCustomDedup(unittest.TestCase):
+    def setUp(self):
+        self._patch_correlate = patch(
+            "keep.providers.base.base_provider.get_correlation_deduplication_rule",
+            return_value=None,
+        )
+        self._patch_correlate.start()
+
+    def tearDown(self):
+        self._patch_correlate.stop()
+
     @patch("keep.providers.base.base_provider.get_custom_deduplication_rule")
     def test_custom_dedup_rule_overwrites_fingerprint(self, mock_get_rule):
         """Pulled alerts should get fingerprints recalculated when a custom dedup rule exists."""
