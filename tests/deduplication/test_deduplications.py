@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import random
 import time
@@ -8,11 +9,18 @@ import pytest
 import pytz
 from sqlalchemy import text
 
-from keep.api.core.db import get_last_alerts
+from keep.api.core import db as db_module
+from keep.api.core.db import get_custom_deduplication_rule, get_last_alerts
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
-from keep.api.models.alert import DeduplicationRuleDto, AlertStatus
+from keep.api.models.alert import (
+    AlertDto,
+    AlertSeverity,
+    AlertStatus,
+    DeduplicationRuleDto,
+)
 from keep.api.models.db.alert import AlertDeduplicationRule, AlertDeduplicationEvent, Alert
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
+from keep.providers.base.base_provider import BaseProvider
 from keep.providers.providers_factory import ProvidersFactory
 from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 
@@ -1018,3 +1026,133 @@ def test_sort_keys_deduplication_fix(db_session, client, test_app):
     assert prometheus_rule is not None
     assert prometheus_rule.get("ingested") == 2
     assert prometheus_rule.get("dedup_ratio") == 50.0  # 1 out of 2 was deduplicated
+
+
+def _dedup_test_alert(**kwargs) -> AlertDto:
+    payload = {
+        "id": "test-id",
+        "name": "test alert",
+        "status": AlertStatus.FIRING.value,
+        "severity": AlertSeverity.CRITICAL.value,
+        "lastReceived": "2024-01-01T00:00:00.000Z",
+        "source": ["keep"],
+    }
+    payload.update(kwargs)
+    return AlertDto(**payload)
+
+
+def _add_keep_dedup_rule(db_session):
+    db_session.exec(text("DELETE FROM alertdeduplicationrule"))
+    rule = AlertDeduplicationRule(
+        name="catch all rule",
+        description="test",
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="keep",
+        provider_id=None,
+        fingerprint_fields=["service"],
+        full_deduplication=False,
+        ignore_fields=[],
+        last_updated_by="test",
+        created_by="test",
+    )
+    db_session.add(rule)
+    db_session.commit()
+    db_session.refresh(rule)
+    return rule
+
+
+def test_fingerprint_warns_when_no_field_resolves(caplog):
+    # when none of the configured fields exist on the alert, every alert collapses
+    # into the same (empty) digest - that must not happen silently
+    logger_name = "keep.providers.base.base_provider"
+    with caplog.at_level(logging.WARNING, logger=logger_name):
+        first = BaseProvider.get_alert_fingerprint(
+            _dedup_test_alert(name="alert one"), ["nonexistent_field"]
+        )
+        second = BaseProvider.get_alert_fingerprint(
+            _dedup_test_alert(name="alert two"), ["nonexistent_field"]
+        )
+
+    assert first == second
+    assert "all alerts will share the same fingerprint" in caplog.text
+
+    # a field that does resolve produces a distinct fingerprint and no warning
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger=logger_name):
+        resolved = BaseProvider.get_alert_fingerprint(
+            _dedup_test_alert(service="api"), ["service"]
+        )
+
+    assert resolved != first
+    assert "all alerts will share the same fingerprint" not in caplog.text
+
+
+def test_custom_rule_lookup_normalizes_missing_provider_type(db_session):
+    # rules for provider-less alerts are stored under provider_type="keep", but
+    # callers may pass None - both must resolve the same row
+    rule = _add_keep_dedup_rule(db_session)
+
+    via_none = get_custom_deduplication_rule(SINGLE_TENANT_UUID, None, None)
+    via_keep = get_custom_deduplication_rule(SINGLE_TENANT_UUID, None, "keep")
+
+    assert via_none is not None
+    assert via_none.id == rule.id == via_keep.id
+
+
+def test_custom_rule_lookup_respects_disabled_flag(db_session, monkeypatch):
+    # the kill switch must apply to every caller, not just get_deduplication_rules
+    _add_keep_dedup_rule(db_session)
+
+    monkeypatch.setattr(db_module, "KEEP_CUSTOM_DEDUPLICATION_ENABLED", False)
+    assert get_custom_deduplication_rule(SINGLE_TENANT_UUID, None, None) is None
+
+    monkeypatch.setattr(db_module, "KEEP_CUSTOM_DEDUPLICATION_ENABLED", True)
+    assert get_custom_deduplication_rule(SINGLE_TENANT_UUID, None, None) is not None
+
+
+@pytest.mark.timeout(30)
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+        },
+    ],
+    indirect=True,
+)
+def test_custom_rule_applies_to_provider_less_alerts(db_session, client, test_app):
+    # alerts pushed to the generic /alerts/event endpoint arrive already parsed as
+    # an AlertDto and never go through a provider's _format_alert - the catch-all
+    # deduplication rule must still be applied to them
+    db_session.exec(text("DELETE FROM alertdeduplicationrule"))
+    rule = AlertDeduplicationRule(
+        name="catch all rule",
+        description="test",
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="keep",
+        provider_id=None,
+        fingerprint_fields=["service"],
+        full_deduplication=False,
+        ignore_fields=[],
+        last_updated_by="test",
+        created_by="test",
+    )
+    db_session.add(rule)
+    db_session.commit()
+
+    # same service, different names: without the custom rule each alert would be
+    # fingerprinted as sha256(name) and the two would never be correlated
+    for name in ["first alert", "second alert"]:
+        client.post(
+            "/alerts/event",
+            json={"name": name, "service": "billing-api", "source": ["nagios"]},
+            headers={"x-api-key": "some-api-key"},
+        )
+        time.sleep(0.1)
+
+    wait_for_alerts(client, 1)
+
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    assert len(alerts) == 1
+    # the fingerprint is derived from the rule's field, not from the alert name
+    assert alerts[0]["fingerprint"] == hashlib.sha256(b"billing-api").hexdigest()
