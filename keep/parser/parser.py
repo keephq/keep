@@ -474,15 +474,20 @@ class Parser:
                     parameter
                 ]
             elif isinstance(provider_parameters[parameter], dict):
-                try:
-                    parsed_provider_parameters[parameter_name] = StepProviderParameter(
-                        **provider_parameters[parameter]
-                    )
-                except Exception:
-                    # It could be a dict/list but not of ProviderParameter type
-                    parsed_provider_parameters[parameter_name] = provider_parameters[
-                        parameter
-                    ]
+                param_value = provider_parameters[parameter]
+                # Only coerce to StepProviderParameter if the dict exclusively
+                # contains its known fields — prevents user dicts with a "key"
+                # field from being silently converted and losing other data.
+                known_fields = {"key", "safe", "default"}
+                if param_value.keys() <= known_fields and "key" in param_value:
+                    try:
+                        parsed_provider_parameters[parameter_name] = StepProviderParameter(
+                            **param_value
+                        )
+                    except Exception:
+                        parsed_provider_parameters[parameter_name] = param_value
+                else:
+                    parsed_provider_parameters[parameter_name] = param_value
         return parsed_provider_parameters
 
     def _parse_steps(
