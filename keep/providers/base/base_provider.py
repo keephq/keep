@@ -469,13 +469,6 @@ class BaseProvider(metaclass=abc.ABCMeta):
             )
             return None
         logger.debug("Alert formatted")
-        # after the provider calculated the default fingerprint
-        #   check if there is a custom deduplication rule and apply
-        custom_deduplication_rule = get_custom_deduplication_rule(
-            tenant_id=tenant_id,
-            provider_id=provider_id,
-            provider_type=provider_type,
-        )
 
         if not isinstance(formatted_alert, list):
             formatted_alert.providerId = provider_id
@@ -487,12 +480,50 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 alert.providerId = provider_id
                 alert.providerType = provider_type
 
-        # if there is no custom deduplication rule, return the formatted alert
+        # after the provider calculated the default fingerprint
+        #   check if there is a custom deduplication rule and apply
+        return cls.apply_custom_deduplication_rule(
+            formatted_alert,
+            tenant_id=tenant_id,
+            provider_id=provider_id,
+            provider_type=provider_type,
+        )
+
+    @classmethod
+    def apply_custom_deduplication_rule(
+        cls,
+        alerts: list[AlertDto],
+        tenant_id: str,
+        provider_id: str | None,
+        provider_type: str | None,
+    ) -> list[AlertDto]:
+        """
+        Override the fingerprint of already-formatted alerts with a custom deduplication rule.
+
+        Alerts that reach Keep already parsed as AlertDto never go through
+        _format_alert, so this has to be callable on its own - otherwise a configured
+        rule is silently ignored for them.
+
+        Args:
+            alerts (list[AlertDto]): The alerts to apply the rule to, in place.
+            tenant_id (str): The tenant id.
+            provider_id (str | None): The provider id, if any.
+            provider_type (str | None): The provider type, if any.
+
+        Returns:
+            list[AlertDto]: The same alerts, with fingerprints overridden if a rule exists.
+        """
+        logger = logging.getLogger(__name__)
+        custom_deduplication_rule = get_custom_deduplication_rule(
+            tenant_id=tenant_id,
+            provider_id=provider_id,
+            provider_type=provider_type,
+        )
+        # if there is no custom deduplication rule, keep the provider's fingerprint
         if not custom_deduplication_rule:
-            return formatted_alert
-        # if there is a custom deduplication rule, apply it
-        # apply the custom deduplication rule to calculate the fingerprint
-        for alert in formatted_alert:
+            return alerts
+
+        for alert in alerts:
             logger.info(
                 "Applying custom deduplication rule",
                 extra={
@@ -504,7 +535,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
             alert.fingerprint = cls.get_alert_fingerprint(
                 alert, custom_deduplication_rule.fingerprint_fields
             )
-        return formatted_alert
+        return alerts
 
     @staticmethod
     def get_alert_fingerprint(alert: AlertDto, fingerprint_fields: list = []) -> str:
@@ -518,10 +549,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
         Returns:
             str: hexdigest of the fingerprint or the event.name if no fingerprint_fields were given.
         """
+        logger = logging.getLogger(__name__)
         if not fingerprint_fields:
             return alert.name
         fingerprint = hashlib.sha256()
         event_dict = alert.dict()
+        matched_fields = []
         for fingerprint_field in fingerprint_fields:
             keys = fingerprint_field.split(".")
             fingerprint_field_value = event_dict
@@ -535,6 +568,16 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 fingerprint_field_value = json.dumps(fingerprint_field_value)
             if fingerprint_field_value is not None:
                 fingerprint.update(str(fingerprint_field_value).encode())
+                matched_fields.append(fingerprint_field)
+        if not matched_fields:
+            logger.warning(
+                "None of the fingerprint fields were found on the alert - "
+                "all alerts will share the same fingerprint",
+                extra={
+                    "fingerprint_fields": fingerprint_fields,
+                    "alert_name": alert.name,
+                },
+            )
         return fingerprint.hexdigest()
 
     def get_alerts_configuration(self, alert_id: Optional[str] = None):

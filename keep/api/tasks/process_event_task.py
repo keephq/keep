@@ -768,13 +768,30 @@ def process_event(
             if isinstance(event, dict):
                 if not event.get("name"):
                     event["name"] = event.get("id", "unknown alert name")
-                event = [AlertDto(**event)]
+                # format through the "keep" provider instead of building the AlertDto
+                # directly, so that a custom deduplication rule is applied here too
+                event = ProvidersFactory.get_provider_class("keep").format_alert(
+                    tenant_id=tenant_id,
+                    event=event,
+                    provider_id=provider_id,
+                    provider_type=provider_type,
+                )
                 raw_event = [raw_event]
 
             # Prepare the event for the digest
             if isinstance(event, AlertDto):
                 event = [event]
                 raw_event = [raw_event]
+                # an alert that arrives already parsed skips provider formatting, and
+                # with it the custom deduplication rule - apply it explicitly
+                event = ProvidersFactory.get_provider_class(
+                    "keep"
+                ).apply_custom_deduplication_rule(
+                    event,
+                    tenant_id=tenant_id,
+                    provider_id=provider_id,
+                    provider_type=provider_type,
+                )
 
             with tracer.start_as_current_span("process_event_internal_preparation"):
                 __internal_prepartion(event, fingerprint, api_key_name)
