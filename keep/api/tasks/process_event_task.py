@@ -721,18 +721,31 @@ def process_event(
 
                 if isinstance(event, list):
                     event_list = []
+                    already_formatted = []
                     for event_item in event:
                         if not isinstance(event_item, AlertDto):
-                            event_list.append(
-                                provider_class.format_alert(
-                                    tenant_id=tenant_id,
-                                    event=event_item,
-                                    provider_id=provider_id,
-                                    provider_type=provider_type,
-                                )
+                            # format_alert returns a list, so extend rather than
+                            # append - appending nests it and breaks downstream
+                            formatted_event_item = provider_class.format_alert(
+                                tenant_id=tenant_id,
+                                event=event_item,
+                                provider_id=provider_id,
+                                provider_type=provider_type,
                             )
+                            if formatted_event_item:
+                                event_list.extend(formatted_event_item)
                         else:
+                            # already parsed, so it skipped format_alert and with it
+                            # the custom deduplication rule - collect and apply once
+                            already_formatted.append(event_item)
                             event_list.append(event_item)
+                    if already_formatted:
+                        provider_class.apply_custom_deduplication_rule(
+                            already_formatted,
+                            tenant_id=tenant_id,
+                            provider_id=provider_id,
+                            provider_type=provider_type,
+                        )
                     event = event_list
                 else:
                     event = provider_class.format_alert(

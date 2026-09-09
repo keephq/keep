@@ -1156,3 +1156,77 @@ def test_custom_rule_applies_to_provider_less_alerts(db_session, client, test_ap
     assert len(alerts) == 1
     # the fingerprint is derived from the rule's field, not from the alert name
     assert alerts[0]["fingerprint"] == hashlib.sha256(b"billing-api").hexdigest()
+
+
+@pytest.mark.timeout(30)
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+        },
+    ],
+    indirect=True,
+)
+def test_array_payload_to_typed_endpoint_is_ingested(db_session, client, test_app):
+    # format_alert returns a list, so appending its result nested it and every
+    # alert in an array payload was dropped after a 202 response
+    provider = ProvidersFactory.get_provider_class("datadog")
+    alert_1 = provider.simulate_alert()
+    alert_2 = provider.simulate_alert()
+    while alert_2.get("monitor_id") == alert_1.get("monitor_id"):
+        alert_2 = provider.simulate_alert()
+
+    response = client.post(
+        "/alerts/event/datadog",
+        json=[alert_1, alert_2],
+        headers={"x-api-key": "some-api-key"},
+    )
+    assert response.status_code == 202
+
+    wait_for_alerts(client, 2)
+
+
+@pytest.mark.timeout(30)
+@pytest.mark.parametrize(
+    "test_app",
+    [
+        {
+            "AUTH_TYPE": "NOAUTH",
+        },
+    ],
+    indirect=True,
+)
+def test_custom_rule_applies_to_array_of_parsed_alerts(db_session, client, test_app):
+    # an array posted to the generic endpoint arrives as a list of already-parsed
+    # AlertDto, which skips _format_alert - the catch-all rule must still apply
+    db_session.exec(text("DELETE FROM alertdeduplicationrule"))
+    rule = AlertDeduplicationRule(
+        name="catch all rule",
+        description="test",
+        tenant_id=SINGLE_TENANT_UUID,
+        provider_type="keep",
+        provider_id=None,
+        fingerprint_fields=["service"],
+        full_deduplication=False,
+        ignore_fields=[],
+        last_updated_by="test",
+        created_by="test",
+    )
+    db_session.add(rule)
+    db_session.commit()
+
+    client.post(
+        "/alerts/event",
+        json=[
+            {"name": "first alert", "service": "billing-api", "source": ["nagios"]},
+            {"name": "second alert", "service": "billing-api", "source": ["nagios"]},
+        ],
+        headers={"x-api-key": "some-api-key"},
+    )
+
+    wait_for_alerts(client, 1)
+
+    alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
+    assert len(alerts) == 1
+    assert alerts[0]["fingerprint"] == hashlib.sha256(b"billing-api").hexdigest()
