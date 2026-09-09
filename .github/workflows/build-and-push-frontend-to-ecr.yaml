@@ -1,0 +1,76 @@
+  name: "Build and Push Frontend Image to ECR"
+
+  on:
+    push:
+      branches:                                                                                                                                                    
+        - main
+      paths:
+        - ".github/workflows/build-and-push-frontend-to-ecr.yaml"
+        - "keepui/*"
+    workflow_dispatch:
+      inputs:
+        image-tag:
+          description: "Image tag override (default: git SHA)"
+          required: false
+
+  env:
+    iam-role-name: "ServiceAccess-eks-acddevops_kubernetes_workloads"
+    ECR_REPOSITORY: "keephq/frontend"
+    DOCKERFILE_PATH: "docker/Dockerfile.ui"
+    BUILD_CONTEXT: "."
+
+  permissions:
+    id-token: write
+    contents: read
+
+  jobs:
+    build-and-push:
+      strategy:
+        fail-fast: false
+        matrix:
+          include:
+            - account: "300813158921"
+              region: "us-west-2"
+              partition: "aws"
+              accountalias: ic-dev-Oregon
+            # Add more accounts as needed
+
+      name: ${{ matrix.accountalias }}
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Configure AWS Credentials
+          uses: aws-actions/configure-aws-credentials@v4
+          with:
+            aws-region: ${{ matrix.region }}
+            role-to-assume: arn:${{ matrix.partition }}:iam::${{ matrix.account }}:role/${{ env.iam-role-name }}
+
+        - name: Login to Private Amazon ECR
+          id: ecr-login
+          uses: aws-actions/amazon-ecr-login@v2
+
+        - name: Create ECR repository if not exists
+          run: |
+            aws ecr describe-repositories --repository-names "${{ env.ECR_REPOSITORY }}" 2>/dev/null || \
+            aws ecr create-repository \
+              --repository-name "${{ env.ECR_REPOSITORY }}" \
+              --image-scanning-configuration scanOnPush=true \
+              --encryption-configuration encryptionType=AES256
+
+        - name: Set image tag
+          id: tag
+          run: |
+            TAG="${{ github.event.inputs.image-tag || github.sha }}"
+            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+        - name: Build and push Docker image
+          uses: docker/build-push-action@v5
+          with:
+            context: ${{ env.BUILD_CONTEXT }}
+            file: ${{ env.DOCKERFILE_PATH }}
+            push: true
+            tags: |
+              ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}
+              ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
