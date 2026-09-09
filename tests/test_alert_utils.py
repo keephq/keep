@@ -17,6 +17,11 @@ from keep.api.utils.alert_utils import sanitize_alert
             {"nested": {"bool": True, "number": 1234}},
             {"nested": {"bool": True, "number": 1234}},
         ),
+        (
+            {"deep": {"level1": [{"level2": "clean\x00data"}]}},
+            {"deep": {"level1": [{"level2": "cleandata"}]}},
+        ),
+        ({}, {}),
         (None, None),
     ],
 )
