@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,12 +8,31 @@ from keep.api.core.db import get_session
 from keep.api.models.db.maintenance_window import (
     MaintenanceRuleCreate,
     MaintenanceRuleRead,
+    MaintenanceWindowDto,
     MaintenanceWindowRule,
 )
 from keep.identitymanager.authenticatedentity import AuthenticatedEntity
 from keep.identitymanager.identitymanagerfactory import IdentityManagerFactory
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+def _run_maintenance_workflows(
+    tenant_id: str, maintenance: MaintenanceWindowDto, action: str
+) -> None:
+    from keep.workflowmanager.workflowmanager import WorkflowManager
+
+    try:
+        WorkflowManager.get_instance().insert_maintenance(
+            tenant_id, maintenance, action
+        )
+    except Exception:
+        logger.exception(
+            "Failed to run workflows for maintenance window",
+            extra={"maintenance_id": maintenance.id, "tenant_id": tenant_id},
+        )
 
 
 @router.get(
@@ -54,6 +74,11 @@ def create_maintenance_rule(
     session.add(new_rule)
     session.commit()
     session.refresh(new_rule)
+    _run_maintenance_workflows(
+        authenticated_entity.tenant_id,
+        MaintenanceWindowDto.from_orm_rule(new_rule),
+        "created",
+    )
     return MaintenanceRuleRead(**new_rule.dict())
 
 
@@ -91,6 +116,11 @@ def update_maintenance_rule(
 
     session.commit()
     session.refresh(rule)
+    _run_maintenance_workflows(
+        authenticated_entity.tenant_id,
+        MaintenanceWindowDto.from_orm_rule(rule),
+        "updated",
+    )
     return MaintenanceRuleRead(**rule.dict())
 
 
@@ -114,6 +144,8 @@ def delete_maintenance_rule(
         raise HTTPException(
             status_code=404, detail="Maintenance rule not found or access denied"
         )
+    maintenance = MaintenanceWindowDto.from_orm_rule(rule)
     session.delete(rule)
     session.commit()
+    _run_maintenance_workflows(authenticated_entity.tenant_id, maintenance, "deleted")
     return {"detail": "Maintenance rule deleted successfully"}
