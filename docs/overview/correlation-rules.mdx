@@ -26,6 +26,12 @@ Creating a rule involves defining the conditions under which an alert should be 
  - **Logical grouping**: Combine conditions using logical operators to form comprehensive rules.
  - **Manual approve**: Create Incident-candidate or full-fledged incident.
 
+## Locking an Incident After a Maximum Window
+
+By default a correlation rule keeps extending the same incident as long as matching alerts keep arriving within the rule timeframe, so a long-running condition can stay in a single incident indefinitely.
+
+Set **Max incident window** (in seconds) on a rule to cap this: once an incident is older than the window (measured from its creation time), the next matching alert opens a fresh incident instead of extending the old one. Leaving it empty keeps the default behavior.
+
 ## Dynamic Incident Naming
 
 The correlation engine supports dynamic incident naming based on alert attributes. This allows you to create more meaningful and context-aware incident names that reflect the actual alert data.
