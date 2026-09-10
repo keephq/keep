@@ -155,6 +155,30 @@ class SentryProvider(BaseProvider):
     def get_parameters(self):
         return {}
 
+    @staticmethod
+    def _error_detail(response) -> str:
+        """Best-effort error text from a Sentry API response.
+
+        Sentry does not guarantee a JSON body on an error. A 404 from an endpoint that no
+        longer exists comes back with an EMPTY body, so `response.json()` raises
+        JSONDecodeError. Because `validate_scopes()` is called from
+        ProvidersService.provision_providers() at application startup, and that exception
+        is not caught, an unparseable error body takes the whole backend down in a crash
+        loop rather than surfacing as a failed scope.
+
+        Returns the API's `detail` when there is one, and falls back to the status code so
+        the caller still gets an actionable string instead of an exception.
+        """
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = None
+        if isinstance(payload, dict):
+            detail = payload.get("detail")
+            if detail:
+                return str(detail)
+        return f"HTTP {response.status_code} from {response.url}"
+
     def validate_scopes(self) -> dict[str, bool | str]:
         validated_scopes = {}
         project_slug = None
@@ -166,8 +190,7 @@ class SentryProvider(BaseProvider):
                         headers=self.__headers,
                     )
                     if not response.ok:
-                        response_json = response.json()
-                        validated_scopes[scope.name] = response_json.get("detail")
+                        validated_scopes[scope.name] = self._error_detail(response)
                         continue
                 else:
                     projects_response = requests.get(
@@ -175,8 +198,9 @@ class SentryProvider(BaseProvider):
                         headers=self.__headers,
                     )
                     if not projects_response.ok:
-                        response_json = projects_response.json()
-                        validated_scopes[scope.name] = response_json.get("detail")
+                        validated_scopes[scope.name] = self._error_detail(
+                            projects_response
+                        )
                         continue
                     projects = projects_response.json()
                     project_slug = projects[0].get("slug")
@@ -185,8 +209,7 @@ class SentryProvider(BaseProvider):
                         headers=self.__headers,
                     )
                     if not response.ok:
-                        response_json = response.json()
-                        validated_scopes[scope.name] = response_json.get("detail")
+                        validated_scopes[scope.name] = self._error_detail(response)
                         continue
                 validated_scopes[scope.name] = True
             elif scope.name == "project:read":
@@ -195,8 +218,7 @@ class SentryProvider(BaseProvider):
                     headers=self.__headers,
                 )
                 if not response.ok:
-                    response_json = response.json()
-                    validated_scopes[scope.name] = response_json.get("detail")
+                    validated_scopes[scope.name] = self._error_detail(response)
                     continue
                 validated_scopes[scope.name] = True
             elif scope.name == "project:write":
@@ -205,8 +227,7 @@ class SentryProvider(BaseProvider):
                     headers=self.__headers,
                 )
                 if not response.ok:
-                    response_json = response.json()
-                    validated_scopes[scope.name] = response_json.get("detail")
+                    validated_scopes[scope.name] = self._error_detail(response)
                     continue
                 validated_scopes[scope.name] = True
         return validated_scopes
