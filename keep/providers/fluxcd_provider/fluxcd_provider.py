@@ -511,13 +511,15 @@ class FluxcdProvider(BaseTopologyProvider):
         if self.k8s_client is None:
             raise Exception("Kubernetes client is not available.")
 
-        # Mapping from kind to the API group, version, and plural form
+        # Mapping from kind to the API group, version, and plural form.
+        # Versions match the GA APIs available in FluxCD >= 2.7
+        # (also what the corresponding `__list_*` methods in this provider use).
         kind_map = {
-            "HelmRelease": ("helm.toolkit.fluxcd.io", "v2beta1", "helmreleases"),
-            "Kustomization": ("kustomize.toolkit.fluxcd.io", "v1beta2", "kustomizations"),
-            "GitRepository": ("source.toolkit.fluxcd.io", "v1beta2", "gitrepositories"),
-            "OCIRepository": ("source.toolkit.fluxcd.io", "v1beta2", "ocirepositories"),
-            "HelmRepository": ("source.toolkit.fluxcd.io", "v1beta2", "helmrepositories"),
+            "HelmRelease": ("helm.toolkit.fluxcd.io", "v2", "helmreleases"),
+            "Kustomization": ("kustomize.toolkit.fluxcd.io", "v1", "kustomizations"),
+            "GitRepository": ("source.toolkit.fluxcd.io", "v1", "gitrepositories"),
+            "OCIRepository": ("source.toolkit.fluxcd.io", "v1", "ocirepositories"),
+            "HelmRepository": ("source.toolkit.fluxcd.io", "v1", "helmrepositories"),
         }
 
         kind_lower = kind.lower()
