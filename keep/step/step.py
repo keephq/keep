@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterable
 import time
 from enum import Enum
 
@@ -127,7 +128,17 @@ class Step:
             foreach_items.append(items)
         if not foreach_items:
             return []
-        return len(foreach_items) == 1 and foreach_items[0] or zip(*foreach_items)
+        if len(foreach_items) == 1:
+            # A single reference resolves to whatever it points at: normally
+            # the list to iterate, but also legitimately a scalar such as a
+            # count of 0. The old `X and Y or Z` idiom routed falsy values
+            # into zip(), which raised TypeError on non-iterables; a scalar
+            # (falsy or not) is instead iterated once.
+            value = foreach_items[0]
+            if isinstance(value, Iterable):
+                return value
+            return [value]
+        return zip(*foreach_items)
 
     def _run_foreach(self):
         """Evaluate the action for each item, when using the `foreach` attribute (see foreach.md)"""
