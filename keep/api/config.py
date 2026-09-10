@@ -6,6 +6,9 @@ from keep.api.alert_deduplicator.deduplication_rules_provisioning import (
     provision_deduplication_rules_from_env,
 )
 from keep.api.api import AUTH_TYPE
+from keep.api.bl.correlation_rules_provisioning import (
+    provision_correlation_rules_from_env,
+)
 from keep.api.bl.mapping_rules_provisioning import provision_mapping_rules_from_env
 from keep.api.core.db_on_start import migrate_db, try_create_single_tenant
 from keep.api.core.dependencies import SINGLE_TENANT_UUID
@@ -40,6 +43,9 @@ def provision_resources():
         logger.info("Provisioning mapping rules")
         provision_mapping_rules_from_env(SINGLE_TENANT_UUID)
         logger.info("Mapping rules provisioned successfully")
+        logger.info("Provisioning correlation rules")
+        provision_correlation_rules_from_env(SINGLE_TENANT_UUID)
+        logger.info("Correlation rules provisioned successfully")
     else:
         logger.info("Provisioning resources is disabled")
 
