@@ -3,6 +3,7 @@ import json
 import logging
 import re
 from typing import List, Optional
+from copy import deepcopy
 
 import celpy
 import celpy.c7nlib
@@ -462,11 +463,12 @@ class RulesEngine:
         Evaluates if a rule applies to an event using CEL. Handles type coercion for ==/!= between int and str.
         """
         sub_rules = self._extract_subrules(rule.definition_cel)
-        payload = event.dict()
+        payload = deepcopy(event.dict())
         # workaround since source is a list
         # todo: fix this in the future
         payload["source"] = payload["source"][0]
         payload = RulesEngine.sanitize_cel_payload(payload)
+        normalized_payload = None
 
         # what we do here is to compile the CEL rule and evaluate it
         #   https://github.com/cloud-custodian/cel-python
@@ -484,7 +486,8 @@ class RulesEngine:
                 sub_rule = sub_rule.replace("null", '""')
             ast = self.env.compile(sub_rule)
             prgm = self.env.program(ast)
-            activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
+            current_payload = normalized_payload or payload
+            activation = celpy.json_to_cel(json.loads(json.dumps(current_payload, default=str)))
             try:
                 r = prgm.evaluate(activation)
             except celpy.evaluation.CELEvalError as e:
@@ -497,6 +500,26 @@ class RulesEngine:
                     e
                 ):
                     try:
+                        if normalized_payload is None and "StringType" in str(e) and "BoolType" in str(e):
+                            normalized_payload = deepcopy(payload)
+                            # Normilize boolean strings to actual booleans base on AlertDTO
+                            for field_name, model_field in AlertDto.__fields__.items():
+                                val = normalized_payload.get(field_name)
+                                if issubclass(model_field.type_, bool) and isinstance(payload.get(field_name), str):
+                                    if val is not None:
+                                        lower = val.lower()
+                                        if lower == "true":
+                                            normalized_payload[field_name] = True
+                                        elif lower == "false":
+                                            normalized_payload[field_name] = False
+                            activation = celpy.json_to_cel(json.loads(json.dumps(normalized_payload, default=str)))
+                            try:
+                                r = prgm.evaluate(activation)
+                                if r:
+                                    sub_rules_matched.append(sub_rule)
+                                continue
+                            except celpy.evaluation.CELEvalError:
+                                pass
                         coerced = self._coerce_eq_type_error(
                             sub_rule, prgm, activation, event
                         )
