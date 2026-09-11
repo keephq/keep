@@ -4,7 +4,7 @@ JiraonpremProvider is a class that implements the BaseProvider interface for Jir
 
 import dataclasses
 import json
-from typing import List
+from typing import List, Optional
 from urllib.parse import urlencode, urljoin
 
 import pydantic
@@ -293,6 +293,115 @@ class JiraonpremProvider(BaseProvider):
         except Exception as e:
             raise ProviderException(f"Failed to fetch single createmeta: {e}")
 
+    def __get_available_transitions(self, issue_id: str):
+        """
+        Get available transitions for an issue.
+
+        Args:
+            issue_id: The Jira issue ID or key
+
+        Returns:
+            List of available transitions with their IDs and names
+        """
+        try:
+            self.logger.info(f"Fetching available transitions for issue {issue_id}...")
+
+            url = self.__get_url(paths=["issue", issue_id, "transitions"])
+
+            response = requests.get(
+                url=url,
+                headers=self.__get_auth_header(),
+                verify=self.authentication_config.verify,
+                timeout=10,
+            )
+            response.raise_for_status()
+
+            transitions = response.json().get("transitions", [])
+
+            self.logger.info(
+                f"Found {len(transitions)} available transitions for issue {issue_id}"
+            )
+
+            return transitions
+        except Exception as e:
+            raise ProviderException(
+                f"Failed to fetch transitions for issue {issue_id}: {e}"
+            )
+
+    def __transition_issue(
+        self,
+        issue_id: str,
+        transition_name: Optional[str] = None,
+        transition_id: Optional[str] = None,
+    ):
+        """
+        Transition an issue to a new status.
+
+        Args:
+            issue_id: The Jira issue ID or key
+            transition_name: Name of the transition (e.g., "Done", "Resolved", "In Progress")
+            transition_id: Direct transition ID (if known, skips lookup)
+
+        Returns:
+            dict with transition result
+        """
+        try:
+            self.logger.info(f"Transitioning issue {issue_id}...")
+
+            # If transition_id is not provided, look it up by name
+            if not transition_id:
+                if not transition_name:
+                    raise ProviderException(
+                        "Either transition_name or transition_id must be provided"
+                    )
+
+                transitions = self.__get_available_transitions(issue_id)
+
+                # Find transition by name (case-insensitive)
+                transition_id = None
+                for transition in transitions:
+                    if transition["name"].lower() == transition_name.lower():
+                        transition_id = transition["id"]
+                        self.logger.info(
+                            f"Found transition '{transition_name}' with ID {transition_id}"
+                        )
+                        break
+
+                if not transition_id:
+                    available_names = [t["name"] for t in transitions]
+                    raise ProviderException(
+                        f"Transition '{transition_name}' not found. "
+                        f"Available transitions: {', '.join(available_names)}"
+                    )
+
+            # Execute the transition
+            url = self.__get_url(paths=["issue", issue_id, "transitions"])
+
+            request_body = {"transition": {"id": transition_id}}
+
+            response = requests.post(
+                url=url,
+                json=request_body,
+                headers=self.__get_auth_header(),
+                verify=self.authentication_config.verify,
+                timeout=10,
+            )
+
+            if response.status_code != 204:
+                response.raise_for_status()
+
+            self.logger.info(f"Successfully transitioned issue {issue_id}!")
+
+            return {
+                "issue_id": issue_id,
+                "transition_id": transition_id,
+                "transition_name": transition_name,
+                "success": True,
+            }
+
+        except Exception as e:
+            raise ProviderException(f"Failed to transition issue {issue_id}: {e}")
+
     def __create_issue(
         self,
         project_key: str,
@@ -522,10 +631,24 @@ class JiraonpremProvider(BaseProvider):
         components: List[str] = None,
         custom_fields: dict = None,
         priority: str = "Medium",
+        transition_to: Optional[str] = None,
         **kwargs: dict,
     ):
         """
         Notify jira by creating an issue.
+
+        Args:
+            summary (str): The summary of the issue.
+            description (str): The description of the issue.
+            issue_type (str): The type of the issue.
+            project_key (str): The project key of the issue.
+            board_name (str): The board name of the issue.
+            issue_id (str): The issue id of the issue.
+            labels (List[str]): The labels of the issue.
+            components (List[str]): The components of the issue.
+            custom_fields (dict): The custom fields of the issue.
+            priority (str): The priority of the issue.
+            transition_to (str): Optional transition name (e.g., "Done", "Resolved") to apply after update/create.
         """
         # if the user didn't provider a project_key, try to extract it from the board name
         issue_type = (
@@ -556,6 +679,16 @@ class JiraonpremProvider(BaseProvider):
 
                 result["ticket_url"] = f"{self.jira_host}/browse/{issue_key}"
 
+                # Apply transition if requested
+                if transition_to:
+                    self.logger.info(
+                        f"Applying transition '{transition_to}' to issue {issue_id}"
+                    )
+                    transition_result = self.__transition_issue(
+                        issue_id=issue_id, transition_name=transition_to
+                    )
+                    result["transition"] = transition_result
+
                 self.logger.info("Updated a jira issue: " + str(result))
                 return result
 
@@ -578,6 +711,18 @@ class JiraonpremProvider(BaseProvider):
                 **kwargs,
             )
             result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
+
+            # Apply transition if requested (on newly created issue)
+            if transition_to:
+                created_issue_id = result["issue"]["key"]
+                self.logger.info(
+                    f"Applying transition '{transition_to}' to newly created issue {created_issue_id}"
+                )
+                transition_result = self.__transition_issue(
+                    issue_id=created_issue_id, transition_name=transition_to
+                )
+                result["transition"] = transition_result
+
             self.logger.info("Notified jira!")
 
             return result
