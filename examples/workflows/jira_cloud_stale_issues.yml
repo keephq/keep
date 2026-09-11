@@ -1,0 +1,29 @@
+workflow:
+  id: jira-cloud-stale-issues
+  name: Jira Cloud Stale Issue Reporter
+  description: Searches Jira Cloud for issues left open past a threshold and posts one Slack message per issue.
+  triggers:
+    - type: interval
+      value: 3600
+  consts:
+    stale_after: "-3d"
+  owners: []
+  services: []
+  steps:
+    - name: search-stale-issues
+      provider:
+        config: "{{ providers.jira }}"
+        type: jira
+        with:
+          jql: "project = SA AND status = Open AND created <= {{ consts.stale_after }}"
+          max_results: 50
+          # Without this every issue arrives with all of its fields, custom ones included.
+          fields: summary,status,created,assignee
+  actions:
+    - name: report-stale-issue
+      foreach: "{{ steps.search-stale-issues.results.issues }}"
+      provider:
+        config: "{{ providers.slack }}"
+        type: slack
+        with:
+          message: "{{ foreach.value.key }} is open since {{ foreach.value.fields.created }}: {{ foreach.value.fields.summary }}"
