@@ -26,6 +26,9 @@ Keep supports Okta as an authentication provider, enabling:
 | `OKTA_AUDIENCE` | Expected audience claim in the token. Falls back to `OKTA_CLIENT_ID` if not set | No |
 | `OKTA_JWKS_URL` | Explicit JWKS URL. If not set, derived from `OKTA_ISSUER` | No |
 | `OKTA_API_TOKEN` | Okta API token for management operations | No |
+| `OKTA_ADMIN_GROUPS` | Comma-separated Okta group names that map to the `admin` role | No |
+| `OKTA_NOC_GROUPS` | Comma-separated Okta group names that map to the `noc` role | No |
+| `OKTA_WEBHOOK_GROUPS` | Comma-separated Okta group names that map to the `webhook` role | No |
 
 ### Frontend Environment Variables
 
@@ -58,16 +61,38 @@ Keep supports Okta as an authentication provider, enabling:
 
 ### Role Mapping
 
-Keep extracts the user role from the JWT token. The role is determined in the following order:
+Keep resolves the user role from the JWT token using the following priority order:
 
 1. `keep_role` claim in the token
 2. `role` claim in the token
-3. First entry in the `groups` claim
-4. Falls back to `user` role
+3. Okta group → Keep role mapping (via `OKTA_*_GROUPS` environment variables)
+4. First entry in the `groups` claim (used as-is)
+5. Falls back to `noc` role
 
-To configure role mapping, add a custom claim to your Okta authorization server:
+#### Option A — Explicit claim (recommended for simple setups)
+
+Add a custom claim to your Okta authorization server:
 
 1. Navigate to **Security** > **API** > **Authorization Servers**
 2. Select your authorization server (e.g., `default`)
 3. Go to the **Claims** tab
-4. Add a claim named `keep_role` or `groups` that maps to the user's Keep role
+4. Add a claim named `keep_role` with the value `admin`, `noc`, or `webhook`
+
+#### Option B — Group-based mapping (recommended for team setups)
+
+Map Okta groups to Keep roles using environment variables. When multiple groups match,
+the highest-privilege role wins (`admin` > `noc` > `webhook`).
+
+```bash
+OKTA_ADMIN_GROUPS=keep-admins,platform-team
+OKTA_NOC_GROUPS=keep-noc,ops-team
+OKTA_WEBHOOK_GROUPS=keep-webhooks
+```
+
+You must configure Okta to include the `groups` claim in the JWT:
+
+1. Navigate to **Security** > **API** > **Authorization Servers**
+2. Select your authorization server (e.g., `default`)
+3. Go to the **Claims** tab
+4. Add a claim named `groups` of type **Groups** with a filter matching the relevant groups
+5. Set **Include in** to `Access Token`
