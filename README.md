@@ -411,6 +411,12 @@
         </a>
     </td>
     <td align="center" width="150">
+        <a href="https://docs.keephq.dev/providers/documentation/mongodbatlas-provider" target="_blank">
+            <img width="40" src="keep-ui/public/icons/mongodbatlas-icon.png" alt="MongoDB Atlas"/><br/>
+            MongoDB Atlas
+        </a>
+    </td>
+    <td align="center" width="150">
         <a href="https://docs.keephq.dev/providers/documentation/mysql-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/mysql-icon.png" alt="MySQL"/><br/>
             MySQL
