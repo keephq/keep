@@ -105,6 +105,20 @@ if not getattr(requests.Session.request, "_keep_no_redirect", False):
     requests.Session.request = no_redirect_request
 
 
+# The event loop only keeps weak references to tasks, so fire-and-forget
+# tasks must be strongly referenced somewhere to avoid being garbage-collected
+# (and silently cancelled) mid-execution.
+# https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
+service_tasks = set()
+
+
+def create_service_task(coro) -> asyncio.Task:
+    task = asyncio.create_task(coro)
+    service_tasks.add(task)
+    task.add_done_callback(service_tasks.discard)
+    return task
+
+
 async def check_pending_tasks(background_tasks: set):
     while True:
         events_in_queue = len(background_tasks)
@@ -180,7 +194,7 @@ async def startup():
             except Exception:
                 logger.exception("Failed to start the maintenance windows")
         else:
-            asyncio.create_task(process_watcher_task.async_process_watcher())
+            create_service_task(process_watcher_task.async_process_watcher())
             logger.info(
                 "Added task",
                 extra={
@@ -231,7 +245,7 @@ async def lifespan(app: FastAPI):
     # if debug tasks are enabled, create a task to check for pending tasks
     if KEEP_DEBUG_TASKS:
         logger.info("Starting background task to check for pending tasks")
-        asyncio.create_task(check_pending_tasks(background_tasks))
+        create_service_task(check_pending_tasks(background_tasks))
 
     # Startup
     await startup()
