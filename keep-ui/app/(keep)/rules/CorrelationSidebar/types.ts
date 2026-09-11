@@ -16,4 +16,5 @@ export type CorrelationFormType = {
   multiLevelPropertyName?: string;
   threshold: number;
   assignee?: string;
+  incidentEnrichments: { key: string; value: string }[];
 };

@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AlertsFoundBadge } from "./AlertsFoundBadge";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
 import { showErrorToast } from "@/shared/ui";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
@@ -29,6 +30,9 @@ export const CorrelationSidebarBody = ({
 }: CorrelationSidebarBodyProps) => {
   const api = useApi();
   const { data: config } = useConfig();
+  const { data: tenantConfiguration } = useTenantConfiguration();
+  const isStoreRawAlertsEnabled =
+    !!tenantConfiguration?.["store_raw_alerts_enabled"];
 
   const methods = useForm<CorrelationFormType>({
     defaultValues: defaultValue,
@@ -79,7 +83,21 @@ export const CorrelationSidebarBody = ({
       multiLevelPropertyName,
       threshold,
       assignee,
+      incidentEnrichments,
     } = correlationFormData;
+
+    const incidentEnrichmentsObject = isStoreRawAlertsEnabled
+      ? incidentEnrichments.reduce(
+          (acc, enrichment) => {
+            const key = enrichment.key.trim();
+            if (key) {
+              acc[key] = enrichment.value;
+            }
+            return acc;
+          },
+          {} as Record<string, string>
+        )
+      : {};
 
     const body = {
       sqlQuery: formatQuery(query, "parameterized_named"),
@@ -98,6 +116,7 @@ export const CorrelationSidebarBody = ({
       multiLevelPropertyName,
       threshold,
       assignee,
+      incidentEnrichments: incidentEnrichmentsObject,
     };
 
     try {
