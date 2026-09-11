@@ -35,7 +35,7 @@ const authSessionTimeout = runtimeEnv("AUTH_SESSION_TIMEOUT")
   ? Number.parseInt(runtimeEnv("AUTH_SESSION_TIMEOUT")!)
   : 30 * 24 * 60 * 60; // Default to 30 days if not set
 // Determine auth type with backward compatibility
-const authTypeEnv = runtimeEnv("AUTH_TYPE");
+const authTypeEnv = runtimeEnv("AUTH_TYPE")?.toUpperCase();
 export const authType =
   authTypeEnv === MULTI_TENANT
     ? AuthType.AUTH0
