@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "keep-mcp"
+version = "0.1.0"
+description = "Model Context Protocol server for Keep — the open-source AIOps and alert management platform."
+authors = ["Keep Alerting LTD"]
+readme = "README.md"
+packages = [{ include = "keep_mcp", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.14"
+mcp = "^1.2.0"
+httpx = "^0.27.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-asyncio = "^0.23"
+respx = "^0.21"
+
+[tool.poetry.scripts]
+keep-mcp = "keep_mcp.__main__:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
