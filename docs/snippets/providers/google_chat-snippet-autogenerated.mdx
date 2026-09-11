@@ -1,9 +1,10 @@
-{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
 Do not edit it manually, as it will be overwritten */}
 
 ## Authentication
 This provider requires authentication.
-- **webhook_url**: Google Chat Webhook Url (required: True, sensitive: True)
+- **webhook_url**: Default Google Chat Webhook Url. Optional when every notification passes its own webhook_url (required: False, sensitive: True)
+- **webhook_urls**: JSON object mapping a space name to its webhook URL, so a notification can name a space instead of carrying its URL (required: False, sensitive: True)
 
 
 ## In workflows
@@ -20,6 +21,10 @@ actions:
       config: "{{ provider.my_provider_name }}"
       with:
         message: {value}  # The text message to send.
+        space: {value}  # Name of the space to post to, looked up in the webhook_urls of the provider configuration.
+        webhook_url: {value}  # Webhook URL of the space to post to, overrides both space and the provider configuration.
+        cards_v2: {value}  # Google Chat cardsV2 payload, can be sent with or instead of the text message.
+        thread_key: {value}  # Arbitrary key that groups messages into a thread, a new thread is started if it is unknown.
 ```
 
 
