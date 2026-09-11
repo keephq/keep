@@ -480,9 +480,13 @@ class RulesEngine:
             #          So we need to replace "null" with ""
             #
             #          TODO: it works for strings now, but we need to add support on list/dict when needed
-            if "null" in sub_rule:
-                sub_rule = sub_rule.replace("null", '""')
-            ast = self.env.compile(sub_rule)
+            # Evaluate the rewritten rule but keep sub_rule as written, since
+            # callers compare what matched against the sub-rules extracted from
+            # the rule definition, which still says "null".
+            evaluated_rule = sub_rule
+            if "null" in evaluated_rule:
+                evaluated_rule = evaluated_rule.replace("null", '""')
+            ast = self.env.compile(evaluated_rule)
             prgm = self.env.program(ast)
             activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
             try:
@@ -498,7 +502,7 @@ class RulesEngine:
                 ):
                     try:
                         coerced = self._coerce_eq_type_error(
-                            sub_rule, prgm, activation, event
+                            evaluated_rule, prgm, activation, event
                         )
                         if coerced:
                             sub_rules_matched.append(sub_rule)
