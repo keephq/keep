@@ -394,6 +394,15 @@ def add_time_to_date(date, date_format, time_str):
     time_dict = {unit: 0 for unit in time_units.values()}
 
     matches = re.findall(r"(\d+)([wdhms])", time_str)
+    if not matches:
+        # Returning the date unchanged made a typo look like a working
+        # workflow: "1y" or "3M" are not units this understands, and an SLA
+        # deadline computed from one silently came out as the start date.
+        raise ValueError(
+            f"add_time_to_date() could not read any time from {time_str!r}: "
+            "expected a number followed by w, d, h, m, or s, such as '1w' or "
+            "'2d 3h'"
+        )
     for value, unit in matches:
         time_dict[time_units[unit]] += int(value)
 
