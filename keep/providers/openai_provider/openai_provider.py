@@ -1,5 +1,5 @@
-import json
 import dataclasses
+import json
 import pydantic
 
 from openai import OpenAI
@@ -14,17 +14,17 @@ class OpenaiProviderAuthConfig:
     api_key: str = dataclasses.field(
         metadata={
             "required": True,
-            "description": "OpenAI Platform API Key",
+            "description": "OpenAI API Key",
             "sensitive": True,
         },
     )
-    organization_id: str | None = dataclasses.field(
+    organization: str = dataclasses.field(
+        default=None,
         metadata={
             "required": False,
-            "description": "OpenAI Platform Organization ID",
-            "sensitive": False,
+            "description": "OpenAI Organization ID",
+            "sensitive": True,
         },
-        default=None,
     )
 
 
@@ -56,9 +56,22 @@ class OpenaiProvider(BaseProvider):
         max_tokens=1024,
         structured_output_format=None,
     ):
+        """
+        Query the OpenAI API with the given prompt.
+        Args:
+            prompt (str): The user query.
+            model (str): The model to use for the query.
+            max_tokens (int): The maximum number of tokens to generate.
+            structured_output_format (dict): The structured output format.
+        """
+        try:
+            max_tokens = int(max_tokens)
+        except (TypeError, ValueError):
+            max_tokens = 1024
+
         client = OpenAI(
             api_key=self.authentication_config.api_key,
-            organization=self.authentication_config.organization_id,
+            organization=self.authentication_config.organization,
         )
         response = client.chat.completions.create(
             model=model,
@@ -66,6 +79,11 @@ class OpenaiProvider(BaseProvider):
             max_tokens=max_tokens,
             response_format=structured_output_format,
         )
+
+        if not response.choices:
+            self.logger.warning("OpenAI returned an empty choices list.")
+            return {"response": ""}
+
         response = response.choices[0].message.content
         try:
             response = json.loads(response)
@@ -78,8 +96,8 @@ class OpenaiProvider(BaseProvider):
 
 
 if __name__ == "__main__":
-    import os
     import logging
+    import os
 
     logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler()])
     context_manager = ContextManager(
@@ -87,10 +105,10 @@ if __name__ == "__main__":
         workflow_id="test",
     )
 
-    api_key = os.environ.get("API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")
 
     config = ProviderConfig(
-        description="My Provider",
+        description="OpenAI Provider",
         authentication={
             "api_key": api_key,
         },
@@ -98,34 +116,13 @@ if __name__ == "__main__":
 
     provider = OpenaiProvider(
         context_manager=context_manager,
-        provider_id="my_provider",
+        provider_id="openai_provider",
         config=config,
     )
 
     print(
         provider.query(
-            prompt="Here is an alert, define environment for it: Clients are panicking, nothing works.",
+            prompt="Which is the highest mountain in the world?",
             model="gpt-4o-mini",
-            structured_output_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "environment_restoration",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "environment": {
-                                "type": "string",
-                                "enum": ["production", "debug", "pre-prod"],
-                            },
-                        },
-                        "required": ["environment"],
-                        "additionalProperties": False,
-                    },
-                    "strict": True,
-                },
-            },
-            max_tokens=100,
         )
     )
-
-    # https://platform.openai.com/docs/guides/function-calling
