@@ -176,3 +176,34 @@ def test_continue_on_error_explicit_false():
         {},
     )
     assert step.continue_on_error is False
+
+def test_get_foreach_items_falsy_scalar():
+    """Verify that single foreach resolving to 0 or False returns the value without TypeError (#6721)."""
+    context_manager = Mock()
+    context_manager.get_full_context.return_value = {
+        "steps": {
+            "count_step": {"results": {"count": 0}},
+            "flag_step": {"results": {"flag": False}},
+        }
+    }
+    # Test count == 0
+    step_zero = Step(
+        context_manager,
+        "step_zero",
+        {"foreach": "{{ steps.count_step.results.count }}"},
+        StepType.STEP,
+        Mock(),
+        {},
+    )
+    assert step_zero._get_foreach_items() == 0
+
+    # Test flag == False
+    step_false = Step(
+        context_manager,
+        "step_false",
+        {"foreach": "{{ steps.flag_step.results.flag }}"},
+        StepType.STEP,
+        Mock(),
+        {},
+    )
+    assert step_false._get_foreach_items() is False
