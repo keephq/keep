@@ -177,6 +177,26 @@ class AppdynamicsProvider(BaseProvider):
 
         return url
 
+    @staticmethod
+    def _error_detail(response) -> dict:
+        """Best-effort error info from an AppDynamics API response for logging.
+
+        AppDynamics does not guarantee a JSON object body on every error - a reverse
+        proxy or WAF in front of the controller can answer a 401/403 with an HTML page
+        or a plain-text body instead. `response.json()` raises `ValueError` on a body
+        that isn't valid JSON, and even when it is valid JSON, `extra=` in stdlib
+        logging requires a mapping, so a non-dict JSON body (e.g. a bare list) fails
+        the same way. Either case turns an auth/permission failure into an unrelated
+        crash of the logging call itself.
+        """
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = None
+        if isinstance(payload, dict):
+            return payload
+        return {"status_code": response.status_code, "text": response.text}
+
     def get_user_id_by_name(self, name: str) -> Optional[str]:
         self.logger.info("Getting user ID by name")
         response = requests.get(
@@ -192,7 +212,8 @@ class AppdynamicsProvider(BaseProvider):
             return None
         else:
             self.logger.error(
-                "Error while validating scopes for AppDynamics", extra=response.json()
+                "Error while validating scopes for AppDynamics",
+                extra=self._error_detail(response),
             )
 
     def validate_scopes(self) -> dict[str, bool | str]:
