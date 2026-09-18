@@ -88,7 +88,7 @@ To send alerts from Graylog to Keep, Use the following webhook url to configure 
 - **Headers**: X-API-KEY:{api_key}
 4. Erase the Body Template.
 5. Click on "Create Notification".
-6. Go the the `Event Definitions` tab, and select the Event Definition that will trigger the alert you want to send to Keep and click on More > Edit.
+6. Go to the `Event Definitions` tab, and select the Event Definition that will trigger the alert you want to send to Keep and click on More > Edit.
 7. Go to "Notifications" tab.
 8. Click on "Add Notification" and select the "keep-graylog-webhook-integration" that you created in step 3.
 9. Click on "Add Notification".
