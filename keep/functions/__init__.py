@@ -212,6 +212,21 @@ def timestamp_delta(
     return dt + delta
 
 
+def _assume_utc(dt: datetime.datetime) -> datetime.datetime:
+    """Attach UTC to a datetime that carries no offset.
+
+    A timestamp written without an offset, such as ``2024-01-01T00:00:00``,
+    is the documented input to to_utc and to_timestamp, and it is what most
+    alert payloads carry. astimezone reads such a value in the host's local
+    timezone, so the same alert converted on a UTC server and on a server in
+    Asia/Kolkata comes out 5.5 hours apart. UTC is the only reading that does
+    not depend on where Keep happens to run.
+    """
+    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        return dt.replace(tzinfo=datetime.timezone.utc)
+    return dt
+
+
 def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
     if isinstance(dt, str):
         try:
@@ -219,7 +234,7 @@ def to_utc(dt: datetime.datetime | str = "") -> datetime.datetime:
         except ParserError:
             # Failed to parse the date
             return ""
-    utc_dt = dt.astimezone(pytz.utc)
+    utc_dt = _assume_utc(dt).astimezone(pytz.utc)
     return utc_dt
 
 
@@ -241,7 +256,7 @@ def to_timestamp(dt: datetime.datetime | str = "") -> int:
         except ParserError:
             # Failed to parse the date
             return 0
-    return int(dt.timestamp())
+    return int(_assume_utc(dt).timestamp())
 
 
 def datetime_compare(t1: datetime = None, t2: datetime = None) -> float:
@@ -557,6 +572,8 @@ def is_business_hours(
 
     if not dt:  # Handle case where parsing failed
         return False
+
+    dt = _assume_utc(dt)
 
     # Convert to specified timezone
     dt = dt.astimezone(tz)
