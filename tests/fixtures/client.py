@@ -15,7 +15,7 @@ def _mock_oidc_discovery():
     """Return a context manager that stubs OIDC discovery HTTP calls.
 
     Prevents real network requests to Auth0 during app startup when
-    AUTH_TYPE=AUTH0 is set in tests.
+    AUTH_TYPE=AUTH0 or its legacy MULTI_TENANT alias is set in tests.
     """
     mock_resp = MagicMock()
     mock_resp.json.return_value = {
@@ -37,13 +37,12 @@ def test_app(monkeypatch, request, db_session):
 
     try:
         monkeypatch.setenv("KEEP_USE_LIMITER", "false")
-        is_auth0 = False
         # Check if request.param is a dict or a string
         if isinstance(request.param, dict):
             # Set environment variables based on the provided dictionary
             for key, value in request.param.items():
                 monkeypatch.setenv(key, str(value))
-            is_auth0 = request.param.get("AUTH_TYPE") == "AUTH0"
+            auth_type = request.param.get("AUTH_TYPE", "")
         else:
             # Old behavior for string parameters
             auth_type = request.param
@@ -51,9 +50,11 @@ def test_app(monkeypatch, request, db_session):
             monkeypatch.setenv("KEEP_JWT_SECRET", "somesecret")
 
             if auth_type == "MULTI_TENANT":
-                monkeypatch.setenv("AUTH0_DOMAIN", "https://auth0domain.com")
+                monkeypatch.setenv("AUTH0_DOMAIN", "auth0domain.com")
 
-        # When AUTH_TYPE=AUTH0, the authverifier module makes a real HTTP call
+        is_auth0 = auth_type.lower() in ("auth0", "multi_tenant")
+
+        # Both Auth0 modes make a real HTTP call
         # at import time to fetch the OIDC discovery document. The mock must
         # wrap the module reload as well, because deleted route modules get
         # re-imported during reload and cascade into re-importing the verifier.
