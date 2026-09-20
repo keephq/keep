@@ -699,3 +699,29 @@ workflow:
     });
   });
 });
+
+describe("manual run visibility round trip", () => {
+  it.each([true, false, undefined])("preserves %s through the builder", (visible) => {
+    const yaml = `workflow:
+  id: automated-workflow
+  name: Automated workflow
+  description: An incident workflow
+  disabled: false
+${visible === undefined ? "" : `  manual_visible: ${visible}\n`}  triggers:
+    - type: incident
+      events:
+        - created
+  actions: []
+`;
+    const definition = parseWorkflow(yaml, mockProviders);
+    expect(definition.properties.manual_visible).toBe(visible);
+    const exported = getYamlWorkflowDefinition(definition);
+    expect(exported.manual_visible).toBe(visible);
+    expect(exported.triggers).toEqual([{ type: "incident", events: ["created"] }]);
+    const restored = parseWorkflow(
+      getOrderedWorkflowYamlStringFromJSON({ workflow: exported }),
+      mockProviders
+    );
+    expect(restored.properties.manual_visible).toBe(visible);
+  });
+});

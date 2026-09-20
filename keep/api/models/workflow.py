@@ -45,6 +45,12 @@ class WorkflowDTO(BaseModel):
     provisioned_file: str = None
     alertRule: bool = False
     canRun: bool = True
+    manual_visible: bool = True
+
+    @validator("manual_visible", pre=True, always=True)
+    def read_manual_visibility(cls, value, values):
+        raw = cyaml.safe_load(values.get("workflow_raw", "")) or {}
+        return raw.get("manual_visible", True)
 
     @property
     def workflow_raw_id(self):
