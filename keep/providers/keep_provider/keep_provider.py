@@ -95,10 +95,10 @@ class KeepProvider(BaseProvider):
         )
         # if timerange is provided, calculate time delta
         if timerange:
-            time_delta = int(
-                self._calculate_time_delta(
-                    timerange=timerange, default_time_range=time_delta
-                )
+            # float: a sub-day window truncates to 0, which both consumers
+            # read as "no time filter".
+            time_delta = self._calculate_time_delta(
+                timerange=timerange, default_time_range=time_delta
             )
         if version == 1:
             # filters are mandatory for version 1
