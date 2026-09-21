@@ -319,3 +319,29 @@ def test_calculate_time_delta_keeps_sub_day_precision():
         }
     )
     assert one_hour == pytest.approx(1 / 24)
+
+
+def test_parse_provider_parameters_keeps_float():
+    """
+    A float step parameter must survive parsing.
+
+    parse_provider_parameters only copied str/list/int/bool (and dict) through,
+    so a float was dropped with no error and the provider fell back to its
+    default. That is what made `time_delta: 0.1667` behave as one full day.
+    """
+    from keep.parser.parser import Parser
+
+    parsed = Parser.parse_provider_parameters(
+        {
+            "time_delta": 0.001388888888888889,
+            "limit": 10,
+            "filter": "status == 'firing'",
+            "distinct": True,
+        }
+    )
+
+    assert "time_delta" in parsed, "float parameter was dropped during parsing"
+    assert parsed["time_delta"] == pytest.approx(0.001388888888888889)
+    assert parsed["limit"] == 10
+    assert parsed["filter"] == "status == 'firing'"
+    assert parsed["distinct"] is True

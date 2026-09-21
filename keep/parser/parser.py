@@ -469,7 +469,7 @@ class Parser:
                 parameter_name = parameter + "_"
             else:
                 parameter_name = parameter
-            if isinstance(provider_parameters[parameter], (str, list, int, bool)):
+            if isinstance(provider_parameters[parameter], (str, list, int, float, bool)):
                 parsed_provider_parameters[parameter_name] = provider_parameters[
                     parameter
                 ]
