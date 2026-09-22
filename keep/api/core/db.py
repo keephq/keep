@@ -103,6 +103,9 @@ ALLOWED_INCIDENT_FILTERS = [
     "assignee",
 ]
 KEEP_AUDIT_EVENTS_ENABLED = config("KEEP_AUDIT_EVENTS_ENABLED", cast=bool, default=True)
+KEEP_CUSTOM_DEDUPLICATION_ENABLED = config(
+    "KEEP_CUSTOM_DEDUPLICATION_ENABLED", cast=bool, default=True
+)
 
 INTERVAL_WORKFLOWS_RELAUNCH_TIMEOUT = timedelta(minutes=60)
 WORKFLOWS_TIMEOUT = timedelta(minutes=120)
@@ -2584,6 +2587,13 @@ def get_deduplication_rule_by_id(tenant_id, rule_id: str):
 
 
 def get_custom_deduplication_rule(tenant_id, provider_id, provider_type):
+    # check the custom deduplication flag here so every caller behaves the same
+    if not KEEP_CUSTOM_DEDUPLICATION_ENABLED:
+        return None
+    # alerts ingested without a provider are attributed to the "keep" provider.
+    # normalizing here so all callers resolve the same rule row
+    if not provider_type:
+        provider_type = "keep"
     with Session(engine) as session:
         rule = session.exec(
             select(AlertDeduplicationRule)

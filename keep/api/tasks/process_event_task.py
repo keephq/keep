@@ -721,18 +721,31 @@ def process_event(
 
                 if isinstance(event, list):
                     event_list = []
+                    already_formatted = []
                     for event_item in event:
                         if not isinstance(event_item, AlertDto):
-                            event_list.append(
-                                provider_class.format_alert(
-                                    tenant_id=tenant_id,
-                                    event=event_item,
-                                    provider_id=provider_id,
-                                    provider_type=provider_type,
-                                )
+                            # format_alert returns a list, so extend rather than
+                            # append - appending nests it and breaks downstream
+                            formatted_event_item = provider_class.format_alert(
+                                tenant_id=tenant_id,
+                                event=event_item,
+                                provider_id=provider_id,
+                                provider_type=provider_type,
                             )
+                            if formatted_event_item:
+                                event_list.extend(formatted_event_item)
                         else:
+                            # already parsed, so it skipped format_alert and with it
+                            # the custom deduplication rule - collect and apply once
+                            already_formatted.append(event_item)
                             event_list.append(event_item)
+                    if already_formatted:
+                        provider_class.apply_custom_deduplication_rule(
+                            already_formatted,
+                            tenant_id=tenant_id,
+                            provider_id=provider_id,
+                            provider_type=provider_type,
+                        )
                     event = event_list
                 else:
                     event = provider_class.format_alert(
@@ -768,13 +781,30 @@ def process_event(
             if isinstance(event, dict):
                 if not event.get("name"):
                     event["name"] = event.get("id", "unknown alert name")
-                event = [AlertDto(**event)]
+                # format through the "keep" provider instead of building the AlertDto
+                # directly, so that a custom deduplication rule is applied here too
+                event = ProvidersFactory.get_provider_class("keep").format_alert(
+                    tenant_id=tenant_id,
+                    event=event,
+                    provider_id=provider_id,
+                    provider_type=provider_type,
+                )
                 raw_event = [raw_event]
 
             # Prepare the event for the digest
             if isinstance(event, AlertDto):
                 event = [event]
                 raw_event = [raw_event]
+                # an alert that arrives already parsed skips provider formatting, and
+                # with it the custom deduplication rule - apply it explicitly
+                event = ProvidersFactory.get_provider_class(
+                    "keep"
+                ).apply_custom_deduplication_rule(
+                    event,
+                    tenant_id=tenant_id,
+                    provider_id=provider_id,
+                    provider_type=provider_type,
+                )
 
             with tracer.start_as_current_span("process_event_internal_preparation"):
                 __internal_prepartion(event, fingerprint, api_key_name)
