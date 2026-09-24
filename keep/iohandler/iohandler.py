@@ -307,8 +307,8 @@ class IOHandler:
                     _arg = None
                     if isinstance(arg, ast.Call):
                         _arg = _parse(self, arg)
-                    elif isinstance(arg, ast.Str) or isinstance(arg, ast.Constant):
-                        _arg = str(arg.s)
+                    elif isinstance(arg, ast.Constant):
+                        _arg = str(arg.value)
                     elif isinstance(arg, ast.Dict):
                         _arg = ast.literal_eval(arg)
                     elif (
@@ -350,8 +350,8 @@ class IOHandler:
 
                     if isinstance(value, ast.Call):
                         _kwargs[key] = _parse(self, value)
-                    elif isinstance(value, ast.Str) or isinstance(value, ast.Constant):
-                        _kwargs[key] = str(value.s)
+                    elif isinstance(value, ast.Constant):
+                        _kwargs[key] = str(value.value)
                     elif isinstance(value, ast.Dict):
                         _kwargs[key] = ast.literal_eval(value)
                     elif (
