@@ -22,7 +22,7 @@ const config: Config = {
   },
   // Transform ESM packages
   transformIgnorePatterns: [
-    "node_modules/(?!(jose|@segment/analytics-node|@copilotkit)/)"
+    "node_modules/(?!(next-auth|@auth/core|jose|@segment/analytics-node|@copilotkit)/)"
   ],
   // Add more setup options before each test is run
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
