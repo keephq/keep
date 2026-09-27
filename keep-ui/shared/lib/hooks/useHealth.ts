@@ -19,7 +19,7 @@ export function useHealth(): UseHealthResult {
     error,
     mutate: mutateHealth,
   } = useSWR(
-    "/healthcheck",
+    api.isReady() ? "/healthcheck" : null,
     () =>
       api.request("/healthcheck", {
         method: "GET",

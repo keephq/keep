@@ -69,7 +69,7 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({
   const [statuses, setStatuses] = useState<string[]>(
     setFilterValue(
       "statuses",
-      incidentsMeta?.statuses.filter((status) =>
+      incidentsMeta?.statuses?.filter((status) =>
         DefaultIncidentFilteredStatuses.includes(status)
       )
     )
@@ -90,7 +90,7 @@ export const IncidentFilterContextProvider: FC<PropsWithChildren> = ({
       setStatuses(
         setFilterValue(
           "statuses",
-          incidentsMeta?.statuses.filter((status) =>
+          incidentsMeta?.statuses?.filter((status) =>
             DefaultIncidentFilteredStatuses.includes(status)
           )
         )
