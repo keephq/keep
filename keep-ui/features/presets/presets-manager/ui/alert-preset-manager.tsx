@@ -162,6 +162,8 @@ export function AlertPresetManager({
         <Button
           variant="secondary"
           tooltip="Test alerts"
+          aria-label="Test alerts"
+          data-testid="test-alerts-button"
           size="sm"
           icon={GrTest}
           onClick={handleAddAlertModalOpen}

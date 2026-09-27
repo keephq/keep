@@ -105,13 +105,9 @@ describe("AlertPresetManager", () => {
       />
     );
 
-    // The test alerts button is rendered, check by its color and variant
-    const buttons = screen.getAllByRole("button");
-    const testButton = buttons.find(button => 
-      button.className.includes("border-orange-500") && 
-      button.className.includes("text-orange-500")
-    );
-    expect(testButton).toBeInTheDocument();
+    const testButton = screen.getByRole("button", { name: "Test alerts" });
+    fireEvent.click(testButton);
+    expect(screen.getByTestId("push-alert-modal")).toBeInTheDocument();
   });
 
   it("should maintain button order and spacing", () => {
