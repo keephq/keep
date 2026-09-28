@@ -96,6 +96,11 @@ class HttpProvider(BaseProvider):
             headers = json.loads(headers)
         if body is None:
             body = {}
+        if isinstance(body, str):
+            try:
+                body = json.loads(body)
+            except (json.JSONDecodeError, ValueError):
+                pass  # not JSON — leave as-is, requests will send it as a plain string
         if params is None:
             params = {}
 
