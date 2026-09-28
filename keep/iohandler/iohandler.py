@@ -129,16 +129,27 @@ class IOHandler:
                     escape_next = False
                     quote_char = ""
                     escapes = {}
+                    embedded_json_end = None
+                    string_content_started = False
                     while i < len(text) and (parent_count > 0 or in_string):
                         if text[i] == "\\" and in_string and not escape_next:
                             escape_next = True
                             i += 1
                             continue
+                        elif (
+                            in_string
+                            and embedded_json_end is not None
+                            and i < embedded_json_end
+                        ):
+                            if text[i] == quote_char and not escape_next:
+                                escapes[i - start] = text[i]
                         elif text[i] in ('"', "'"):
                             if not in_string:
                                 # Detecting the beginning of the string
                                 in_string = True
                                 quote_char = text[i]
+                                embedded_json_end = None
+                                string_content_started = False
                             elif (
                                 text[i] == quote_char
                                 and not escape_next
@@ -152,9 +163,21 @@ class IOHandler:
                                 in_string = False
                                 quote_char = ""
                             elif text[i] == quote_char and not escape_next:
-                                escapes[i] = text[
+                                escapes[i - start] = text[
                                     i
                                 ]  # Save the quote character where we need to escape for valid ast parsing
+                        elif (
+                            in_string
+                            and not string_content_started
+                            and not text[i].isspace()
+                        ):
+                            string_content_started = True
+                            if text[i] == "{":
+                                try:
+                                    _, json_end = json.JSONDecoder().raw_decode(text[i:])
+                                    embedded_json_end = i + json_end
+                                except json.JSONDecodeError:
+                                    pass
                         elif text[i] == "(" and not in_string:
                             parent_count += 1
                         elif text[i] == ")" and not in_string:
@@ -172,6 +195,12 @@ class IOHandler:
             else:
                 i += 1
         return matches
+
+    @staticmethod
+    def _escape_token_quotes(token, escapes):
+        for escape in sorted(escapes, reverse=True):
+            token = token[:escape] + "\\" + token[escape:]
+        return token
 
     def _trim_token_error(self, token):
         # trim too long tokens so that the error message will be readable
@@ -230,15 +259,8 @@ class IOHandler:
             token, escapes = tokens[0]
             token_to_replace = token
             try:
-                escapes_counter = 0
                 if escapes:
-                    for escape in escapes:
-                        token = (
-                            token[: escape + escapes_counter]
-                            + "\\"
-                            + token[escape + escapes_counter :]
-                        )
-                        escapes_counter += 1  # we need to increment the counter because we added a character
+                    token = self._escape_token_quotes(token, escapes)
                 val = self._parse_token(token)
             except Exception as e:
                 # trim stacktrace since we have limitation on the error message
@@ -275,8 +297,7 @@ class IOHandler:
             token_to_replace = token
             try:
                 if escapes:
-                    for escape in escapes:
-                        token = token[:escape] + "\\" + token[escape:]
+                    token = self._escape_token_quotes(token, escapes)
                 val = self._parse_token(token)
 
             except Exception as e:
