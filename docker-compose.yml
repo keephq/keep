@@ -29,6 +29,18 @@ services:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
 
+  keep-mcp:
+    extends:
+      file: docker-compose.common.yml
+      service: keep-mcp-common
+    profiles:
+      - mcp
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mcp
+    depends_on:
+      - keep-backend
+
   grafana:
     image: grafana/grafana:latest
     profiles:
