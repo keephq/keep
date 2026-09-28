@@ -342,14 +342,19 @@ def get_app(
 
     @app.exception_handler(Exception)
     async def catch_exception(request: Request, exc: Exception):
-        logging.error(
-            f"An unhandled exception occurred: {exc}, Trace ID: {request.state.trace_id}. Tenant ID: {request.state.tenant_id}"
+        trace_id = getattr(request.state, "trace_id", None)
+        tenant_id = getattr(request.state, "tenant_id", None)
+        logger.exception(
+            "An unhandled exception occurred: %s, Trace ID: %s. Tenant ID: %s",
+            exc,
+            trace_id,
+            tenant_id,
         )
         return JSONResponse(
             status_code=500,
             content={
                 "message": "An internal server error occurred.",
-                "trace_id": request.state.trace_id,
+                "trace_id": trace_id,
                 "error_msg": str(exc),
             },
         )
