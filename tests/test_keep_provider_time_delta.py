@@ -214,3 +214,134 @@ def test_keep_provider_time_delta_filtering_version_1(db_session):
     # This should work correctly - only return recent alert
     assert len(filtered_alerts) == 1, f"Expected 1 alert within time_delta, but got {len(filtered_alerts)}"
     assert filtered_alerts[0].event["id"] == "recent-alert-v1" 
+
+def test_keep_provider_timerange_sub_day_window(db_session):
+    """
+    A timerange shorter than 24h must not be truncated away.
+
+    _calculate_time_delta returns days, so a two-minute window is ~0.00139.
+    Casting that to int() gives 0, and both query paths treat 0 as "no time
+    filter" - the query then returns all of history rather than the window
+    that was asked for. That is worse than an error, because a workflow built
+    on it silently sees stale alerts as current.
+    """
+    tenant_id = SINGLE_TENANT_UUID
+    context_manager = ContextManager(tenant_id=tenant_id, workflow_id=None)
+    provider = KeepProvider(
+        context_manager=context_manager,
+        provider_id="test-keep-timerange",
+        config=ProviderConfig(authentication={}),
+    )
+
+    now = datetime.datetime.now(timezone.utc)
+    old_time = now - timedelta(hours=2)
+    recent_time = now - timedelta(seconds=30)
+
+    alert_details = [
+        ("old-alert-timerange", "old-alert-timerange-fingerprint", old_time),
+        ("recent-alert-timerange", "recent-alert-timerange-fingerprint", recent_time),
+    ]
+
+    alerts = [
+        Alert(
+            tenant_id=tenant_id,
+            provider_type="test",
+            provider_id="test",
+            event=_create_valid_event(
+                {
+                    "id": alert_id,
+                    "source": ["test"],
+                    "status": AlertStatus.FIRING.value,
+                    "lastReceived": ts.isoformat(),
+                    "fingerprint": fingerprint,
+                },
+                ts.isoformat(),
+            ),
+            fingerprint=fingerprint,
+            timestamp=ts,
+        )
+        for alert_id, fingerprint, ts in alert_details
+    ]
+    db_session.add_all(alerts)
+    db_session.commit()
+
+    db_session.add_all(
+        [
+            LastAlert(
+                tenant_id=tenant_id,
+                fingerprint=alert.fingerprint,
+                timestamp=alert.timestamp,
+                first_timestamp=alert.timestamp,
+                alert_id=alert.id,
+            )
+            for alert in alerts
+        ]
+    )
+    db_session.commit()
+
+    # A two-minute window ending now. Only the 30-second-old alert falls in it.
+    timerange = {
+        "from": (now - timedelta(minutes=2)).isoformat(),
+        "to": now.isoformat(),
+    }
+
+    with freeze_time(now):
+        results = provider._query(
+            version=2,
+            filter="status == 'firing'",
+            timerange=timerange,
+            limit=10000,
+        )
+
+    assert len(results) == 1, (
+        f"Expected 1 alert within the 2 minute timerange, got {len(results)}. "
+        "A sub-day timerange was truncated to zero days and the filter dropped."
+    )
+    assert results[0].id == "recent-alert-timerange"
+
+
+def test_calculate_time_delta_keeps_sub_day_precision():
+    """_calculate_time_delta must not round a sub-day window down to zero."""
+    provider = KeepProvider.__new__(KeepProvider)
+
+    two_minutes = provider._calculate_time_delta(
+        timerange={
+            "from": "2026-09-21T23:00:00Z",
+            "to": "2026-09-21T23:02:00Z",
+        }
+    )
+    assert two_minutes == pytest.approx(120 / 86400)
+
+    one_hour = provider._calculate_time_delta(
+        timerange={
+            "from": "2026-09-21T22:00:00Z",
+            "to": "2026-09-21T23:00:00Z",
+        }
+    )
+    assert one_hour == pytest.approx(1 / 24)
+
+
+def test_parse_provider_parameters_keeps_float():
+    """
+    A float step parameter must survive parsing.
+
+    parse_provider_parameters only copied str/list/int/bool (and dict) through,
+    so a float was dropped with no error and the provider fell back to its
+    default. That is what made `time_delta: 0.1667` behave as one full day.
+    """
+    from keep.parser.parser import Parser
+
+    parsed = Parser.parse_provider_parameters(
+        {
+            "time_delta": 0.001388888888888889,
+            "limit": 10,
+            "filter": "status == 'firing'",
+            "distinct": True,
+        }
+    )
+
+    assert "time_delta" in parsed, "float parameter was dropped during parsing"
+    assert parsed["time_delta"] == pytest.approx(0.001388888888888889)
+    assert parsed["limit"] == 10
+    assert parsed["filter"] == "status == 'firing'"
+    assert parsed["distinct"] is True
