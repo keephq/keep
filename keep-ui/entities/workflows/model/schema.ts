@@ -261,6 +261,7 @@ export const WorkflowPropertiesSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
   disabled: z.boolean(),
+  manual_visible: z.boolean().optional(),
   isLocked: z.boolean(),
   consts: z.record(z.string(), z.string()).optional(),
   alert: AlertTriggerValueSchema.optional(),
