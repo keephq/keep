@@ -17,6 +17,7 @@ export default function ExtractionExecutionDetailsPage(props: {
   const { execution, isLoading } = useEnrichmentEvent({
     ruleId: params.rule_id,
     executionId: params.execution_id,
+    type: "extraction",
   });
 
   const { data: extractions } = useExtractions();
