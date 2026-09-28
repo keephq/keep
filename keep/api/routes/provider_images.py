@@ -16,6 +16,9 @@ DEFAULT_IMAGE_PATH = os.environ.get(
     "DEFAULT_IMAGE_PATH",
     os.path.join(os.path.dirname(__file__), "../../../unknown-icon.png"),
 )
+FALLBACK_IMAGE_PATH = os.environ.get(
+    "KEEP_DEFAULT_IMAGE_FALLBACK_PATH", "/unknown-icon.png"
+)
 
 
 @router.post("/upload/{image_name}")
@@ -91,15 +94,14 @@ async def get_provider_image(
         return Response(content=provider_image.image_blob, media_type="image/png")
 
     # Return default image if no custom image found
+    path = DEFAULT_IMAGE_PATH
+    if not os.path.exists(path):
+        logger.warning(
+            f"Default image not found at {DEFAULT_IMAGE_PATH}, using fallback path: {FALLBACK_IMAGE_PATH}"
+        )
+        path = FALLBACK_IMAGE_PATH
     try:
-        path = DEFAULT_IMAGE_PATH
-        if not os.path.exists(path):
-            fallback_path = "/unknown-icon.png"
-            logger.warning(
-                f"Default image not found at {DEFAULT_IMAGE_PATH}, using fallback path: {fallback_path}"
-            )
-            path = fallback_path
-        with open(DEFAULT_IMAGE_PATH, "rb") as f:
+        with open(path, "rb") as f:
             return Response(content=f.read(), media_type="image/png")
     except FileNotFoundError:
         raise HTTPException(404, "Default image not found")
