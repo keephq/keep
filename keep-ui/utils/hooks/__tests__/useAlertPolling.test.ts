@@ -25,4 +25,27 @@ describe("parsePollAlertsPayload", () => {
       })
     ).toEqual(["fp-1", "fp-2"]);
   });
+
+  it("ignores extra status-transition fields and still returns fingerprints", () => {
+    const payload = {
+      fingerprints: ["fp-1", "fp-2"],
+      alerts: [
+        { fingerprint: "fp-1", status: "resolved", previous_status: "acknowledged" },
+        { fingerprint: "fp-2", status: "firing", previous_status: null },
+      ],
+      statuses: { "fp-1": "resolved", "fp-2": "firing" },
+      resolved_fingerprints: ["fp-1"],
+    };
+    expect(parsePollAlertsPayload(payload)).toEqual(["fp-1", "fp-2"]);
+  });
+
+  it("handles payload with status fields but empty fingerprints", () => {
+    const payload = {
+      fingerprints: [],
+      alerts: [],
+      statuses: {},
+      resolved_fingerprints: [],
+    };
+    expect(parsePollAlertsPayload(payload)).toEqual([]);
+  });
 });
