@@ -649,7 +649,15 @@ class JiraProvider(BaseProvider):
             }
             raise ProviderException(f"Failed to notify jira: {e} - Params: {context}")
 
-    def _query(self, ticket_id="", board_id="", **kwargs: dict):
+    def _query(
+        self,
+        ticket_id="",
+        board_id="",
+        jql="",
+        max_results=0,
+        fields="",
+        **kwargs: dict,
+    ):
         """
         API for fetching issues:
         https://developer.atlassian.com/cloud/jira/software/rest/api-group-board/#api-rest-agile-1-0-board-boardid-issue-get
@@ -657,8 +665,67 @@ class JiraProvider(BaseProvider):
         Args:
             ticket_id (str): The ticket id of the issue, optional.
             board_id (str): The board id of the issue.
+            jql (str): A JQL query to search the issues with.
+            max_results (int): How many issues to return alongside the total. Zero, the default, returns the total and an empty issues list.
+            fields (str): Comma separated Jira fields to return for each issue, or a list of them. All fields when empty.
         """
-        if not ticket_id:
+        if jql:
+            try:
+                max_results = int(max_results)
+            except (TypeError, ValueError):
+                raise ProviderException(
+                    f"{self.__class__.__name__} got a non-numeric max_results: {max_results!r}"
+                )
+
+            if isinstance(fields, list):
+                fields = ",".join(fields)
+
+            issues = []
+            total = None
+
+            if max_results:
+                query_params = {"jql": jql, "maxResults": max_results}
+                if fields:
+                    query_params["fields"] = fields
+
+                # /rest/api/2/search is on its way out on Cloud, search/jql replaces it
+                request_url = self.__get_url(
+                    paths=["search", "jql"], query_params=query_params
+                )
+                response = requests.get(
+                    request_url, auth=self.__get_auth(), verify=False
+                )
+                if not response.ok:
+                    raise ProviderException(
+                        f"{self.__class__.__name__} failed to fetch data from Jira: {response.text}"
+                    )
+                page = response.json()
+                issues = page.get("issues", [])
+                # A page Jira did not truncate is the whole answer, and its length
+                # is the total. Jira marks a truncated page with a nextPageToken; a
+                # page filled to max_results counts as truncated too, since a
+                # deployment that omits the token would otherwise pass a capped
+                # number off as the total.
+                if not page.get("nextPageToken") and len(issues) < max_results:
+                    total = len(issues)
+
+            if total is None:
+                # search/jql reports no total of its own, so the count comes from
+                # the endpoint next to it
+                count_response = requests.post(
+                    self.__get_url(paths=["search", "approximate-count"]),
+                    json={"jql": jql},
+                    auth=self.__get_auth(),
+                    verify=False,
+                )
+                if not count_response.ok:
+                    raise ProviderException(
+                        f"{self.__class__.__name__} failed to fetch data from Jira: {count_response.text}"
+                    )
+                total = count_response.json().get("count", 0)
+
+            return {"total": total, "jql": jql, "issues": issues}
+        elif not ticket_id:
             request_url = f"{self.jira_host}/rest/agile/1.0/board/{board_id}/issue"
             response = requests.get(request_url, auth=self.__get_auth(), verify=False)
             if not response.ok:
