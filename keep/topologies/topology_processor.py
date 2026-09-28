@@ -242,6 +242,22 @@ class TopologyProcessor:
                     Incident.status != IncidentStatus.DELETED.value,
                 )
             ).first()
+            # If application ID changed or is not linked (e.g. historical data or manual topology sync),
+            # fall back to matching an active incident by application name to prevent duplicate incidents.
+            if not incident and application.name:
+                app_incident_name = f"Application incident: {application.name}"
+                incident = session.exec(
+                    select(Incident).where(
+                        Incident.tenant_id == tenant_id,
+                        Incident.user_generated_name == app_incident_name,
+                        Incident.incident_type == "topology",
+                        Incident.status != IncidentStatus.DELETED.value,
+                    )
+                ).first()
+                if incident:
+                    incident.incident_application = application.id
+                    session.add(incident)
+                    session.commit()
             return incident
 
     def _get_topology_data(self, tenant_id: str):

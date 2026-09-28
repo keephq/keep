@@ -386,10 +386,54 @@ def test_import_to_db(db_session):
         assert applications[0].name == "Test Application 1"
         assert applications[1].name == "Test Application 2"
 
+        if i == 0:
+            first_run_app_ids = {app.name: app.id for app in applications}
+        else:
+            # Verify application IDs are preserved across re-imports to prevent duplicate incidents
+            for app in applications:
+                assert app.id == first_run_app_ids[app.name]
+
         dependencies = db_session.exec(select(TopologyServiceDependency)).all()
         assert len(dependencies) == 1
         assert dependencies[0].service_id == 1
         assert dependencies[0].depends_on_service_id == 2
+
+
+def test_get_application_based_incident_fallback_by_name(db_session):
+    from unittest.mock import patch
+
+    tenant_id = SINGLE_TENANT_UUID
+    old_app_id = uuid.uuid4()
+    new_app_id = uuid.uuid4()
+
+    # Existing active incident created under an old application UUID
+    incident = Incident(
+        tenant_id=tenant_id,
+        user_generated_name="Application incident: Test App",
+        user_summary="Test summary",
+        incident_type="topology",
+        incident_application=old_app_id,
+        status=IncidentStatus.FIRING.value,
+        is_candidate=False,
+        is_visible=True,
+        is_predicted=True,
+    )
+    db_session.add(incident)
+    db_session.commit()
+
+    processor = object.__new__(TopologyProcessor)
+    app = TopologyApplication(id=new_app_id, tenant_id=tenant_id, name="Test App")
+
+    with patch(
+        "keep.topologies.topology_processor.existed_or_new_session"
+    ) as mock_session:
+        mock_session.return_value.__enter__.return_value = db_session
+        mock_session.return_value.__exit__.return_value = None
+        found_incident = processor._get_application_based_incident(tenant_id, app)
+
+    assert found_incident is not None
+    assert found_incident.id == incident.id
+    assert found_incident.incident_application == new_app_id
 
 
 def test_create_application_based_incident_sets_is_predicted(db_session):
