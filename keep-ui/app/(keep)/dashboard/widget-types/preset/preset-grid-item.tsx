@@ -12,6 +12,7 @@ import TimeAgo from "react-timeago";
 import { useSearchParams } from "next/navigation";
 import WidgetAlertsTable from "./widget-alerts-table";
 import WidgetAlertCountPanel from "./widget-alert-count-panel";
+import WidgetAlertTimeSeriesPanel from "./widget-alert-time-series-panel";
 import CelInput from "@/features/cel-input/cel-input";
 
 interface GridItemProps {
@@ -180,9 +181,10 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
 
   const isAlertTable = item.presetPanelType === PresetPanelType.ALERT_TABLE || !item.presetPanelType;
   const isAlertCountPanel = item.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
+  const isAlertTimeSeries = item.presetPanelType === PresetPanelType.ALERT_TIME_SERIES;
 
   return (
-    <div className="flex flex-col overflow-y-auto gap-2">
+    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto gap-2">
       {isAlertTable && (
         <>
       <div className="flex gap-2">
@@ -220,6 +222,14 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
           presetName={preset?.name as string}
           showFiringOnly={item.showFiringOnly}
           background={isLoading ? undefined : hexToRgb(getColor(), 0.1)}
+          thresholds={item.thresholds}
+          customLink={item.customLink}
+        />
+      )}
+      {isAlertTimeSeries && (
+        <WidgetAlertTimeSeriesPanel
+          presetName={preset?.name as string}
+          showFiringOnly={item.showFiringOnly}
           thresholds={item.thresholds}
           customLink={item.customLink}
         />
