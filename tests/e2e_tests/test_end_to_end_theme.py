@@ -24,8 +24,12 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
                 else:
                     raise e
 
-        # wait for the modal to appear
-        expect(page.get_by_role("dialog")).to_be_visible()
+        # The dialog root has no layout box; its fixed-position panel contains
+        # the visible controls. Wait on a control inside the dialog instead.
+        submit_button = page.get_by_role("dialog").get_by_role(
+            "button", name="Submit", exact=True
+        )
+        expect(submit_button).to_be_visible()
 
         # Using the visible text for dropdown
         page.locator("text=Select alert source").click(force=True)
@@ -33,8 +37,8 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
         # select the "prometheus prometheus" option
         page.get_by_role("option", name="prometheus prometheus").locator("div").click()
         # click the submit button
-        page.get_by_role("button", name="Submit").click()
-        expect(page.get_by_role("dialog")).not_to_be_visible()
+        submit_button.click()
+        expect(submit_button).not_to_be_visible()
 
         # refresh the page
         page.reload()
