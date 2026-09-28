@@ -799,12 +799,16 @@ def get_alert(
             "tenant_id": tenant_id,
         },
     )
-    all_alerts = get_all_alerts(authenticated_entity=authenticated_entity)
-    alert = list(filter(lambda alert: alert.fingerprint == fingerprint, all_alerts))
-    if alert:
-        return alert[0]
-    else:
-        raise HTTPException(status_code=404, detail="Alert not found")
+    db_alerts = get_last_alerts(
+        tenant_id=tenant_id,
+        fingerprints=[fingerprint],
+        limit=1,
+    )
+    alerts = convert_db_alerts_to_dto_alerts(db_alerts)
+    if alerts:
+        return alerts[0]
+
+    raise HTTPException(status_code=404, detail="Alert not found")
 
 
 @router.post("/enrich/note", description="Enrich an alert note")
