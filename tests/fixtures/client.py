@@ -51,7 +51,15 @@ def test_app(monkeypatch, request, db_session):
             monkeypatch.setenv("KEEP_JWT_SECRET", "somesecret")
 
             if auth_type == "MULTI_TENANT":
-                monkeypatch.setenv("AUTH0_DOMAIN", "https://auth0domain.com")
+                # MULTI_TENANT is backward-compatibly routed to the Auth0
+                # identity manager/verifier (see
+                # IdentityManagerFactory._backward_compatible_get_identity_manager),
+                # so its OIDC discovery HTTP call needs to be mocked too,
+                # exactly like AUTH_TYPE=AUTH0. AUTH0_DOMAIN must be a bare
+                # domain (no scheme) since _discover_jwks_uri() builds the
+                # URL as f"https://{auth_domain}/...".
+                monkeypatch.setenv("AUTH0_DOMAIN", "auth0domain.com")
+                is_auth0 = True
 
         # When AUTH_TYPE=AUTH0, the authverifier module makes a real HTTP call
         # at import time to fetch the OIDC discovery document. The mock must
