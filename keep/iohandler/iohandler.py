@@ -332,13 +332,15 @@ class IOHandler:
                     else:
                         _arg = arg.id
                     # if the value is empty '', we still need to pass it to the function
-                    # also, if the value is 0 or 0.0, we need to pass it to the function
-                    # 0 == False, so we need to check if the value is not False explicitly
+                    # also, if the value is 0, 0.0 or False, we need to pass it to the function
+                    # 0 == False, so we need to check falsy values explicitly
+                    # empty containers (list/dict/tuple/set) are falsy too but must not be dropped
                     if (
                         _arg
                         or _arg == ""
-                        or (_arg == 0 or _arg == 0.0)
-                        and _arg is not False
+                        or _arg == 0
+                        or _arg == 0.0
+                        or isinstance(_arg, (list, dict, tuple, set))
                     ):
                         _args.append(_arg)
 
