@@ -589,7 +589,7 @@ class WorkflowStore:
         Args:
             tenant_id (str): The tenant to which the workflows belong.
             workflows_dir (str): A directory containing workflows yamls.
-            limit (int): The number of workflows to return.
+            query (QueryDto): The query to filter workflows by.
 
         Returns:
             List[dict]: A list of workflows
