@@ -21,7 +21,12 @@ from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
-from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY, fingerprints_for_poll_payload
+from keep.api.consts import (
+    KEEP_CORRELATION_ENABLED,
+    KEEP_STORE_RAW_ALERTS,
+    MAINTENANCE_WINDOW_ALERT_STRATEGY,
+    fingerprints_for_poll_payload,
+)
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     enrich_alerts_with_incidents,
@@ -141,16 +146,17 @@ def __save_to_db(
         # keep raw events in the DB if the user wants to
         # this is mainly for debugging and research purposes
         if KEEP_STORE_RAW_ALERTS:
-            if isinstance(raw_events, dict):
-                raw_events = [raw_events]
+            events_to_store = raw_events
+            if isinstance(events_to_store, dict):
+                events_to_store = [events_to_store]
 
-            for raw_event in raw_events:
-                alert = AlertRaw(
+            for raw_event in events_to_store:
+                alert_raw = AlertRaw(
                     tenant_id=tenant_id,
                     raw_alert=raw_event,
                     provider_type=provider_type,
                 )
-                session.add(alert)
+                session.add(alert_raw)
 
         enrichments_bl = EnrichmentsBl(tenant_id, session)
         # add audit to the deduplicated events
@@ -185,7 +191,7 @@ def __save_to_db(
             tenant_id, fingerprints, session=session
         )
 
-        for formatted_event in formatted_events:
+        for alert_index, formatted_event in enumerate(formatted_events):
             formatted_event.pushed = True
 
             started_at = started_at_for_fingerprints.get(
@@ -554,6 +560,11 @@ def __handle_formatted_events(
                     "tenant_id": tenant_id,
                 },
             )
+
+    if KEEP_STORE_RAW_ALERTS and raw_events:
+        stored_raw = raw_events[0] if isinstance(raw_events, list) else raw_events
+        for alert in enriched_formatted_events:
+            alert.keep_raw_payload = copy.deepcopy(stored_raw)
 
     incidents = []
     with tracer.start_as_current_span("process_event_run_rules_engine"):

@@ -79,6 +79,124 @@ When an incident contains multiple alerts:
 
 Service Issue on host1,host2
 
+## Incident Enrichments
+
+Correlation rules can attach **key/value metadata** to incidents when they are **first created**. Configure this in the Correlation rule editor under **Incident enrichments**.
+
+Each row has:
+- **Key** — field name on the incident (e.g. `threshold`, `monitor`, `team`)
+- **Value** — static text or a template using `{{ ... }}` syntax
+
+Enrichments appear on the incident detail page and are stored in the incident enrichment record.
+
+### Requirements
+
+Incident enrichments from correlation rules require:
+
+```bash
+KEEP_STORE_RAW_ALERTS=true
+```
+
+Set this in your `.env` or deployment environment and restart the Keep API.
+
+When `KEEP_STORE_RAW_ALERTS` is **disabled**, correlation rules still create incidents, but **no incident enrichments** are applied.
+
+### When enrichments run
+
+| Scenario | Enrichments |
+|----------|-------------|
+| **New incident** created by the rule | Templates are rendered and saved |
+| **Existing incident** reused (same rule fingerprint) | Not re-run — first alert's enrichments are kept |
+
+Enrichments are resolved from the **triggering alert** at incident creation time, using:
+
+1. **Formatted alert** (`alert.*` / top-level fields on `AlertDto`)
+2. **In-memory raw webhook** (`keep_raw_payload` on `AlertDto` during ingestion — not saved on the `alert` row)
+
+When `KEEP_STORE_RAW_ALERTS=true`, the full provider webhook is also written once per webhook to the `alertraw` table (for debugging/archive). Incident enrichments read raw fields from **in-memory** `keep_raw_payload`, not from a DB lookup.
+
+### Template syntax
+
+Use `{{ variable }}` placeholders. Whitespace inside braces is trimmed automatically.
+
+#### Alert fields (formatted `AlertDto`)
+
+Reference normalized alert fields stored in `alert.event`:
+
+```
+{{ alert.labels.monitor }}
+{{ alert.name }}
+{{ alert.severity }}
+{{ labels.monitor }}          # same as alert.labels.monitor when on AlertDto
+```
+
+#### Raw webhook fields (`KEEP_STORE_RAW_ALERTS=true`)
+
+Reference the provider's original webhook payload (full webhook stored in `alertraw`, passed in-memory during ingestion):
+
+```
+{{ raw.alerts[0].condition }}
+{{ raw.alerts[0].labels.monitor }}
+{{ raw.alerts[0].data[0].model.conditions[0].evaluator.params[0] }}
+```
+
+Dot index works too: `{{ raw.alerts.0.data.0.model... }}`
+
+- Prefix with `raw.` to read **only** from the raw webhook
+- Without `raw.`, Keep tries the formatted alert first, then falls back to raw
+- Bracket notation `alerts[0]` and dot notation `alerts.0` both work
+
+For Grafana (and similar providers), the stored raw payload is the **full webhook**. Fields like `data`, `condition`, and `labels` live under `alerts[index]` — **not** at the top level.
+
+| Wrong (returns `N/A`) | Correct |
+|-----------------------|---------|
+| `{{ raw.data[0].model... }}` | `{{ raw.alerts[0].data[0].model... }}` |
+| `{{ raw.condition }}` | `{{ raw.alerts[0].condition }}` |
+| `{{ raw.labels.monitor }}` | `{{ raw.alerts[0].labels.monitor }}` or `{{ alert.labels.monitor }}` |
+
+For multi-alert webhooks, use the index of the alert you care about (`alerts[0]`, `alerts[1]`, …). Prefer `{{ alert.* }}` when Grafana already maps the field onto the normalized alert.
+
+### Grafana example
+
+**Webhook payload (simplified):**
+
+```json
+{
+  "title": "NetworkLatencyIsHigh",
+  "alerts": [{
+    "condition": "C",
+    "labels": { "monitor": "router1" },
+    "data": [{
+      "model": {
+        "conditions": [{
+          "evaluator": { "params": [100], "type": "gt" }
+        }]
+      }
+    }]
+  }]
+}
+```
+
+**Correlation rule — Incident enrichments:**
+
+| Key | Value |
+|-----|-------|
+| `monitor` | `{{ alert.labels.monitor }}` |
+| `condition` | `{{ raw.alerts[0].condition }}` |
+| `threshold` | `{{ raw.alerts[0].data[0].model.conditions[0].evaluator.params[0] }}` |
+
+**Result on incident:** `monitor=router1`, `condition=C`, `threshold=100`
+
+### Troubleshooting
+
+| Symptom | Likely cause |
+|---------|----------------|
+| Enrichment value is `N/A` | Wrong template path — for Grafana use `raw.alerts[0].…`, not `raw.data[0].…` |
+| No enrichments on incident | `KEEP_STORE_RAW_ALERTS` is not `true`, or API was not restarted after changing `.env` |
+| `raw.*` returns `N/A` | Flag off, API not restarted, or no `keep_raw_payload` on alert — send a **new** alert after enabling |
+| Incident enrichments UI hidden | `KEEP_STORE_RAW_ALERTS` is not `true` on the API (UI reads `store_raw_alerts_enabled`) |
+| Wrong value on reused incident | Enrichments only run at **create**; delete/recreate incident or wait for expiry |
+
 ## Examples
 - **Metric-based alerts**: Construct a rule to pinpoint alerts associated with specific metrics, such as high CPU usage on servers. This can be achieved by grouping alerts that share a common attribute, like a 'CPU usage' tag, ensuring you quickly identify and address performance issues.
 - **Feature-related alerts**: Establish rules to create incident by specific features or services. For instance, you can start incident based on a 'service' or 'URL' tag. This approach is particularly useful for tracking and managing alerts related to distinct functionalities or components within your application.

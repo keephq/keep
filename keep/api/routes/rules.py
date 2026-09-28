@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from keep.api.core.cel_to_sql.cel_ast_converter import CelToAstConverter
 from keep.api.core.db import create_rule as create_rule_db
@@ -36,6 +36,7 @@ class RuleCreateDto(BaseModel):
     multiLevelPropertyName: str = None
     threshold: int = 1
     assignee: str = None
+    incidentEnrichments: dict = Field(default_factory=dict)
 
 
 @router.get(
@@ -96,6 +97,7 @@ async def create_rule(
     multi_level_property_name = rule_create_request.multiLevelPropertyName
     threshold = rule_create_request.threshold
     assignee = rule_create_request.assignee
+    incident_enrichments = rule_create_request.incidentEnrichments or {}
 
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
@@ -147,6 +149,7 @@ async def create_rule(
         multi_level_property_name=multi_level_property_name,
         threshold=threshold,
         assignee=assignee,
+        incident_enrichments=incident_enrichments,
     )
     logger.info("Rule created")
     return rule
@@ -204,6 +207,7 @@ async def update_rule(
         multi_level_property_name = body.get("multiLevelPropertyName", None)
         threshold = body.get("threshold", 1)
         assignee = body.get("assignee", None)
+        incident_enrichments = body.get("incidentEnrichments", {}) or {}
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -261,6 +265,7 @@ async def update_rule(
         multi_level_property_name=multi_level_property_name,
         threshold=threshold,
         assignee=assignee,
+        incident_enrichments=incident_enrichments,
     )
 
     if rule:
