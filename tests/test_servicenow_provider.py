@@ -308,6 +308,110 @@ class TestResolveSysId:
         assert result is None
 
 
+class TestQueryPagination:
+    """Tests for _query's pagination parameters."""
+
+    def test_offset_is_forwarded_not_reset_to_zero(self, servicenow_provider):
+        """A non-zero sysparm_offset must reach the request as-is, otherwise
+        _get_incidents' pagination loop keeps re-fetching page 1 forever."""
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.json.return_value = {"result": []}
+
+        with patch("requests.get", return_value=mock_response) as mock_get:
+            servicenow_provider._query(
+                table_name="incident", sysparm_limit=100, sysparm_offset=200
+            )
+
+        _, kwargs = mock_get.call_args
+        assert kwargs["params"]["sysparm_offset"] == 200
+
+    def test_zero_offset_stays_zero(self, servicenow_provider):
+        """Sanity check: the first page (offset=0) is unaffected."""
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.json.return_value = {"result": []}
+
+        with patch("requests.get", return_value=mock_response) as mock_get:
+            servicenow_provider._query(
+                table_name="incident", sysparm_limit=100, sysparm_offset=0
+            )
+
+        _, kwargs = mock_get.call_args
+        assert kwargs["params"]["sysparm_offset"] == 0
+
+
+class TestNotifyUpdate:
+    """Tests for _notify_update's auth selection and failure handling."""
+
+    def test_uses_basic_auth_when_no_access_token(self, servicenow_provider):
+        servicenow_provider._access_token = None
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = json.dumps({"result": {"sys_id": "abc123"}})
+
+        with patch("requests.get", return_value=mock_response) as mock_get:
+            servicenow_provider._notify_update("incident", "abc123", "fp1")
+
+        _, kwargs = mock_get.call_args
+        assert kwargs["auth"] == ("admin", "admin")
+
+    def test_uses_bearer_header_when_access_token_present(self, servicenow_provider):
+        servicenow_provider._access_token = "token123"
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = json.dumps({"result": {"sys_id": "abc123"}})
+
+        with patch("requests.get", return_value=mock_response) as mock_get:
+            servicenow_provider._notify_update("incident", "abc123", "fp1")
+
+        _, kwargs = mock_get.call_args
+        assert kwargs["auth"] is None
+        assert kwargs["headers"]["Authorization"] == "Bearer token123"
+
+    def test_failure_response_raises_http_error_not_name_error(
+        self, servicenow_provider
+    ):
+        """The failure branch must raise the real HTTPError from `response`,
+        not crash with NameError from a never-assigned `resp`."""
+        import requests
+
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_response.text = "Not Found"
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "404 Client Error"
+        )
+
+        with patch("requests.get", return_value=mock_response):
+            with pytest.raises(requests.exceptions.HTTPError):
+                servicenow_provider._notify_update("incident", "abc123", "fp1")
+
+
+class TestPullTopologyFields:
+    """Tests for pull_topology's requested CMDB field list."""
+
+    def test_owned_by_name_and_manufacturer_name_are_separate_fields(
+        self, servicenow_provider
+    ):
+        """A missing comma previously concatenated these into a single,
+        nonexistent field name, so neither value was ever returned."""
+        cmdb_response = MagicMock()
+        cmdb_response.ok = True
+        cmdb_response.json.return_value = {"result": []}
+
+        with patch("requests.get", return_value=cmdb_response) as mock_get:
+            servicenow_provider.pull_topology()
+
+        # pull_topology makes further requests.get calls afterward (relationship
+        # types, relationships) - the CMDB items fetch with sysparm_fields is
+        # always the first one.
+        _, kwargs = mock_get.call_args_list[0]
+        requested_fields = kwargs["params"]["sysparm_fields"].split(",")
+        assert "owned_by.name" in requested_fields
+        assert "manufacturer.name" in requested_fields
+
+
 class TestProviderConfig:
     """Tests for provider configuration."""
 
