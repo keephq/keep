@@ -13,6 +13,8 @@ RUN npm ci  --noproxy registry.npmjs.org --maxsockets 1
 
 # Rebuild the source code only when needed
 FROM base AS builder
+ARG KEEP_INCLUDE_SOURCES=false
+ENV KEEP_INCLUDE_SOURCES=${KEEP_INCLUDE_SOURCES}
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

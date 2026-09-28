@@ -1,4 +1,6 @@
-from playwright.sync_api import Page
+import re
+
+from playwright.sync_api import Page, expect
 
 from tests.e2e_tests.utils import init_e2e_test, save_failure_artifacts
 
@@ -13,7 +15,7 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
                 init_e2e_test(browser, next_url="/alerts/feed")
                 browser.wait_for_timeout(10000)
                 browser.wait_for_load_state("networkidle")
-                page.locator(".h-14 > div > button").click()
+                page.get_by_role("button", name="Test alerts", exact=True).click()
                 break
             except Exception as e:
                 if attempt < max_attemps - 1:
@@ -22,8 +24,12 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
                 else:
                     raise e
 
-        # wait for the modal to appear
-        page.wait_for_selector("div[data-headlessui-state='open']")
+        # The dialog root has no layout box; its fixed-position panel contains
+        # the visible controls. Wait on a control inside the dialog instead.
+        submit_button = page.get_by_role("dialog").get_by_role(
+            "button", name="Submit", exact=True
+        )
+        expect(submit_button).to_be_visible()
 
         # Using the visible text for dropdown
         page.locator("text=Select alert source").click(force=True)
@@ -31,55 +37,16 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
         # select the "prometheus prometheus" option
         page.get_by_role("option", name="prometheus prometheus").locator("div").click()
         # click the submit button
-        page.get_by_role("button", name="Submit").click()
+        submit_button.click()
+        expect(submit_button).not_to_be_visible()
 
         # refresh the page
         page.reload()
         page.wait_for_load_state("networkidle")
 
-        # Click test alerts button using data-testid
-        try:
-            page.locator('[data-testid="test-alerts-button"]').click()
-        except Exception:
-            # Fallback to previous methods if test ID isn't found
-            try:
-                page.get_by_role("button", name="Test alerts").click()
-            except Exception:
-                try:
-                    page.locator("button:has(svg[viewBox='0 0 24 24'])").nth(0).click()
-                except Exception:
-                    try:
-                        page.locator("button.ml-2:has(svg)").nth(0).click()
-                    except Exception:
-                        page.evaluate(
-                            """
-                            () => {
-                                const buttons = Array.from(document.querySelectorAll('button'));
-                                const testButton = buttons.find(b =>
-                                    b.innerHTML.includes('svg') &&
-                                    b.className.includes('ml-2')
-                                );
-                                if (testButton) testButton.click();
-                            }
-                            """
-                        )
-
-        # open the settings modal using data-testid
-        try:
-            page.locator('[data-testid="settings-button"]').click()
-        except Exception:
-            # Fallback strategies if the test ID isn't found yet
-            try:
-                page.get_by_role("button", name="Settings").click()
-            except Exception:
-                try:
-                    # Look for a button with settings icon
-                    page.locator(
-                        'button:has(svg path[d^="M19.4 15a1.65 1.65 0 0 0 .33 1.82"])'
-                    ).click()
-                except Exception:
-                    # Fallback to finding by icon
-                    page.locator("button:has(svg)").nth(0).click()
+        # The alert was submitted above. Open settings directly; clicking an
+        # unrelated icon button here can open another dialog or navigation menu.
+        page.get_by_test_id("settings-button").click()
 
         # Wait for settings panel to appear
         page.wait_for_selector('[data-testid="settings-panel"]', state="visible")
@@ -97,13 +64,7 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
         page.get_by_role("button", name="Apply theme").click()
 
         # Check row background color
-        row_element = page.locator("tr.tremor-TableRow-row").nth(1)
-        background_color = row_element.evaluate(
-            """element => {
-            const style = window.getComputedStyle(element);
-            return style.backgroundColor;
-        }"""
-        )
+        row_element = page.get_by_test_id("alerts-table").locator("tbody tr").first
         # Colors for "Keep" theme
         expected_keep_colors = [
             "rgb(255, 247, 237)",
@@ -112,15 +73,13 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
             "rgb(253, 186, 116)",
             "rgb(251, 146, 60)",
         ]
-        assert (
-            background_color in expected_keep_colors
-        ), f"Expected {expected_keep_colors}, got {background_color}"
+        expect(row_element).to_have_css(
+            "background-color",
+            re.compile("^(" + "|".join(map(re.escape, expected_keep_colors)) + ")$"),
+        )
 
         # Open settings again
-        try:
-            page.locator('[data-testid="settings-button"]').click()
-        except Exception:
-            page.get_by_role("button", name="Settings").click()
+        page.get_by_test_id("settings-button").click()
 
         # Wait for settings panel
         page.wait_for_selector('[data-testid="settings-panel"]', state="visible")
@@ -134,15 +93,6 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
         # Apply theme
         page.get_by_role("button", name="Apply theme").click()
 
-        # Check row background color again
-        row_element = page.locator("tr.tremor-TableRow-row").nth(1)
-        background_color = row_element.evaluate(
-            """element => {
-            const style = window.getComputedStyle(element);
-            return style.backgroundColor;
-        }"""
-        )
-
         # Colors for "Basic" theme
         expected_basic_colors = [
             "rgb(254, 202, 202)",
@@ -151,9 +101,10 @@ def test_theme(browser: Page, setup_page_logging, failure_artifacts):
             "rgb(187, 247, 208)",
             "rgb(191, 219, 254)",
         ]
-        assert (
-            background_color in expected_basic_colors
-        ), f"Expected {expected_basic_colors}, got {background_color}"
+        expect(row_element).to_have_css(
+            "background-color",
+            re.compile("^(" + "|".join(map(re.escape, expected_basic_colors)) + ")$"),
+        )
 
     except Exception:
         save_failure_artifacts(browser)
