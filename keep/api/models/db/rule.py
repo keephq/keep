@@ -52,6 +52,7 @@ class Rule(SQLModel, table=True):
     resolve_on: str = ResolveOn.NEVER.value
     create_on: str = CreateIncidentOn.ANY.value
     is_deleted: bool = False
+    is_provisioned: bool = Field(default=False)
     incident_name_template: str = None
     incident_prefix: str | None = None
     multi_level: bool = False
