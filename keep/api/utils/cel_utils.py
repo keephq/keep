@@ -40,4 +40,20 @@ def preprocess_cel_expression(cel_expression: str) -> str:
         pattern, replace_matched, cel_expression, flags=re.IGNORECASE
     )
 
-    return modified_expression
+    known_severities = {severity.value.lower(): severity.order for severity in AlertSeverity}
+    remaining_pattern = (
+        r'(\bseverity\b)\s*([=><!]=?)\s*(?:"([^"]*)"|\'([^\']*)\'|(\w+))'
+    )
+
+    def replace_remaining(match):
+        value = (match.group(3) or match.group(4) or match.group(5) or "").lower()
+        order = known_severities.get(value)
+        if order is not None:
+            return f"{match.group(1)} {match.group(2)} {order}"
+        if value.isdigit():
+            return match.group(0)
+        return "false"
+
+    return re.sub(
+        remaining_pattern, replace_remaining, modified_expression, flags=re.IGNORECASE
+    )
