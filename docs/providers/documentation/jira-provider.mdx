@@ -236,6 +236,22 @@ with:
     - Infrastructure
 ```
 
+## Public ticket links
+
+Keep returns a `ticket_url` for every issue it creates or updates, built from the host the provider
+connects to. That host is not always one a person can open - Jira may sit behind a proxy, or Keep
+may reach it over a cluster-internal address.
+
+Set `ticket_creation_url` to the public new-issue link and the returned links point at that host
+instead. Any of the shapes Jira hands out is understood:
+
+- `https://company.atlassian.net/secure/CreateIssue.jspa`
+- `https://company.atlassian.net/secure/CreateIssue!default.jspa?pid=10000&issuetype=1`
+- `https://company.atlassian.net/jira/secure/CreateIssue.jspa`, Jira served under a context path
+- `https://company.atlassian.net`, a plain base URL, with or without a scheme
+
+Leave the field empty and the links come from the host the provider connects to.
+
 ## Notes
 
 ## Useful Links
