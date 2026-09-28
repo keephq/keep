@@ -42,6 +42,27 @@ def test_with_function(context_manager):
     s = iohandler.render("hello keep.len({{ steps.some_list }})")
     assert s == "hello 3"
 
+
+@pytest.mark.parametrize(
+    "test_input, expected_output",
+    [
+        ("res keep.join([], '-')", "res "),
+        ("res keep.join({}, '-')", "res "),
+        ("res keep.len([])", "res 0"),
+    ],
+)
+def test_with_function_empty_container_argument(
+    context_manager, test_input, expected_output
+):
+    """
+    A literal [] or {} argument to a keep.* function must be passed through
+    as an empty list/dict, not silently dropped - see issue #6728.
+    """
+    iohandler = IOHandler(context_manager)
+    s = iohandler.render(test_input)
+    assert s == expected_output
+
+
 @pytest.mark.parametrize(
     "test_input, expected_output",
     [
