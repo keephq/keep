@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { xor } from "lodash";
 import { Badge, Icon, TextInput } from "@tremor/react";
 import { Button } from "@/components/ui";
+import Modal from "@/components/ui/Modal";
 import { FiSave, FiTrash2, FiX } from "react-icons/fi";
 import { MdModeEdit } from "react-icons/md";
 
@@ -24,6 +25,7 @@ export const EnrichmentEditableField = ({
   const router = useRouter();
 
   const [editMode, setEditMode] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [stringedValue, setStringedValue] = useState(
     Array.isArray(value) ? value.join(", ") : value.toString()
   );
@@ -49,10 +51,11 @@ export const EnrichmentEditableField = ({
     resetForm();
   };
 
-  const handleUnenrich = async () => {
+  const handleConfirmDelete = () => {
     if (onDelete) {
       onDelete(fieldName);
     }
+    setIsDeleteModalOpen(false);
     setEditMode(false);
   };
 
@@ -158,7 +161,7 @@ export const EnrichmentEditableField = ({
               variant="light"
               className="text-gray-500 leading-none p-2 rounded-md prevent-row-click hover:bg-slate-200 [&>[role='tooltip']]:z-50 transition-opacity duration-100 opacity-0 group-hover:opacity-100"
               tooltip="Un-enrich"
-              onClick={handleUnenrich}
+              onClick={() => setIsDeleteModalOpen(true)}
               icon={() => (
                 <Icon icon={FiTrash2} className={`w-4 h-4 text-red-500`} />
               )}
@@ -172,6 +175,30 @@ export const EnrichmentEditableField = ({
         >
           <Badge>+</Badge> Add new field
         </div>
+      )}
+      {onDelete && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title="Delete Enrichment"
+          description={`Are you sure you want to delete the enrichment "${fieldName}"? This action cannot be undone.`}
+          className="max-w-md"
+        >
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              variant="secondary"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </Button>
+          </div>
+        </Modal>
       )}
     </div>
   );
