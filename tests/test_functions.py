@@ -657,6 +657,35 @@ def test_is_business_hours_custom_hours():
     assert functions.is_business_hours(test_time, start_hour=9, end_hour=17) == True
 
 
+def test_is_business_hours_overnight_window():
+    """
+    Test a window crossing midnight (e.g. 20-8)
+    """
+    # 22:00, inside the overnight window
+    night_time = datetime.datetime(
+        2024, 3, 27, 22, 0, tzinfo=datetime.timezone.utc
+    )
+    assert functions.is_business_hours(night_time, start_hour=20, end_hour=8) == True
+
+    # 02:00, after midnight but still inside the window
+    early_time = datetime.datetime(
+        2024, 3, 28, 2, 0, tzinfo=datetime.timezone.utc
+    )
+    assert functions.is_business_hours(early_time, start_hour=20, end_hour=8) == True
+
+    # 12:00, outside the overnight window
+    day_time = datetime.datetime(
+        2024, 3, 27, 12, 0, tzinfo=datetime.timezone.utc
+    )
+    assert functions.is_business_hours(day_time, start_hour=20, end_hour=8) == False
+
+    # End boundary is exclusive, same as same-day windows
+    end_time = datetime.datetime(
+        2024, 3, 28, 8, 0, tzinfo=datetime.timezone.utc
+    )
+    assert functions.is_business_hours(end_time, start_hour=20, end_hour=8) == False
+
+
 def test_is_business_hours_invalid_hours():
     """
     Test with invalid hour inputs
