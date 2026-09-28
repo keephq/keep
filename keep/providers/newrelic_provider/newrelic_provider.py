@@ -282,7 +282,7 @@ class NewrelicProvider(BaseProvider):
         Query New Relic account using the given NRQL
 
         Args:
-            query (str): query to execute
+            nrql (str): query to execute
 
         Returns:
             list[tuple] | list[dict]: results of the query
