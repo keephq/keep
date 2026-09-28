@@ -1074,3 +1074,55 @@ def test_check_if_rule_apply_int_str_type_coercion(db_session):
     assert (
         len(matched_rules4) == 1
     ), "Rule with 'field == \"2\"' should match alert with field='2'"
+
+
+def test_check_if_rule_apply_returns_subrule_as_written_for_null(db_session):
+    """
+    _check_if_rule_apply rewrites "null" before evaluating, but callers compare
+    what it returns against the sub-rules extracted from the rule definition,
+    which still says "null". It has to return the sub-rule as written.
+    """
+    from datetime import datetime
+
+    from keep.api.core.dependencies import SINGLE_TENANT_UUID
+    from keep.api.models.alert import AlertDto
+    from keep.api.models.db.rule import Rule
+    from keep.rulesengine.rulesengine import RulesEngine
+
+    definition_cel = '(source == "sentry") || (service != null)'
+
+    rule = Rule(
+        id="test-rule-null",
+        tenant_id=SINGLE_TENANT_UUID,
+        name="Test Rule - null subrule",
+        definition_cel=definition_cel,
+        definition={},
+        timeframe=60,
+        timeunit="seconds",
+        created_by="test@keephq.dev",
+        creation_time=datetime.utcnow(),
+        grouping_criteria=[],
+        threshold=1,
+        create_on="all",
+    )
+
+    engine = RulesEngine(tenant_id=SINGLE_TENANT_UUID)
+    all_sub_rules = set(engine._extract_subrules(definition_cel))
+
+    alert_sentry = AlertDto(
+        id="a1", name="test", fingerprint="fp1", source=["sentry"], service=None
+    )
+    alert_service = AlertDto(
+        id="a2", name="test", fingerprint="fp2", source=["grafana"], service="api"
+    )
+
+    matched = set()
+    for alert in (alert_sentry, alert_service):
+        matched = matched.union(engine._check_if_rule_apply(rule, alert))
+
+    assert matched.issubset(
+        all_sub_rules
+    ), f"matched sub-rules must be reported as written, got {matched}"
+    assert (
+        all_sub_rules == matched
+    ), "both sub-rules were satisfied, so the sets should be equal"
