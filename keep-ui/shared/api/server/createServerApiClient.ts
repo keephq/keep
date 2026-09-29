@@ -46,11 +46,9 @@ export async function createServerApiClient(): Promise<ApiClient> {
     const config = getConfig();
 
     if (process.env.AUTH_TYPE === AuthType.OAUTH2PROXY) {
-      console.log("Using OAuth2Proxy headers");
       const headersList = await headers();
       const oauth2Headers: Record<string, string> = {};
       const headerConfig = getOAuth2HeaderConfig();
-      console.log("OAuth2Proxy header config:", headerConfig);
 
       // Get header values using configured names but keep the original names
       const value = headersList.get(headerConfig.userHeader);
@@ -73,7 +71,12 @@ export async function createServerApiClient(): Promise<ApiClient> {
         oauth2Headers[headerConfig.groupsHeader] = groupsValue;
       }
 
-      console.log("OAuth2Proxy headers:", oauth2Headers);
+      // Forward incoming cookie header to preserve authentication session on server-to-server calls
+      const cookieHeader = headersList.get("cookie");
+      if (cookieHeader) {
+        oauth2Headers["cookie"] = cookieHeader;
+      }
+
       return new ApiClient(session, config, { headers: oauth2Headers });
     }
 
