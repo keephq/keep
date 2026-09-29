@@ -187,11 +187,24 @@ class AlertDeduplicator:
                 self.logger.warning(f"Failed to delete attribute {field} from alert")
         else:
             alert_attr = field_parts[0]
-            d = copy.deepcopy(getattr(alert, alert_attr))
+            try:
+                attr_val = getattr(alert, alert_attr, None)
+            except AttributeError:
+                attr_val = None
+
+            if not isinstance(attr_val, dict):
+                return alert
+
+            root_dict = copy.deepcopy(attr_val)
+            curr = root_dict
             for part in field_parts[1:-1]:
-                d = d[part]
-            del d[field_parts[-1]]
-            setattr(alert, field_parts[0], d)
+                if not isinstance(curr, dict) or part not in curr:
+                    return alert
+                curr = curr[part]
+
+            if isinstance(curr, dict) and field_parts[-1] in curr:
+                del curr[field_parts[-1]]
+                setattr(alert, alert_attr, root_dict)
         return alert
 
     def get_deduplication_rules(
