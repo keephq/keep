@@ -55,10 +55,21 @@ export function getConfig(): InternalConfig {
     AUTH_TYPE: authType,
     PUSHER_DISABLED: process.env.PUSHER_DISABLED === "true",
     // could be relative (for ingress) or absolute (e.g. Pusher)
-    PUSHER_HOST: process.env.PUSHER_HOST,
-    PUSHER_PORT: process.env.PUSHER_HOST
-      ? parseInt(process.env.PUSHER_PORT!)
-      : undefined,
+    PUSHER_HOST:
+      process.env.PUSHER_HOST_CLIENT ||
+      process.env.PUSHER_HOST_PUBLIC ||
+      process.env.PUSHER_HOST,
+    PUSHER_PORT:
+      process.env.PUSHER_PORT_CLIENT ||
+      process.env.PUSHER_PORT_PUBLIC ||
+      process.env.PUSHER_PORT
+        ? parseInt(
+            (process.env.PUSHER_PORT_CLIENT ||
+              process.env.PUSHER_PORT_PUBLIC ||
+              process.env.PUSHER_PORT)!,
+            10
+          )
+        : undefined,
     PUSHER_APP_KEY: process.env.PUSHER_APP_KEY,
     PUSHER_CLUSTER: process.env.PUSHER_CLUSTER,
     // The API URL is used by the server to make requests to the API
