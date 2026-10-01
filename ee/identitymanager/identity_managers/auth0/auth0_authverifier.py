@@ -54,6 +54,7 @@ if auth_domain:
         jwks_uri, cache_keys=True, headers={"User-Agent": "keep-api"}
     )
 else:
+    jwks_uri = None
     jwks_client = None
 
 
@@ -68,7 +69,13 @@ class Auth0AuthVerifier(AuthVerifierBase):
         self.auth_domain = os.environ.get("AUTH0_DOMAIN")
         if not self.auth_domain:
             raise Exception("Missing AUTH0_DOMAIN environment variable")
-        self.jwks_uri = _discover_jwks_uri(self.auth_domain)
+        # Discovered once, at import. This used to call _discover_jwks_uri
+        # again here, which put one HTTP request with a 10 second timeout on
+        # every construction and then threw the answer away: token verification
+        # below reads the module level jwks_client, not this attribute. Route
+        # dependencies build a verifier each, so an Auth0 deployment paid for
+        # about 190 of those before it served a request.
+        self.jwks_uri = jwks_uri
         # Note: cache_keys is set to True to avoid fetching the jwks keys on every request
         #       but it currently caches only per-route. After moving this auth verifier to be a singleton, we can cache it globally
         self.issuer = f"https://{self.auth_domain}/"
