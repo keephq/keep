@@ -37,13 +37,13 @@ def test_app(monkeypatch, request, db_session):
 
     try:
         monkeypatch.setenv("KEEP_USE_LIMITER", "false")
-        is_auth0 = False
+        uses_auth0 = False
         # Check if request.param is a dict or a string
         if isinstance(request.param, dict):
             # Set environment variables based on the provided dictionary
             for key, value in request.param.items():
                 monkeypatch.setenv(key, str(value))
-            is_auth0 = request.param.get("AUTH_TYPE") == "AUTH0"
+            uses_auth0 = request.param.get("AUTH_TYPE") == "AUTH0"
         else:
             # Old behavior for string parameters
             auth_type = request.param
@@ -51,13 +51,21 @@ def test_app(monkeypatch, request, db_session):
             monkeypatch.setenv("KEEP_JWT_SECRET", "somesecret")
 
             if auth_type == "MULTI_TENANT":
-                monkeypatch.setenv("AUTH0_DOMAIN", "https://auth0domain.com")
+                # A bare host, the way every other reader of this variable
+                # expects it. auth0_utils formats it into
+                # "https://{}/api/v2/" and the verifier builds its issuer the
+                # same way, so a value carrying its own scheme produced
+                # "https://https://auth0domain.com/".
+                monkeypatch.setenv("AUTH0_DOMAIN", "auth0domain.com")
+                # MULTI_TENANT loads the Auth0 verifier too, so it needs the
+                # same stub as the dict form below.
+                uses_auth0 = True
 
-        # When AUTH_TYPE=AUTH0, the authverifier module makes a real HTTP call
-        # at import time to fetch the OIDC discovery document. The mock must
-        # wrap the module reload as well, because deleted route modules get
-        # re-imported during reload and cascade into re-importing the verifier.
-        ctx = _mock_oidc_discovery() if is_auth0 else nullcontext()
+        # The authverifier module makes a real HTTP call at import time to
+        # fetch the OIDC discovery document. The mock must wrap the module
+        # reload as well, because deleted route modules get re-imported during
+        # reload and cascade into re-importing the verifier.
+        ctx = _mock_oidc_discovery() if uses_auth0 else nullcontext()
         with ctx:
             # Clear and reload modules to ensure environment changes are reflected
             for module in list(sys.modules):
