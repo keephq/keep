@@ -137,7 +137,7 @@ class SentryProvider(BaseProvider):
             list[tuple] | list[dict]: results of the query
         """
         headers = {
-            "Authorization": f"Bearer {self.config.authentication['api_token']}",
+            "Authorization": f"Bearer {self.authentication_config.api_key}",
         }
 
         params = {"limit": 100}
