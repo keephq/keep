@@ -2,7 +2,9 @@ import io
 import logging
 import os
 import random
+import threading
 import uuid
+from dataclasses import dataclass
 from typing import Tuple
 
 import celpy
@@ -32,11 +34,22 @@ from keep.workflowmanager.workflow import Workflow
 from sqlalchemy.exc import NoResultFound
 
 
+@dataclass
+class _CachedWorkflow:
+    """Holds a parsed Workflow object and the revision it was parsed from."""
+
+    workflow: "Workflow"
+    revision: int
+
+
 class WorkflowStore:
     def __init__(self):
         self.parser = Parser()
         self.logger = logging.getLogger(__name__)
         self.celpy_env = celpy.Environment()
+        # Parse cache: avoids re-parsing unchanged workflow YAML on every execution
+        self._parse_cache: dict[str, _CachedWorkflow] = {}
+        self._cache_lock = threading.Lock()
 
     def get_workflow_execution(
         self,
@@ -114,6 +127,7 @@ class WorkflowStore:
             raise HTTPException(403, detail="Cannot delete a provisioned workflow")
         try:
             delete_workflow(tenant_id, workflow_id)
+            self.invalidate_workflow_cache(tenant_id, workflow_id)
         except Exception as e:
             self.logger.exception(f"Error deleting workflow {workflow_id}: {str(e)}")
             raise HTTPException(
@@ -150,31 +164,68 @@ class WorkflowStore:
         return self.format_workflow_yaml(workflow.workflow_raw)
 
     def get_workflow(self, tenant_id: str, workflow_id: str) -> Workflow:
-        workflow = get_workflow_by_id(tenant_id, workflow_id)
-        if not workflow:
+        workflow_model = get_workflow_by_id(tenant_id, workflow_id)
+        if not workflow_model:
             raise HTTPException(
                 status_code=404,
                 detail=f"Workflow {workflow_id} not found",
             )
-        workflow_yaml = cyaml.safe_load(workflow.workflow_raw)
-        workflow = self.parser.parse(
+
+        cache_key = f"{tenant_id}:{workflow_id}"
+
+        # Check cache — revision bumps on every update, making it a reliable cache key
+        with self._cache_lock:
+            cached = self._parse_cache.get(cache_key)
+            if cached and cached.revision == workflow_model.revision:
+                self.logger.debug(
+                    "Workflow parse cache hit",
+                    extra={"workflow_id": workflow_id, "tenant_id": tenant_id},
+                )
+                return cached.workflow
+
+        # Cache miss — parse as normal
+        self.logger.debug(
+            "Workflow parse cache miss, parsing",
+            extra={"workflow_id": workflow_id, "tenant_id": tenant_id},
+        )
+        workflow_yaml = cyaml.safe_load(workflow_model.workflow_raw)
+        parsed = self.parser.parse(
             tenant_id,
             workflow_yaml,
-            workflow_db_id=workflow.id,
-            workflow_revision=workflow.revision,
-            is_test=workflow.is_test,
+            workflow_db_id=workflow_model.id,
+            workflow_revision=workflow_model.revision,
+            is_test=workflow_model.is_test,
         )
-        if len(workflow) > 1:
+        if len(parsed) > 1:
             raise HTTPException(
                 status_code=500,
                 detail=f"More than one workflow with id {workflow_id} found",
             )
-        elif workflow:
-            return workflow[0]
-        else:
+        elif not parsed:
             raise HTTPException(
                 status_code=404,
                 detail=f"Workflow {workflow_id} not found",
+            )
+
+        result = parsed[0]
+
+        # Store result in cache
+        with self._cache_lock:
+            self._parse_cache[cache_key] = _CachedWorkflow(
+                workflow=result,
+                revision=workflow_model.revision,
+            )
+
+        return result
+
+    def invalidate_workflow_cache(self, tenant_id: str, workflow_id: str) -> None:
+        """Evict a workflow from the parse cache. Call on update or delete."""
+        cache_key = f"{tenant_id}:{workflow_id}"
+        with self._cache_lock:
+            self._parse_cache.pop(cache_key, None)
+            self.logger.debug(
+                "Workflow parse cache invalidated",
+                extra={"workflow_id": workflow_id, "tenant_id": tenant_id},
             )
 
     def get_workflow_from_dict(self, tenant_id: str, workflow_dict: dict) -> Workflow:
