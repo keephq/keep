@@ -15,6 +15,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
 
 
 @pydantic.dataclasses.dataclass
@@ -95,6 +96,14 @@ receivers:
         )
     ]
     FINGERPRINT_FIELDS = ["fingerprint"]
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="Execute PromQL Query",
+            func_name="execute_query",
+            description="Run an instant PromQL query against Prometheus and return the results",
+            type="view",
+        )
+    ]
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -116,6 +125,25 @@ receivers:
         except Exception as e:
             validated_scopes["connectivity"] = str(e)
         return validated_scopes
+
+    def execute_query(self, query: str) -> dict:
+        """
+        Public wrapper around _query — exposes PromQL instant queries as an
+        invokable provider method so AI agents and Keep workflows can query
+        Prometheus directly.
+
+        Args:
+            query: A valid PromQL expression, e.g. ``up`` or ``rate(http_requests_total[5m])``
+
+        Returns:
+            dict: The raw ``data`` object from the Prometheus API response.
+        """
+        try:
+            return self._query(query)
+        except requests.HTTPError as e:
+            raise Exception(
+                f"Prometheus query failed ({e.response.status_code}): {e.response.text[:200]}"
+            ) from e
 
     def _query(self, query):
         """

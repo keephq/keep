@@ -9,7 +9,7 @@ This provider requires authentication.
 - **verify**: Verify SSL certificates (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
-- **connectivity**: Connectivity Test (mandatory)
+- **connectivity**: Connectivity Test (mandatory) 
 
 
 
@@ -25,7 +25,7 @@ steps:
       provider: prometheus
       config: "{{ provider.my_provider_name }}"
       with:
-        query: {value}
+        query: {value}  
 ```
 
 
@@ -39,6 +39,14 @@ Check the following workflow examples:
 - [enrich_using_structured_output_from_vllm_qwen.yaml](https://github.com/keephq/keep/blob/main/examples/workflows/enrich_using_structured_output_from_vllm_qwen.yaml)
 - [http_enrich.yml](https://github.com/keephq/keep/blob/main/examples/workflows/http_enrich.yml)
 - [multi-condition-cel.yml](https://github.com/keephq/keep/blob/main/examples/workflows/multi-condition-cel.yml)
+
+
+## Provider Methods
+The provider exposes the following [Provider Methods](/providers/provider-methods#via-ai-assistant). They are available in the [AI Assistant](/overview/ai-incident-assistant).
+
+- **execute_query** Run an instant PromQL query against Prometheus and return the results (view, scopes: no additional scopes)
+
+    - `query`: A valid PromQL expression, e.g. ``up`` or ``rate(http_requests_total[5m])``
 
 ## Connecting via Webhook (omnidirectional)
 
