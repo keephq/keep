@@ -51,6 +51,14 @@ class UptimekumaProvider(BaseProvider):
     PROVIDER_TAGS = ["alert"]
     PROVIDER_CATEGORY = ["Monitoring"]
 
+    webhook_description = """Install Keep as an UptimeKuma webhook
+    1) In UptimeKuma → Settings → Notifications → Setup Notification
+    2) Select "Webhook" as the Notification Type and set a Friendly Name (e.g. Keep)
+    3) Use URL = {keep_webhook_api_url_with_auth}
+    4) Request Body = Preset - application/json (recommended)
+    """
+    webhook_template = """"""
+
     PROVIDER_SCOPES = [
         ProviderScope(
             name="alerts",
