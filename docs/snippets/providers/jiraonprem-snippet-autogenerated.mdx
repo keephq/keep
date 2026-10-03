@@ -42,20 +42,22 @@ actions:
       provider: jiraonprem
       config: "{{ provider.my_provider_name }}"
       with:
-        summary: {value}  
-        description: {value}  
-        issue_type: {value}  
-        project_key: {value}  
-        board_name: {value}  
-        issue_id: {value}  
-        labels: {value}  
-        components: {value}  
-        custom_fields: {value}  
-        priority: {value}  
+        summary: {value}  # The summary of the issue.
+        description: {value}  # The description of the issue.
+        issue_type: {value}  # The type of the issue.
+        project_key: {value}  # The project key of the issue.
+        board_name: {value}  # The board name of the issue.
+        issue_id: {value}  # The issue id of the issue.
+        labels: {value}  # The labels of the issue.
+        components: {value}  # The components of the issue.
+        custom_fields: {value}  # The custom fields of the issue.
+        priority: {value}  # The priority of the issue.
+        transition_to: {value}  # Optional transition name (e.g., "Done", "Resolved") to apply after update/create.
 ```
 
 
 
 
-Check the following workflow example:
+Check the following workflow examples:
 - [jira_on_prem.yml](https://github.com/keephq/keep/blob/main/examples/workflows/jira_on_prem.yml)
+- [jira_on_prem_transition_on_resolved.yml](https://github.com/keephq/keep/blob/main/examples/workflows/jira_on_prem_transition_on_resolved.yml)
