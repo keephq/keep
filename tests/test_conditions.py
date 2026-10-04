@@ -164,3 +164,27 @@ def test_stddev_condition():
     )
     result = stddev_condition.apply(1, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     assert result is True
+
+
+@pytest.mark.parametrize(
+    "compare_type, threshold, value, expected",
+    [
+        ("gt", "-5", "-3", True),
+        ("gt", "-5", "-10", False),
+        ("lt", "-5", "-3", False),
+        ("lt", "-5", "-10", True),
+        ("gt", "-5.5", "-3", True),
+        ("gt", "5", "-3", False),
+        ("lt", "5", "-3", True),
+        ("gt", "-5", "3", True),
+    ],
+)
+def test_threshold_condition_negative_numbers(compare_type, threshold, value, expected):
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
+    threshold_condition = ThresholdCondition(
+        context_manager=context_manager,
+        condition_type="threshold",
+        condition_name="mock",
+        condition_config={"compare_type": compare_type},
+    )
+    assert threshold_condition.apply(threshold, value) is expected
