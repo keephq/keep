@@ -268,6 +268,8 @@ export default function IncidentsTable({
       id: "creation_time",
       header: "Created At",
       cell: ({ row }) => <DateTimeField date={row.original.creation_time} />,
+      enableSorting: true,
+      sortingFn: "datetime",
     }),
     columnHelper.display({
       id: "actions",

@@ -1,0 +1,26 @@
+From 9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b Mon Sep 17 00:00:00 2001
+From: Alistair <mydude92@users.noreply.github.com>
+Date: Fri, 11 Sep 2026 10:20:00 +0000
+Subject: [PATCH] fix(ttnn): restore exact erf GELU default in bias_gelu (#55130)
+
+---
+ ttnn/cpp/ttnn/operations/eltwise/binary/device/binary_composite_op.cpp | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/ttnn/cpp/ttnn/operations/eltwise/binary/device/binary_composite_op.cpp b/ttnn/cpp/ttnn/operations/eltwise/binary/device/binary_composite_op.cpp
+index 3333333..4444444 100644
+--- a/ttnn/cpp/ttnn/operations/eltwise/binary/device/binary_composite_op.cpp
++++ b/ttnn/cpp/ttnn/operations/eltwise/binary/device/binary_composite_op.cpp
+@@ -150,9 +150,11 @@ Tensor _bias_gelu(const Tensor& a, const Tensor& b, bool approximate, const MemoryConfig& output_mem_config) {
+     Tensor sum = ttnn::add(a, b);
+-    // Legacy bug: forced approximate mode unconditionally
+-    return ttnn::gelu(sum, true, output_mem_config);
++    // Fixed: default to exact erf-based evaluation matching standard PyTorch gelu
++    if (approximate) {
++        return ttnn::gelu(sum, true, output_mem_config); // Tanh fast approximation
++    }
++    return ttnn::gelu(sum, false, output_mem_config); // Exact erf formulation
+ }
+ 
+-- 
+2.34.1
