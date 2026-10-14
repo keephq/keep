@@ -31,6 +31,34 @@ The docker-compose.yml contains 3 services:
 - [keep-frontend](https://console.cloud.google.com/artifacts/docker/keephq/us-central1/keep/keep-ui?project=keephq) - a nextjs app that serves as Keep UI interface.
 - [keep-websocket-server](https://docs.soketi.app/getting-started/installation/docker) - Soketi (a pusher compatible websocket server) for real time alerting.
 
+### Debugging Keep UI
+
+The debug UI image uses the same production server as the regular image, with
+browser source maps and console output retained. The `Release Debug UI Image`
+workflow publishes `ghcr.io/keephq/keep-frontend:<version>-dev` when the release
+version changes on `main`. It can also be run manually with a release tag or
+commit containing debug-image support.
+
+To debug an existing deployment, replace only the frontend image with the
+matching `<version>-dev` image. Keep its environment variables, ports, and
+oauth2-proxy configuration, then reproduce the error with browser developer
+tools open and JavaScript source maps enabled. This also works in Kubernetes
+without running a local development server.
+
+You can build the image yourself from the corresponding release checkout:
+
+```sh
+docker build -f docker/Dockerfile.ui \
+  --build-arg KEEP_INCLUDE_SOURCES=true \
+  -t keep-ui:debug keep-ui
+```
+
+`KEEP_INCLUDE_SOURCES` is a **build argument**. Setting it only in a running
+container cannot generate source maps or change the routes compiled by Next.js.
+Source maps are included even when Sentry is disabled at build time. Debug images
+serve frontend source code to browsers; switch back to the regular image after
+debugging. Regular builds continue to block requests for source maps.
+
 ### Reinstall Keep with the option to refresh from scratch
 
 `Caution:` This usage context will refresh from the beginning and Keep's data and settings will be erased. Even other containers on this host are also erased. So please consider when using the steps below.
@@ -64,4 +92,3 @@ rm -rf state/*
 ```
 docker compose up -d
 ```
-

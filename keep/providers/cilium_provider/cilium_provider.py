@@ -124,6 +124,9 @@ class CiliumProvider(BaseTopologyProvider):
 
     def pull_topology(self) -> list[TopologyServiceInDto]:
         # for some providers that depends on grpc like cilium provider, this might fail on imports not from Keep (such as the docs script)
+        from google.protobuf import any_pb2, field_mask_pb2, timestamp_pb2, wrappers_pb2  # noqa
+        import keep.providers.cilium_provider.grpc.flow.flow_pb2  # noqa
+        import keep.providers.cilium_provider.grpc.relay.relay_pb2  # noqa
         from keep.providers.cilium_provider.grpc.observer_pb2 import (  # noqa
             FlowFilter,
             GetFlowsRequest,
