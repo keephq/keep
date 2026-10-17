@@ -249,6 +249,8 @@ class EnrichmentsBl:
                 match_dict = match_result.groupdict()
                 # we don't override source
                 match_dict.pop("source", None)
+                for field in getattr(self, "protected_fields", ()):
+                    match_dict.pop(field, None)
                 event.update(match_dict)
                 self.enrich_entity(
                     fingerprint,
@@ -471,6 +473,10 @@ class EnrichmentsBl:
                                             enrichment_key.strip()
                                         ] = enrichment_value.strip()
                                 break
+        enrichments = {
+            key: value for key, value in enrichments.items()
+            if key.strip() not in getattr(self, "protected_fields", ())
+        }
         if enrichments:
             # Enrich the alert with the matched data from the row
             for key, matcher in enrichments.items():

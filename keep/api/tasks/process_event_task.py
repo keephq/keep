@@ -21,7 +21,11 @@ from keep.api.alert_deduplicator.alert_deduplicator import AlertDeduplicator
 from keep.api.bl.enrichments_bl import EnrichmentsBl
 from keep.api.bl.incidents_bl import IncidentBl
 from keep.api.bl.maintenance_windows_bl import MaintenanceWindowsBl
-from keep.api.consts import KEEP_CORRELATION_ENABLED, MAINTENANCE_WINDOW_ALERT_STRATEGY, fingerprints_for_poll_payload
+from keep.api.consts import (
+    KEEP_CORRELATION_ENABLED,
+    MAINTENANCE_WINDOW_ALERT_STRATEGY,
+    fingerprints_for_poll_payload,
+)
 from keep.api.core.db import (
     bulk_upsert_alert_fields,
     enrich_alerts_with_incidents,
@@ -32,6 +36,13 @@ from keep.api.core.db import (
     get_session_sync,
     get_started_at_for_alerts,
     set_last_alert,
+)
+from keep.api.core.source_event_ordering import (
+    enabled as source_ordering_enabled,
+    current_alert,
+    advance_source_cursor,
+    source_event_decision,
+    serialized_source_event,
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.core.elastic import ElasticClient
@@ -153,6 +164,12 @@ def __save_to_db(
                 session.add(alert)
 
         enrichments_bl = EnrichmentsBl(tenant_id, session)
+        protected_fields = (
+            frozenset({"fingerprint", "sourceEventOrdering"})
+            if source_ordering_enabled(provider_type)
+            else frozenset()
+        )
+        enrichments_bl.protected_fields = protected_fields
         # add audit to the deduplicated events
         # TODO: move this to the alert deduplicator
         if KEEP_AUDIT_EVENTS_ENABLED:
@@ -186,6 +203,12 @@ def __save_to_db(
         )
 
         for formatted_event in formatted_events:
+            ordering_context = (
+                copy.deepcopy(formatted_event.sourceEventOrdering)
+                if source_ordering_enabled(provider_type)
+                else None
+            )
+            admitted_fingerprint = formatted_event.fingerprint
             formatted_event.pushed = True
 
             started_at = started_at_for_fingerprints.get(
@@ -196,11 +219,17 @@ def __save_to_db(
 
             if KEEP_CALCULATE_START_FIRING_TIME_ENABLED:
                 # calculate startFiring time
-                previous_alert = get_alerts_by_fingerprint(
-                    tenant_id=tenant_id,
-                    fingerprint=formatted_event.fingerprint,
-                    limit=1,
-                )
+                if source_ordering_enabled(provider_type):
+                    previous = current_alert(
+                        session, tenant_id, formatted_event.fingerprint
+                    )
+                    previous_alert = [previous] if previous else []
+                else:
+                    previous_alert = get_alerts_by_fingerprint(
+                        tenant_id=tenant_id,
+                        fingerprint=formatted_event.fingerprint,
+                        limit=1,
+                    )
                 previous_alert = convert_db_alerts_to_dto_alerts(previous_alert)
                 formatted_event.firingStartTime = calculated_start_firing_time(
                     formatted_event, previous_alert
@@ -244,6 +273,9 @@ def __save_to_db(
                     },
                 )
 
+            if ordering_context is not None:
+                formatted_event.fingerprint = admitted_fingerprint
+                formatted_event.sourceEventOrdering = ordering_context
             __validate_last_received(formatted_event)
 
             alert_args = {
@@ -266,6 +298,10 @@ def __save_to_db(
             saved_alerts.append(alert)
             alert_id = alert.id
             formatted_event.event_id = str(alert_id)
+            if ordering_context is not None:
+                ordering_context["eventId"] = str(alert_id)
+                formatted_event.sourceEventOrdering = ordering_context
+                alert.event = formatted_event.dict()
 
             if KEEP_AUDIT_EVENTS_ENABLED:
                 audit = AlertAudit(
@@ -283,13 +319,18 @@ def __save_to_db(
 
             session.commit()
             session.flush()
-            set_last_alert(tenant_id, alert, session=session)
+            if source_ordering_enabled(provider_type):
+                advance_source_cursor(session, tenant_id, alert)
+            else:
+                set_last_alert(tenant_id, alert, session=session)
 
             # Mapping
             try:
                 enrichments_bl.run_mapping_rules(formatted_event)
             except Exception:
                 logger.exception("Failed to run mapping rules")
+            if ordering_context is not None:
+                formatted_event.fingerprint = admitted_fingerprint
 
             alert_enrichment = get_enrichment_with_session(
                 session=session,
@@ -298,11 +339,16 @@ def __save_to_db(
             )
             if alert_enrichment:
                 for enrichment in alert_enrichment.enrichments:
+                    if enrichment in protected_fields:
+                        continue
                     # set the enrichment
                     value = alert_enrichment.enrichments[enrichment]
                     if isinstance(value, str):
                         value = value.strip()
                     setattr(formatted_event, enrichment, value)
+            if ordering_context is not None:
+                formatted_event.fingerprint = admitted_fingerprint
+                formatted_event.sourceEventOrdering = ordering_context
             enriched_formatted_events.append(formatted_event)
 
         logger.info("Checking for incidents to resolve", extra={"tenant_id": tenant_id})
@@ -359,6 +405,85 @@ def __save_to_db(
 
 
 def __handle_formatted_events(
+    tenant_id,
+    provider_type,
+    session,
+    raw_events,
+    formatted_events,
+    tracer,
+    provider_id=None,
+    notify_client=True,
+    timestamp_forced=None,
+    job_id=None,
+):
+    if not source_ordering_enabled(provider_type):
+        return __handle_formatted_events_unordered(
+            tenant_id,
+            provider_type,
+            session,
+            raw_events,
+            formatted_events,
+            tracer,
+            provider_id,
+            notify_client,
+            timestamp_forced,
+            job_id,
+        )
+    # End any read transaction made during provider formatting. The ordered
+    # session must read a fresh current cursor after acquiring its lock.
+    session.commit()
+    processed = []
+    for event in formatted_events:
+        with serialized_source_event(
+            session.get_bind(), tenant_id, event.fingerprint
+        ) as ordered_session:
+            previous = current_alert(ordered_session, tenant_id, event.fingerprint)
+            if previous and (
+                previous.provider_id != provider_id
+                or previous.provider_type != provider_type
+            ):
+                raise ValueError(
+                    "Source event ordering provider identity conflicts with the current cursor; "
+                    "review fingerprint namespacing or an explicit migration handoff"
+                )
+            decision = source_event_decision(
+                event.dict(), previous.event if previous else None
+            )
+            event.sourceEventOrdering = decision
+            if not decision["accepted"]:
+                # History remains inspectable; deliberately do not move LastAlert,
+                # dispose enrichments, resolve incidents, or enqueue workflows.
+                archived = Alert(
+                    tenant_id=tenant_id,
+                    provider_type=provider_type,
+                    provider_id=provider_id,
+                    fingerprint=event.fingerprint,
+                    event=event.dict(),
+                    alert_hash=getattr(event, "alert_hash", None),
+                )
+                ordered_session.add(archived)
+                ordered_session.flush()
+                decision["eventId"] = str(archived.id)
+                archived.event = event.dict()
+                ordered_session.commit()
+                continue
+            accepted = __handle_formatted_events_unordered(
+                tenant_id,
+                provider_type,
+                ordered_session,
+                raw_events,
+                [event],
+                tracer,
+                provider_id,
+                notify_client,
+                timestamp_forced,
+                job_id,
+            )
+            processed.extend(accepted or [])
+    return processed
+
+
+def __handle_formatted_events_unordered(
     tenant_id,
     provider_type,
     session: Session,
@@ -435,6 +560,11 @@ def __handle_formatted_events(
             event = alert_deduplicator.apply_deduplication(
                 event, deduplication_rules, last_alerts_fingerprint_to_hash
             )
+            if source_ordering_enabled(provider_type):
+                # Source-time retries were rejected before dedup. A newer source
+                # event must advance the cursor even when a full-dedup rule
+                # ignores its timestamp; otherwise a later stale event can win.
+                event.isFullDuplicate = False
 
         # filter out the deduplicated events
         deduplicated_events = list(
@@ -525,13 +655,13 @@ def __handle_formatted_events(
         ignored_events = list(
             filter(
                 lambda event: event.status == AlertStatus.MAINTENANCE.value,
-                enriched_formatted_events
+                enriched_formatted_events,
             )
         )
         enriched_formatted_events = list(
             filter(
                 lambda event: event.status != AlertStatus.MAINTENANCE.value,
-                enriched_formatted_events
+                enriched_formatted_events,
             )
         )
 
@@ -597,11 +727,7 @@ def __handle_formatted_events(
                 pusher_client.trigger(
                     f"private-{tenant_id}",
                     "poll-alerts",
-                    {
-                        "fingerprints": fingerprints_for_poll_payload(
-                            alert_fingerprints
-                        )
-                    },
+                    {"fingerprints": fingerprints_for_poll_payload(alert_fingerprints)},
                 )
                 logger.info("Told client to poll alerts")
             except Exception:

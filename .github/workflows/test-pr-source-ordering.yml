@@ -1,0 +1,58 @@
+name: CloudWatch source ordering contracts
+
+on:
+  pull_request:
+    paths:
+      - keep/api/core/source_event_ordering.py
+      - keep/api/tasks/process_event_task.py
+      - keep/providers/cloudwatch_provider/**
+      - keep/providers/providers_service.py
+      - tests/test_source_event_ordering.py
+      - tests/test_cloudwatch_scope_validation.py
+      - tests/test_provider_pulling_provisioning.py
+      - .github/workflows/test-pr-source-ordering.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18.3-bookworm@sha256:80630f83606d8db77d30b3851b16a9f78be2d0d4dda6f7b82a1fdca5ebe3acba
+        env:
+          POSTGRES_DB: keep_source_ordering_test
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d keep_source_ordering_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      PYTHON_VERSION: '3.11'
+      SKIP_DOCKER: 'true'
+      AWS_EC2_METADATA_DISABLED: 'true'
+      KEEP_TEST_ORDERING_POSTGRES_URL: postgresql+psycopg2://postgres@127.0.0.1:5432/keep_source_ordering_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      - uses: actions/cache@v4
+        with:
+          path: .venv
+          key: source-ordering-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
+      - run: poetry install --no-interaction --no-root --with dev
+      - name: Real provider and PostgreSQL contracts without external delivery
+        run: >-
+          poetry run pytest -q --timeout 60
+          tests/test_source_event_ordering.py
+          tests/test_cloudwatch_scope_validation.py
+          tests/test_provider_pulling_provisioning.py

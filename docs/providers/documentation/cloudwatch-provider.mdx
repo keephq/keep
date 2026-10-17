@@ -37,6 +37,66 @@ To integrate CloudWatch with Keep, you'll need the following:
 3. **Set Up SNS Topic (Optional)**: If using a custom SNS topic, specify its ARN or name in the provider configuration. Keep will use this topic to listen for alarm notifications.
 4. **Activate the Provider**: Finalize the setup in Keep to start receiving CloudWatch alarms.
 
+## Externally managed SNS subscriptions (webhook-only mode)
+
+If Terraform, CloudFormation, or another deployment system owns your alarm actions
+and SNS subscriptions, set `webhook_only: true` in the provider's authentication
+configuration. Keep still uses the native CloudWatch event formatter, but does not
+require AWS credentials, validate AWS permissions, start Logs Insights queries, or
+install subscriptions in this mode. Region remains required.
+
+```json
+{
+  "region": "us-east-1",
+  "protocol": "https",
+  "webhook_only": true
+}
+```
+
+For providers provisioned through `KEEP_PROVIDERS` or a provider file, place
+`install_webhook` and `pulling_enabled` at the top level:
+
+```yaml
+name: cloudwatch-receiver
+type: cloudwatch
+install_webhook: false
+pulling_enabled: false
+authentication:
+  region: us-east-1
+  protocol: https
+  webhook_only: true
+```
+
+These settings are separate from authentication. `pulling_enabled` accepts a
+boolean or the strings `"true"`/`"false"` and is honored on installation and
+reprovisioning; omitting it retains the existing enabled-by-default behavior.
+When calling `ProvidersService.install_provider` directly, pass
+`pulling_enabled=False`. Do not use the automatic installation action in
+webhook-only mode; it raises an error before accessing AWS. Workflow queries are
+also disabled.
+
+Configure your SNS HTTPS subscription to use the Keep CloudWatch webhook URL
+with the installed `provider_id` and the usual Keep API authentication. SNS
+subscription confirmation and event parsing are unchanged. Externally provision
+ALARM, OK, and any desired INSUFFICIENT_DATA alarm actions; receiving an ALARM
+alone does not configure recovery delivery.
+
+## Permission validation
+
+In API mode (the default), permission validation first uses
+`iam:SimulatePrincipalPolicy`. Simulation results are reported without replacing
+denied permissions with live probes. If simulation is unavailable, Keep probes
+only read operations: describing alarms, listing a configured topic's
+subscriptions, listing existing Logs Insights queries, and retrieving an existing
+query's results when one is available.
+
+Permission validation never calls `PutMetricAlarm` or starts a query. Their scope
+results remain unverified unless IAM simulation determines them. An unverified
+scope is not proof that access is denied or granted. An empty query history also
+does not prove that `GetQueryResults` is denied. Automatic subscription installation
+and explicit workflow queries still require their actual AWS permissions when
+used in API mode.
+
 ## Troubleshooting
 
 - Ensure the AWS credentials provided have the correct permissions and are not expired.
@@ -46,10 +106,69 @@ To integrate CloudWatch with Keep, you'll need the following:
 ## Webhook Integration Modifications
 
 The webhook integration for CloudWatch adds Keep as a subscriber to the SNS topics associated with CloudWatch alarms. This integration allows Keep to receive notifications for all alarms triggered within the AWS environment.
-The integration automatically gains access to the following scopes within CloudWatch:
-- `cloudwatch:DescribeAlarms`
+Automatic installation requires AWS permissions granted by your IAM policies;
+it does not grant permissions itself. It can update alarm actions using
+`cloudwatch:PutMetricAlarm` and subscribe to SNS topics. Use webhook-only mode
+when these resources are managed outside Keep.
 
 ## Useful Links
 
 - [AWS CloudWatch Documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/WhatIsCloudWatch.html)
 - [AWS SNS Documentation](https://docs.aws.amazon.com/sns/latest/dg/welcome.html)
+
+### Experimental source event ordering (PostgreSQL only)
+
+`KEEP_SOURCE_EVENT_ORDERING_PROVIDERS=cloudwatch` opts in to ordering incoming
+CloudWatch state changes by `StateChangeTime`, exposed as `lastReceived`.
+The default is disabled; enabling it on another database fails before alert
+mutation. This is draft functionality, not a production cutover recommendation.
+
+Admission uses the existing tenant/fingerprint cursor and a PostgreSQL advisory
+lock, including concurrent first arrivals. Ingestion timestamps are retained.
+Older events, exact retries and conflicting states with the same source timestamp
+remain in alert history, but do not replace the current alert, dispose its
+enrichments, resolve incidents or enqueue another workflow. Equal-time conflicts
+are recorded for investigation; arrival order is not used to choose a winner.
+A newer source event advances the cursor even if a full-deduplication rule ignores
+its timestamp. This opt-in therefore changes full-deduplication behavior for
+CloudWatch; source-time retries are rejected before ordinary deduplication.
+
+The cursor's provider ID and type must match the incoming provider. A collision
+is rejected explicitly before changing alert history or current state. Use
+provider-scoped fingerprints (for example, a reviewed rule based on `providerId`
+and `AlarmArn`) before opting in. Migrating an existing generic integration whose
+current alert was stored with another provider type requires an explicit reviewed
+cursor handoff; changing only the installed provider's type does not perform it.
+Historical alerts are not rewritten by this feature.
+
+After admission, `fingerprint` and `sourceEventOrdering` are reserved: post-format
+extraction rules, mapping rules and stored enrichment overlays cannot redirect the
+admitted identity or replace its ordering context. With ordering disabled, existing
+enrichment behavior remains unchanged.
+
+Accepted alerts carry reserved `sourceEventOrdering` context:
+
+- `accepted`: whether the event was admitted as the current source transition.
+- `reason`: admission or archival reason.
+- `sourceTime`: normalized source timestamp.
+- `eventId`: persisted alert event ID.
+- `recoveryEligible`: true for an accepted recovery only when the current episode
+  contains an observed accepted firing, including a pending intermediate state.
+- `episodeFiringObserved`: whether the current episode still has an observed firing.
+
+An initial `OK` is ingested with `recoveryEligible: false`; workflows must explicitly
+use that field when deciding to notify a recovery. It is not proof that a firing
+notification was delivered to an external destination.
+
+**Known cutover blocker:** admission is serialized through workflow queue insertion,
+but workflows already queued can still execute after a newer source event. The
+execution/action boundary needs an upstream-approved stale-work policy before
+production activation. Holding the ingest lock across arbitrary workflow actions
+can deadlock workflows that synchronously emit the same fingerprint and can delay
+recovery behind long-running actions. This contribution does not claim exactly-once
+notification delivery or a transaction spanning the database and external channels.
+
+Run the isolated PostgreSQL regressions with
+`KEEP_TEST_ORDERING_POSTGRES_URL=<disposable-database-url> pytest --noconftest tests/test_source_event_ordering.py`.
+These tests use no AWS API or external notification destination. PostgreSQL cases
+are skipped when the explicit test database URL is absent.

@@ -77,6 +77,16 @@ class CloudwatchProviderAuthConfig:
         },
     )
 
+    webhook_only: bool = dataclasses.field(
+        default=False,
+        metadata={
+            "required": False,
+            "description": "Receive webhooks only; do not access AWS APIs",
+            "sensitive": False,
+            "type": "switch",
+        },
+    )
+
 
 class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
     """Push alarms from AWS Cloudwatch to Keep."""
@@ -183,211 +193,84 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
             self.logger.info("API key is disabled for CloudWatch provider")
 
     def validate_scopes(self):
-        # init the scopes as False
-        scopes = {scope.name: False for scope in self.PROVIDER_SCOPES}
-        # the scope name is the action
-        actions = scopes.keys()
-        # fetch the results
+        """Validate capabilities without changing alarms or starting queries.
+
+        IAM simulation can check write permissions safely. When unavailable,
+        only read operations are probed; a diagnostic string means unverified,
+        not granted. An externally managed webhook receiver needs no AWS scopes.
+        """
+        if self.authentication_config.webhook_only:
+            return {}
+
+        scopes = {
+            scope.name: "Not verified: IAM policy simulation is unavailable"
+            for scope in self.PROVIDER_SCOPES
+        }
         try:
             sts_client = self.__generate_client("sts")
             identity = sts_client.get_caller_identity()["Arn"]
             iam_client = self.__generate_client("iam")
-        except Exception as e:
-            self.logger.exception(
-                "Error validating AWS IAM scopes",
-                extra={"tenant_id": self.context_manager.tenant_id},
-            )
-            scopes = {s: str(e) for s in scopes.keys()}
-            return scopes
-        # 0. try to validate all scopes using simulate_principal_policy
-        #    if the user/role have permissions to simulate_principal_policy, we can validate the scopes easily
-        try:
             iam_resp = iam_client.simulate_principal_policy(
-                PolicySourceArn=identity, ActionNames=list(actions)
+                PolicySourceArn=identity, ActionNames=list(scopes)
             )
-            scopes = {
-                res.get("EvalActionName"): res.get("EvalDecision") == "allowed"
-                for res in iam_resp.get("EvaluationResults")
-            }
+            for result in iam_resp.get("EvaluationResults", []):
+                action = result.get("EvalActionName")
+                if action in scopes:
+                    scopes[action] = result.get("EvalDecision") == "allowed"
             scopes["iam:SimulatePrincipalPolicy"] = True
-            if all(scopes.values()):
-                self.logger.info(
-                    "All AWS IAM scopes are granted!",
-                    extra={
-                        "scopes": scopes,
-                        "tenant_id": self.context_manager.tenant_id,
-                    },
-                )
-                return scopes
-            # if not all the scopes are granted, we need to test them one by one
-            else:
-                self.logger.warning(
-                    "Some of the AWS IAM scopes are not granted, testing them one by one...",
-                    extra={
-                        "scopes": scopes,
-                        "tenant_id": self.context_manager.tenant_id,
-                    },
-                )
-        # otherwise, we need to test them one by one
+            # Do not override explicit/implicit denies with a live API probe.
+            return scopes
         except Exception:
-            self.logger.exception(
-                "Error validating AWS IAM scopes",
+            self.logger.info(
+                "IAM policy simulation unavailable; checking read-only capabilities",
                 extra={"tenant_id": self.context_manager.tenant_id},
-            )
-            scopes["iam:SimulatePrincipalPolicy"] = (
-                "No permissions to simulate_principal_policy (but its cool, its not a must)"
             )
 
-        self.logger.info("Validating aws cloudwatch scopes")
-        # 1. validate describe alarms
-        cloudwatch_client = self.__generate_client("cloudwatch")
-        resp = None
         try:
-            resp = cloudwatch_client.describe_alarms()
+            cloudwatch_client = self.__generate_client("cloudwatch")
+            cloudwatch_client.describe_alarms(MaxRecords=1)
             scopes["cloudwatch:DescribeAlarms"] = True
         except Exception as e:
-            self.logger.exception(
-                "Error validating AWS cloudwatch:DescribeAlarms scope",
-                extra={"tenant_id": self.context_manager.tenant_id},
-            )
             scopes["cloudwatch:DescribeAlarms"] = str(e)
-        # if we got the response, we can validate the other scopes
-        if resp:
-            # 2. validate put metric alarm
-            try:
-                alarms = resp.get("MetricAlarms", [])
-                alarm = alarms[0]
-                filtered_alarm = {
-                    k: v
-                    for k, v in alarm.items()
-                    if k in CloudwatchProvider.VALID_ALARM_KEYS
-                }
-                cloudwatch_client.put_metric_alarm(**filtered_alarm)
-                scopes["cloudwatch:PutMetricAlarm"] = True
-            except Exception as e:
-                self.logger.exception(
-                    "Error validating AWS cloudwatch:PutMetricAlarm scope",
-                    extra={"tenant_id": self.context_manager.tenant_id},
-                )
-                scopes["cloudwatch:PutMetricAlarm"] = str(e)
-        else:
-            scopes["cloudwatch:PutMetricAlarm"] = (
-                "cloudwatch:DescribeAlarms scope is not granted, so we cannot validate cloudwatch:PutMetricAlarm scope"
-            )
-        # 3. validate list subscriptions by topic
+
         if self.authentication_config.cloudwatch_sns_topic:
             try:
                 sns_client = self.__generate_client("sns")
                 sns_topic = self.authentication_config.cloudwatch_sns_topic
-                if not sns_topic.startswith("arn:aws:sns"):
+                if not sns_topic.startswith("arn:"):
                     account_id = self._get_account_id()
-                    sns_topic = f"arn:aws:sns:{self.authentication_config.region}:{account_id}:{self.authentication_config.cloudwatch_sns_topic}"
+                    sns_topic = f"arn:aws:sns:{self.authentication_config.region}:{account_id}:{sns_topic}"
                 sns_client.list_subscriptions_by_topic(TopicArn=sns_topic)
                 scopes["sns:ListSubscriptionsByTopic"] = True
             except Exception as e:
-                self.logger.exception(
-                    "Error validating AWS sns:ListSubscriptionsByTopic scope",
-                    extra={"tenant_id": self.context_manager.tenant_id},
-                )
                 scopes["sns:ListSubscriptionsByTopic"] = str(e)
         else:
             scopes["sns:ListSubscriptionsByTopic"] = (
-                "cloudwatch_sns_topic is not set, so we cannot validate sns:ListSubscriptionsByTopic scope"
+                "Not verified: cloudwatch_sns_topic is not set"
             )
 
-        # 4. validate start query
-        logs_client = self.__generate_client("logs")
-
         try:
-            logs_client.start_query(
-                logGroupName="keepTest",
-                queryString="keepTest",
-                startTime=int(
-                    (
-                        datetime.datetime.today() - datetime.timedelta(hours=24)
-                    ).timestamp()
-                ),
-                endTime=int(datetime.datetime.now().timestamp()),
-            )
-            scopes["logs:StartQuery"] = True
-        except Exception as e:
-            # that means that the user/role have the permissions but we've just made up the logGroupName which make sense
-            if "ResourceNotFoundException" in str(e):
-                self.logger.info(
-                    "AWS logs:StartQuery scope is not required",
-                    extra={"tenant_id": self.context_manager.tenant_id},
-                )
-                scopes["logs:StartQuery"] = True
-            # other/wise the scope is false
-            else:
-                self.logger.info(
-                    "Error validating AWS logs:StartQuery scope",
-                    extra={"tenant_id": self.context_manager.tenant_id},
-                )
-                scopes["logs:StartQuery"] = str(e)
-
-        query_id = False
-        self.logger.info(
-            "Validating AWS logs:DescribeQueries scope",
-            extra={
-                "tenant_id": self.context_manager.tenant_id,
-            },
-        )
-        try:
-            query_id = logs_client.describe_queries().get("queries")[0]["queryId"]
+            logs_client = self.__generate_client("logs")
+            queries = logs_client.describe_queries(maxResults=1).get("queries", [])
             scopes["logs:DescribeQueries"] = True
-        except Exception:
-            self.logger.exception(
-                "Error validating AWS logs:DescribeQueries scope",
-                extra={
-                    "tenant_id": self.context_manager.tenant_id,
-                },
+        except Exception as e:
+            scopes["logs:DescribeQueries"] = str(e)
+            scopes["logs:GetQueryResults"] = (
+                "Not verified: cannot list an existing Logs Insights query"
             )
-            scopes["logs:DescribeQueries"] = (
-                "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
-            )
-
-        self.logger.info(
-            "Validating AWS logs:StartQuery scope",
-            extra={
-                "tenant_id": self.context_manager.tenant_id,
-            },
-        )
-        if query_id:
-            try:
-                logs_client.get_query_results(queryId=query_id)
-                scopes["logs:StartQuery"] = True
-            except Exception as e:
-                self.logger.exception(
-                    "Error validating AWS logs:StartQuery scope",
-                    extra={"tenant_id": self.context_manager.tenant_id},
+        else:
+            if queries:
+                try:
+                    logs_client.get_query_results(queryId=queries[0]["queryId"])
+                    scopes["logs:GetQueryResults"] = True
+                except Exception as e:
+                    scopes["logs:GetQueryResults"] = str(e)
+            else:
+                scopes["logs:GetQueryResults"] = (
+                    "Not verified: no existing Logs Insights query is available"
                 )
-                scopes["logs:StartQuery"] = str(e)
-        else:
-            scopes["logs:StartQuery"] = (
-                "Could not validate logs:StartQuery scope without logs:DescribeQueries, so assuming the scope is not granted."
-            )
 
-        # 5. validate get query results
-        self.logger.info(
-            "Validating AWS logs:GetQueryResults scope",
-            extra={
-                "tenant_id": self.context_manager.tenant_id,
-            },
-        )
-        if query_id:
-            try:
-                logs_client.get_query_results(queryId=query_id)
-                scopes["logs:GetQueryResults"] = True
-            except Exception as e:
-                self.logger.exception("Error validating AWS logs:GetQueryResults scope")
-                scopes["logs:GetQueryResults"] = str(e)
-        else:
-            scopes["logs:DescribeQueries"] = (
-                "Could not validate logs:GetQueryResults scope without logs:DescribeQueries, so assuming the scope is not granted."
-            )
-
-        # Finally
+        # PutMetricAlarm and StartQuery intentionally have no live probes.
         return scopes
 
     @property
@@ -405,6 +288,8 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         hours: int = 24,
         **kwargs: dict,
     ) -> dict:
+        if self.authentication_config.webhook_only:
+            raise ValueError("Queries are disabled when webhook_only is enabled")
         # log_group = kwargs.get("log_group")
         # query = kwargs.get("query")
         # hours = kwargs.get("hours", 24)
@@ -460,6 +345,8 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         return identity["Account"]
 
     def __generate_client(self, aws_client_type: str):
+        if self.authentication_config.webhook_only:
+            raise ValueError("AWS API access is disabled when webhook_only is enabled")
         if self.authentication_config.session_token:
             self.logger.info("Using temporary credentials")
             client = boto3.client(
@@ -480,7 +367,9 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
 
     def dispose(self):
         try:
-            self.client.close()
+            # Disposing an unused receiver must not initialize an AWS client.
+            if self._client is not None:
+                self._client.close()
         except Exception:
             self.logger.exception("Error closing boto3 connection")
 
@@ -488,10 +377,18 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
         self.authentication_config = CloudwatchProviderAuthConfig(
             **self.config.authentication
         )
+        if self.authentication_config.webhook_only:
+            # Do not mark API scopes granted: none are needed in this mode.
+            # Keep the class-level scope catalog intact for API-mode instances.
+            self.PROVIDER_SCOPES = []
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
     ):
+        if self.authentication_config.webhook_only:
+            raise ValueError(
+                "Automatic webhook installation is disabled when webhook_only is enabled"
+            )
         # first, list all Cloudwatch alarms
         self.logger.info("Setting up webhook with url %s", keep_api_url)
         cloudwatch_client = self.__generate_client("cloudwatch")
@@ -687,9 +584,9 @@ class CloudwatchProvider(BaseProvider, ProviderHealthMixin):
                 target[param_parts[-1]] = choices[param_index]
 
         # Set StateChangeTime to current time
-        simulated_alert["Message"][
-            "StateChangeTime"
-        ] = datetime.datetime.now().isoformat()
+        simulated_alert["Message"]["StateChangeTime"] = (
+            datetime.datetime.now().isoformat()
+        )
 
         # Provider expects all keys as string
         for key in simulated_alert:
