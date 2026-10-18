@@ -9,6 +9,8 @@ from keep.api.models.db.topology import (
     TopologyApplicationDtoIn,
     TopologyService,
     TopologyServiceDependency,
+    TopologyServiceDependencyCreateRequestDto,
+    TopologyServiceDependencyUpdateRequestDto,
     TopologyServiceDtoIn,
 )
 from keep.topologies.topologies_service import (
@@ -16,6 +18,7 @@ from keep.topologies.topologies_service import (
     ApplicationNotFoundException,
     InvalidApplicationDataException,
     ServiceNotFoundException,
+    DependencyNotFoundException,
 )
 from keep.api.models.db.alert import Incident
 from keep.api.models.db.incident import IncidentStatus
@@ -451,3 +454,47 @@ def test_get_application_based_incident_skips_deleted_incident(db_session):
         processor._get_application_based_incident(SINGLE_TENANT_UUID, application)
         is None
     )
+
+
+def test_cross_tenant_dependency_idor_isolation(db_session):
+    tenant_a = "tenant-a-uuid"
+    tenant_b = "tenant-b-uuid"
+
+    service_a1 = create_service(db_session, tenant_a, "srv_a1")
+    service_a2 = create_service(db_session, tenant_a, "srv_a2")
+    service_b1 = create_service(db_session, tenant_b, "srv_b1")
+    service_b2 = create_service(db_session, tenant_b, "srv_b2")
+
+    dep_a = TopologyServiceDependency(
+        service_id=service_a1.id,
+        depends_on_service_id=service_a2.id,
+    )
+    db_session.add(dep_a)
+    db_session.commit()
+    db_session.refresh(dep_a)
+
+    # 1. Tenant B cannot read Tenant A's dependency
+    assert TopologiesService.get_dependency_by_id(dep_a.id, db_session, tenant_id=tenant_b) is None
+    assert TopologiesService.get_dependency_by_id(dep_a.id, db_session, tenant_id=tenant_a) is not None
+
+    # 2. Tenant B cannot delete Tenant A's dependency
+    with pytest.raises(DependencyNotFoundException):
+        TopologiesService.delete_dependency(dep_a.id, db_session, tenant_id=tenant_b)
+
+    # 3. Tenant B cannot update Tenant A's dependency
+    update_dto = TopologyServiceDependencyUpdateRequestDto(
+        id=dep_a.id,
+        service_id=service_b1.id,
+        depends_on_service_id=service_b2.id,
+    )
+    with pytest.raises(DependencyNotFoundException):
+        TopologiesService.update_dependency(update_dto, db_session, tenant_id=tenant_b)
+
+    # 4. Tenant B cannot create a dependency linking another tenant's services
+    create_dto = TopologyServiceDependencyCreateRequestDto(
+        service_id=service_a1.id,
+        depends_on_service_id=service_b2.id,
+    )
+    with pytest.raises(ServiceNotFoundException):
+        TopologiesService.create_dependency(create_dto, tenant_id=tenant_b, session=db_session)
+
