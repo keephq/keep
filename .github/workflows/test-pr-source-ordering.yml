@@ -4,10 +4,14 @@ on:
   pull_request:
     paths:
       - keep/api/core/source_event_ordering.py
+      - keep/api/core/db.py
       - keep/api/tasks/process_event_task.py
+      - keep/workflowmanager/workflowmanager.py
+      - keep/workflowmanager/workflowscheduler.py
       - keep/providers/cloudwatch_provider/**
       - keep/providers/providers_service.py
       - tests/test_source_event_ordering.py
+      - tests/test_source_ordering_workflow_enrichments.py
       - tests/test_cloudwatch_scope_validation.py
       - tests/test_provider_pulling_provisioning.py
       - .github/workflows/test-pr-source-ordering.yml
@@ -54,5 +58,6 @@ jobs:
         run: >-
           poetry run pytest -q --timeout 60
           tests/test_source_event_ordering.py
+          tests/test_source_ordering_workflow_enrichments.py
           tests/test_cloudwatch_scope_validation.py
           tests/test_provider_pulling_provisioning.py

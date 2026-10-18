@@ -143,8 +143,17 @@ Historical alerts are not rewritten by this feature.
 
 After admission, `fingerprint` and `sourceEventOrdering` are reserved: post-format
 extraction rules, mapping rules and stored enrichment overlays cannot redirect the
-admitted identity or replace its ordering context. With ordering disabled, existing
-enrichment behavior remains unchanged.
+admitted identity or replace its ordering context. Workflow queue insertion and
+retry refreshes enforce these exclusions too, including the persisted `event_id`.
+Legacy events without an admission context retain their existing enrichment
+behavior. Events already admitted keep their protection if ordering is disabled
+while they are waiting in the workflow queue.
+
+For `only_on_change` and `severity_changed`, ordered alerts compare against the
+previous **accepted** source transition of the same tenant, fingerprint and provider.
+The comparison is anchored to `sourceEventOrdering.eventId`, so rejected history
+entries and worker clock differences cannot suppress a legitimate transition.
+This does not remove history entries or make queued workflow execution atomic.
 
 Accepted alerts carry reserved `sourceEventOrdering` context:
 
@@ -169,6 +178,6 @@ recovery behind long-running actions. This contribution does not claim exactly-o
 notification delivery or a transaction spanning the database and external channels.
 
 Run the isolated PostgreSQL regressions with
-`KEEP_TEST_ORDERING_POSTGRES_URL=<disposable-database-url> pytest --noconftest tests/test_source_event_ordering.py`.
+`KEEP_TEST_ORDERING_POSTGRES_URL=<disposable-database-url> pytest --noconftest tests/test_source_event_ordering.py tests/test_source_ordering_workflow_enrichments.py`.
 These tests use no AWS API or external notification destination. PostgreSQL cases
 are skipped when the explicit test database URL is absent.

@@ -550,6 +550,7 @@ def test_persisted_enrichments_cannot_override_admitted_identity(
         lambda **kwargs: SimpleNamespace(
             enrichments={
                 "fingerprint": "foreign-entity",
+                "event_id": "foreign-event",
                 "sourceEventOrdering": {"accepted": False},
                 "service": "payments",
             }
@@ -558,4 +559,5 @@ def test_persisted_enrichments_cannot_override_admitted_identity(
     receive("firing", 5)
     assert queued[0].fingerprint == "alarm"
     assert queued[0].sourceEventOrdering["accepted"] is True
+    assert queued[0].event_id == queued[0].sourceEventOrdering["eventId"]
     assert queued[0].service == "payments"

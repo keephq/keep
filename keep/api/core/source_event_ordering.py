@@ -16,11 +16,41 @@ from sqlmodel import Session, select
 
 from keep.api.models.db.alert import Alert, LastAlert
 
+SOURCE_ORDERING_RESERVED_FIELDS = frozenset(
+    {"fingerprint", "event_id", "sourceEventOrdering"}
+)
+
 
 def enabled(provider_type):
     configured = os.environ.get("KEEP_SOURCE_EVENT_ORDERING_PROVIDERS", "").split(",")
     # Only CloudWatch currently promises that lastReceived is its state change time.
     return provider_type == "cloudwatch" and provider_type in configured
+
+
+def source_ordered_event_id(event):
+    """Use the persisted admission ID, never an enrichment overlay, for comparisons."""
+    context = getattr(event, "sourceEventOrdering", None)
+    if isinstance(context, dict) and context.get("accepted") is True:
+        identity = context.get("eventId")
+        if isinstance(identity, str) and identity:
+            return identity
+    return None
+
+
+def workflow_enrichments(event, enrichments):
+    """Keep admission identity/context reserved at initial dispatch and retries.
+
+    Already queued ordered events retain protection if the feature is later
+    disabled. Legacy events without an admission context keep their old merge.
+    """
+    context = getattr(event, "sourceEventOrdering", None)
+    if not isinstance(context, dict) or type(context.get("accepted")) is not bool:
+        return enrichments
+    return {
+        field: value
+        for field, value in enrichments.items()
+        if field not in SOURCE_ORDERING_RESERVED_FIELDS
+    }
 
 
 def _source_time(event):

@@ -38,6 +38,7 @@ from keep.api.core.db import (
     set_last_alert,
 )
 from keep.api.core.source_event_ordering import (
+    SOURCE_ORDERING_RESERVED_FIELDS,
     enabled as source_ordering_enabled,
     current_alert,
     advance_source_cursor,
@@ -165,7 +166,7 @@ def __save_to_db(
 
         enrichments_bl = EnrichmentsBl(tenant_id, session)
         protected_fields = (
-            frozenset({"fingerprint", "sourceEventOrdering"})
+            SOURCE_ORDERING_RESERVED_FIELDS
             if source_ordering_enabled(provider_type)
             else frozenset()
         )

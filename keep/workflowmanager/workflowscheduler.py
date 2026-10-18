@@ -27,6 +27,7 @@ from keep.api.core.metrics import (
     workflow_queue_size,
     workflows_running,
 )
+from keep.api.core.source_event_ordering import workflow_enrichments
 from keep.api.models.alert import AlertDto
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
@@ -596,7 +597,9 @@ class WorkflowScheduler:
                     # merge the new enrichment with the original event
                     if new_enrichment:
                         new_event = event.dict()
-                        new_event.update(new_enrichment.enrichments)
+                        new_event.update(
+                            workflow_enrichments(event, new_enrichment.enrichments)
+                        )
                         if isinstance(event, IncidentDto):
                             event = IncidentDto(**new_event)
                         else:
