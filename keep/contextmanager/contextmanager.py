@@ -31,6 +31,8 @@ class ContextManager:
         self.tenant_id = tenant_id
         self.steps_context = {}
         self.steps_context_size = 0
+        # set when the run aborts (a step failed without continue_on_error): the remaining steps never ran
+        self.workflow_cancelled = False
         self.providers_context = {}
         self.actions_context = {}
         self.event_context: AlertDto = {}
@@ -246,6 +248,23 @@ class ContextManager:
         )
         if condition_alias:
             self.aliases[condition_alias] = result
+
+    def set_step_status(self, step_id, status):
+        """Record how a step (or action) of the current run ended: "success", "failure" or "skipped".
+
+        Read back by the workflow status check functions (keep.success() and friends).
+        """
+        if step_id not in self.steps_context:
+            self.steps_context[step_id] = {"conditions": {}, "results": {}}
+        self.steps_context[step_id]["status"] = status
+
+    def get_steps_status(self):
+        """{step_id: status} for every step or action whose run outcome was recorded."""
+        return {
+            step_id: context["status"]
+            for step_id, context in self.steps_context.items()
+            if isinstance(context, dict) and "status" in context
+        }
 
     def set_step_provider_paremeters(self, step_id, provider_parameters):
         if step_id not in self.steps_context:
