@@ -317,3 +317,89 @@ def test_run_actions_continue_on_error_next_action_still_runs():
     _make_workflow(actions=[failing, next_action]).run_actions()
 
     next_action.run.assert_called_once()
+
+
+def _status_mock_step(step_id, ran=True, error=None, continue_on_error=False):
+    step = Mock()
+    step.step_id = step_id
+    step.name = step_id
+    step.continue_on_error = continue_on_error
+    step.continue_to_next_step = True
+    if error is not None:
+        step.run = Mock(side_effect=error)
+    else:
+        step.run = Mock(return_value=ran)
+    return step
+
+
+def _status_workflow(context_manager, steps, actions=None):
+    return Workflow(
+        context_manager=context_manager,
+        workflow_id="wf-status",
+        workflow_revision=1,
+        workflow_name="wf-status",
+        workflow_owners=[],
+        workflow_tags=[],
+        workflow_interval=0,
+        workflow_triggers=[],
+        workflow_steps=steps,
+        workflow_actions=actions or [],
+    )
+
+
+def test_run_steps_records_success_and_skipped_statuses(context_manager):
+    workflow = _status_workflow(
+        context_manager,
+        [_status_mock_step("step-ran", ran=True), _status_mock_step("step-skipped", ran=False)],
+    )
+    workflow.run_steps()
+    assert context_manager.get_steps_status() == {
+        "step-ran": "success",
+        "step-skipped": "skipped",
+    }
+    assert context_manager.workflow_cancelled is False
+
+
+def test_run_steps_records_failure_and_cancels_the_run(context_manager):
+    workflow = _status_workflow(
+        context_manager,
+        [_status_mock_step("step-broken", error=StepError("boom")), _status_mock_step("step-after")],
+    )
+    with pytest.raises(StepError):
+        workflow.run_steps()
+    assert context_manager.get_steps_status() == {"step-broken": "failure"}
+    assert context_manager.workflow_cancelled is True
+
+
+def test_run_steps_continue_on_error_records_failure_without_cancelling(context_manager):
+    workflow = _status_workflow(
+        context_manager,
+        [
+            _status_mock_step("step-broken", error=StepError("boom"), continue_on_error=True),
+            _status_mock_step("step-after", ran=True),
+        ],
+    )
+    workflow.run_steps()
+    assert context_manager.get_steps_status() == {
+        "step-broken": "failure",
+        "step-after": "success",
+    }
+    assert context_manager.workflow_cancelled is False
+
+
+def test_run_actions_records_success_skipped_and_failure(context_manager):
+    workflow = _status_workflow(
+        context_manager,
+        [],
+        actions=[
+            _status_mock_step("action-ran", ran=True),
+            _status_mock_step("action-skipped", ran=False),
+            _status_mock_step("action-broken", error=Exception("boom"), continue_on_error=True),
+        ],
+    )
+    workflow.run_actions()
+    assert context_manager.get_steps_status() == {
+        "action-ran": "success",
+        "action-skipped": "skipped",
+        "action-broken": "failure",
+    }
