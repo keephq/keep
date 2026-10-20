@@ -2,6 +2,7 @@ import dataclasses
 import http
 import os
 import time
+from email.utils import parsedate_to_datetime
 
 import pydantic
 import requests
@@ -67,41 +68,68 @@ class GoogleChatProvider(BaseProvider):
         if not message:
             raise ProviderException("Message is required")
 
-        def __send_message(url, body, headers, retries=3):
-            for attempt in range(retries):
-                try:
-                    resp = requests.post(url, json=body, headers=headers)
-                    if resp.status_code == http.HTTPStatus.OK:
-                        return resp
-
-                    self.logger.warning(
-                        f"Attempt {attempt + 1} failed with status code {resp.status_code}"
+        payload = {"text": message}
+        headers = {"Content-Type": "application/json; charset=UTF-8"}
+        retries = 3
+        for attempt in range(retries):
+            response = None
+            try:
+                response = requests.post(
+                    webhook_url, json=payload, headers=headers, timeout=(5, 15)
+                )
+            except requests.exceptions.RequestException as error:
+                # Request exception messages can contain the secret webhook URL.
+                self.logger.warning(
+                    "Google Chat attempt %s failed with %s",
+                    attempt + 1,
+                    type(error).__name__,
+                )
+            else:
+                if response.status_code == http.HTTPStatus.OK:
+                    self.logger.debug("Alert message sent to Google Chat successfully")
+                    return "Alert message sent to Google Chat successfully"
+                if response.status_code not in (408, 429) and not (
+                    500 <= response.status_code < 600
+                ):
+                    raise ProviderException(
+                        f"Google Chat rejected the message with status {response.status_code}"
                     )
+                self.logger.warning(
+                    "Google Chat attempt %s failed with status %s",
+                    attempt + 1,
+                    response.status_code,
+                )
+            if attempt < retries - 1:
+                time.sleep(self._retry_delay(response, attempt))
 
-                except requests.exceptions.RequestException as e:
-                    self.logger.error(f"Attempt {attempt + 1} failed: {e}")
+        raise ProviderException(
+            f"Failed to notify Google Chat after {retries} attempts"
+        )
 
-                if attempt < retries - 1:
-                    time.sleep(1)
-
-            raise requests.exceptions.RequestException(
-                f"Failed to notify message after {retries} attempts"
-            )
-
-        payload = {
-            "text": message,
-        }
-
-        request_headers = {"Content-Type": "application/json; charset=UTF-8"}
-
-        response = __send_message(webhook_url, body=payload, headers=request_headers)
-        if response.status_code != http.HTTPStatus.OK:
+    @staticmethod
+    def _retry_delay(response, attempt):
+        """Respect Retry-After without blocking a worker for an unbounded period."""
+        delay = 2**attempt
+        retry_after = (
+            response.headers.get("Retry-After") if response is not None else None
+        )
+        if retry_after:
+            try:
+                delay = max(delay, int(retry_after))
+            except (TypeError, ValueError):
+                try:
+                    delay = max(
+                        delay,
+                        parsedate_to_datetime(retry_after).timestamp() - time.time(),
+                    )
+                except (TypeError, ValueError, OverflowError):
+                    pass
+        if delay > 60:
+            # Retrying sooner than the server requested would amplify rate limiting.
             raise ProviderException(
-                f"Failed to notify message to Google Chat: {response.text}"
+                "Google Chat Retry-After exceeds the 60 second limit"
             )
-
-        self.logger.debug("Alert message sent to Google Chat successfully")
-        return "Alert message sent to Google Chat successfully"
+        return delay
 
 
 if __name__ == "__main__":
