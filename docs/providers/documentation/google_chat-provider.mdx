@@ -60,7 +60,11 @@ A busy Space waits for at most 60 seconds per attempt. Redis errors, missing
 Redis configuration, invalid webhook paths, and exhausted waits fail the action
 explicitly before its HTTP request; they do not silently skip a notification or
 bypass rate limiting. A permit expires automatically if its worker stops. Direct
-Redis and Sentinel settings are taken from Keep's existing Redis configuration.
+Redis settings are taken from Keep's existing Redis configuration, including
+its TLS and authentication settings. Sentinel discovery reuses Keep's existing
+configuration behavior; separately authenticated or TLS-protected Sentinel
+endpoints are not supported by this change. It does not add new Sentinel
+credentials or claim production Sentinel validation.
 
 This is bounded pacing inside the existing workflow executor, not a durable
 outbox. Waiting uses a workflow worker. Monitor workflow errors and backlog, keep

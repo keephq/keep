@@ -131,15 +131,6 @@ class GoogleChatProvider(BaseProvider):
         pass
 
     def _notify(self, message="", **kwargs: dict):
-        if not message:
-            raise ProviderException("Message is required")
-        with ExitStack() as stack:
-            limiter = None
-            if keep_config("GOOGLE_CHAT_RATE_LIMIT_ENABLED", default=False, cast=bool):
-                limiter = _pacing_redis_client(stack)
-            return self._send_message(message, limiter)
-
-    def _send_message(self, message, limiter):
         """
         Notify a message to a Google Chat room using a webhook URL.
 
@@ -155,45 +146,51 @@ class GoogleChatProvider(BaseProvider):
         if not message:
             raise ProviderException("Message is required")
 
-        payload = {"text": message}
-        headers = {"Content-Type": "application/json; charset=UTF-8"}
-        retries = 3
-        for attempt in range(retries):
-            if limiter is not None:
-                _wait_for_space(limiter, webhook_url)
-            response = None
-            try:
-                response = requests.post(
-                    webhook_url, json=payload, headers=headers, timeout=(5, 15)
-                )
-            except requests.exceptions.RequestException as error:
-                # Request exception messages can contain the secret webhook URL.
-                self.logger.warning(
-                    "Google Chat attempt %s failed with %s",
-                    attempt + 1,
-                    type(error).__name__,
-                )
-            else:
-                if response.status_code == http.HTTPStatus.OK:
-                    self.logger.debug("Alert message sent to Google Chat successfully")
-                    return "Alert message sent to Google Chat successfully"
-                if response.status_code not in (408, 429) and not (
-                    500 <= response.status_code < 600
-                ):
-                    raise ProviderException(
-                        f"Google Chat rejected the message with status {response.status_code}"
+        with ExitStack() as stack:
+            limiter = None
+            if keep_config("GOOGLE_CHAT_RATE_LIMIT_ENABLED", default=False, cast=bool):
+                limiter = _pacing_redis_client(stack)
+            payload = {"text": message}
+            headers = {"Content-Type": "application/json; charset=UTF-8"}
+            retries = 3
+            for attempt in range(retries):
+                if limiter is not None:
+                    _wait_for_space(limiter, webhook_url)
+                response = None
+                try:
+                    response = requests.post(
+                        webhook_url, json=payload, headers=headers, timeout=(5, 15)
                     )
-                self.logger.warning(
-                    "Google Chat attempt %s failed with status %s",
-                    attempt + 1,
-                    response.status_code,
-                )
-            if attempt < retries - 1:
-                time.sleep(self._retry_delay(response, attempt))
+                except requests.exceptions.RequestException as error:
+                    # Request exception messages can contain the secret webhook URL.
+                    self.logger.warning(
+                        "Google Chat attempt %s failed with %s",
+                        attempt + 1,
+                        type(error).__name__,
+                    )
+                else:
+                    if response.status_code == http.HTTPStatus.OK:
+                        self.logger.debug(
+                            "Alert message sent to Google Chat successfully"
+                        )
+                        return "Alert message sent to Google Chat successfully"
+                    if response.status_code not in (408, 429) and not (
+                        500 <= response.status_code < 600
+                    ):
+                        raise ProviderException(
+                            f"Google Chat rejected the message with status {response.status_code}"
+                        )
+                    self.logger.warning(
+                        "Google Chat attempt %s failed with status %s",
+                        attempt + 1,
+                        response.status_code,
+                    )
+                if attempt < retries - 1:
+                    time.sleep(self._retry_delay(response, attempt))
 
-        raise ProviderException(
-            f"Failed to notify Google Chat after {retries} attempts"
-        )
+            raise ProviderException(
+                f"Failed to notify Google Chat after {retries} attempts"
+            )
 
     @staticmethod
     def _retry_delay(response, attempt):
