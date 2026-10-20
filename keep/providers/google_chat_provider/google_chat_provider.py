@@ -3,7 +3,8 @@ import hashlib
 import http
 import os
 import time
-from contextlib import ExitStack
+import uuid
+from contextlib import ExitStack, nullcontext
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlsplit
 
@@ -56,6 +57,46 @@ def _pacing_redis_client(stack):
     return client
 
 
+class _SpacePermit:
+    """A bounded owner lease; only its owner can start the final cooldown."""
+
+    def __init__(self, client, key, token):
+        self.client, self.key, self.token = client, key, token
+
+    def ensure_owned(self):
+        try:
+            owned = self.client.eval(
+                "if redis.call('GET', KEYS[1]) == ARGV[1] then "
+                "return redis.call('PEXPIRE', KEYS[1], 60000) else return 0 end",
+                1,
+                self.key,
+                self.token,
+            )
+        except redis.RedisError:
+            raise ProviderException("Google Chat rate limiter unavailable") from None
+        if not owned:
+            raise ProviderException("Google Chat space lease was lost before delivery")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        try:
+            self.client.eval(
+                "if redis.call('GET', KEYS[1]) == ARGV[1] then "
+                "redis.call('SET', KEYS[1], 'cooldown', 'PX', 1100); return 1 else return 0 end",
+                1,
+                self.key,
+                self.token,
+            )
+        except redis.RedisError:
+            if exc_type is None:
+                raise ProviderException(
+                    "Google Chat rate limiter unavailable after delivery"
+                ) from None
+            # Preserve the original failure; the bounded lease expires by itself.
+
+
 def _wait_for_space(client, webhook_url):
     """Coordinate all provider aliases for a Space without storing their secrets."""
     parsed = urlsplit(str(webhook_url))
@@ -71,25 +112,27 @@ def _wait_for_space(client, webhook_url):
         raise ProviderException("Rate limiting requires a Google Chat webhook URL")
     space_hash = hashlib.sha256(parts[2].encode()).hexdigest()
     key = f"keep:google-chat:space:{space_hash}"
+    token = uuid.uuid4().hex
     deadline = time.monotonic() + 60
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise ProviderException("Google Chat space remained busy for 60 seconds")
         try:
-            if client.set(key, "1", nx=True, px=1100):
+            if client.set(key, token, nx=True, px=60000):
                 if time.monotonic() >= deadline:
                     raise ProviderException(
                         "Google Chat space remained busy for 60 seconds"
                     )
-                return
+                return _SpacePermit(client, key, token)
             delay_ms = client.pttl(key)
         except redis.RedisError:
             raise ProviderException("Google Chat rate limiter unavailable") from None
         if delay_ms == -1:
             raise ProviderException("Google Chat rate limiter key has no expiry")
         remaining = max(0, deadline - time.monotonic())
-        time.sleep(min(remaining, max(0.01, delay_ms / 1000)))
+        # The owner normally finishes much earlier than its crash-recovery lease.
+        time.sleep(min(remaining, max(0.01, min(0.1, delay_ms / 1000))))
 
 
 @pydantic.dataclasses.dataclass
@@ -154,13 +197,19 @@ class GoogleChatProvider(BaseProvider):
             headers = {"Content-Type": "application/json; charset=UTF-8"}
             retries = 3
             for attempt in range(retries):
-                if limiter is not None:
-                    _wait_for_space(limiter, webhook_url)
                 response = None
                 try:
-                    response = requests.post(
-                        webhook_url, json=payload, headers=headers, timeout=(5, 15)
+                    permit = (
+                        _wait_for_space(limiter, webhook_url)
+                        if limiter is not None
+                        else nullcontext()
                     )
+                    with permit as admission:
+                        if admission is not None:
+                            admission.ensure_owned()
+                        response = requests.post(
+                            webhook_url, json=payload, headers=headers, timeout=(5, 15)
+                        )
                 except requests.exceptions.RequestException as error:
                     # Request exception messages can contain the secret webhook URL.
                     self.logger.warning(

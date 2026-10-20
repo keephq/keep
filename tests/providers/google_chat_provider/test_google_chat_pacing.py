@@ -377,3 +377,127 @@ def test_late_redis_permit_does_not_send_after_wait_budget(monkeypatch):
     with pytest.raises(ProviderException, match="remained busy"):
         provider()._notify(message="fixture")
     post.assert_not_called()
+
+
+def test_work_between_admission_and_post_preserves_next_request_spacing(
+    isolated_redis, monkeypatch
+):
+    original = module._wait_for_space
+    admitted = []
+    calls = []
+
+    def delayed(client, url):
+        permit = original(client, url)
+        admitted.append(True)
+        if len(admitted) == 1:
+            time.sleep(1.2)
+        return permit
+
+    monkeypatch.setattr(module, "_wait_for_space", delayed)
+    monkeypatch.setattr(
+        module.requests,
+        "post",
+        lambda *a, **kw: calls.append(time.monotonic())
+        or SimpleNamespace(status_code=200, headers={}),
+    )
+    provider()._notify(message="delayed workflow")
+    provider()._notify(message="ordinary next message")
+    assert calls[1] - calls[0] >= 1
+
+
+def test_lost_space_owner_does_not_post_or_remove_replacement(
+    isolated_redis, monkeypatch
+):
+    original = module._wait_for_space
+
+    def replaced(client, url):
+        permit = original(client, url)
+        key = next(iter(client.scan_iter("keep:google-chat:space:*")))
+        client.set(key, "new-worker-owner", px=60000)
+        return permit
+
+    monkeypatch.setattr(module, "_wait_for_space", replaced)
+    post = Mock()
+    monkeypatch.setattr(module.requests, "post", post)
+    with pytest.raises(ProviderException, match="lease"):
+        provider()._notify(message="stale worker")
+    post.assert_not_called()
+    assert list(isolated_redis.scan_iter("keep:google-chat:space:*"))
+    assert all(
+        isolated_redis.get(key) == b"new-worker-owner"
+        for key in isolated_redis.scan_iter("keep:google-chat:space:*")
+    )
+
+
+def test_redis_restart_between_admission_and_post_fails_closed(
+    isolated_redis, monkeypatch
+):
+    original = module._wait_for_space
+
+    def restarted(client, url):
+        permit = original(client, url)
+        client.flushdb()
+        return permit
+
+    monkeypatch.setattr(module, "_wait_for_space", restarted)
+    post = Mock()
+    monkeypatch.setattr(module.requests, "post", post)
+    with pytest.raises(ProviderException, match="lease"):
+        provider()._notify(message="lost state")
+    post.assert_not_called()
+
+
+def test_response_time_does_not_consume_the_next_cooldown(isolated_redis, monkeypatch):
+    calls, finished = [], []
+
+    def post(*args, **kwargs):
+        calls.append(time.monotonic())
+        if len(calls) == 1:
+            time.sleep(1.2)
+            finished.append(time.monotonic())
+        return SimpleNamespace(status_code=200, headers={})
+
+    monkeypatch.setattr(module.requests, "post", post)
+    provider()._notify(message="slow response")
+    provider()._notify(message="next request")
+    assert calls[1] - finished[0] >= 1
+
+
+def test_release_redis_failure_is_explicit_without_repeating_successful_post(
+    isolated_redis, monkeypatch
+):
+    monkeypatch.setattr(module, "_pacing_redis_client", lambda stack: isolated_redis)
+    calls = []
+
+    def post(*args, **kwargs):
+        calls.append(True)
+        monkeypatch.setattr(
+            isolated_redis,
+            "eval",
+            Mock(side_effect=redis.ConnectionError("fixture-secret")),
+        )
+        return SimpleNamespace(status_code=200, headers={})
+
+    monkeypatch.setattr(module.requests, "post", post)
+    with pytest.raises(ProviderException, match="after delivery") as failed:
+        provider()._notify(message="already accepted")
+    assert calls == [True]
+    assert "fixture-secret" not in str(failed.value)
+
+
+def test_released_or_expired_worker_cannot_reuse_its_space_token(isolated_redis):
+    url = provider().authentication_config.webhook_url
+    permit = module._wait_for_space(isolated_redis, url)
+    with permit:
+        permit.ensure_owned()
+    with pytest.raises(ProviderException, match="lease"):
+        permit.ensure_owned()
+    key = next(iter(isolated_redis.scan_iter("keep:google-chat:space:*")))
+    assert isolated_redis.get(key) == b"cooldown"
+    assert 0 < isolated_redis.pttl(key) <= 1100
+    isolated_redis.pexpire(key, 1)
+    time.sleep(0.01)
+    with module._wait_for_space(isolated_redis, url) as replacement:
+        replacement.ensure_owned()
+        with pytest.raises(ProviderException, match="lease"):
+            permit.ensure_owned()
