@@ -501,3 +501,21 @@ def test_released_or_expired_worker_cannot_reuse_its_space_token(isolated_redis)
         replacement.ensure_owned()
         with pytest.raises(ProviderException, match="lease"):
             permit.ensure_owned()
+
+
+def test_abandoned_owner_expires_and_cannot_release_replacement_worker(isolated_redis):
+    url = provider().authentication_config.webhook_url
+    abandoned = module._wait_for_space(isolated_redis, url)
+    key = next(iter(isolated_redis.scan_iter("keep:google-chat:space:*")))
+    assert 59000 < isolated_redis.pttl(key) <= 60000
+    # Exercise real Redis expiry with a shorter clock, without waiting a minute.
+    isolated_redis.pexpire(key, 1)
+    time.sleep(0.01)
+    with module._wait_for_space(isolated_redis, url) as replacement:
+        current = isolated_redis.get(key)
+        with pytest.raises(ProviderException, match="lease"):
+            abandoned.ensure_owned()
+        abandoned.__exit__(None, None, None)
+        assert isolated_redis.get(key) == current
+        assert isolated_redis.pttl(key) > 59000
+        replacement.ensure_owned()
