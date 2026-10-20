@@ -1,17 +1,95 @@
 import dataclasses
+import hashlib
 import http
 import os
 import time
+from contextlib import ExitStack
 from email.utils import parsedate_to_datetime
+from urllib.parse import urlsplit
 
 import pydantic
+import redis
 import requests
+from redis.sentinel import Sentinel
 
+from keep.api.core.config import config as keep_config
+from keep.api.redis_settings import get_redis_settings
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.validation.fields import HttpsUrl
+
+
+def _pacing_redis_client(stack):
+    """Use Keep's existing Redis configuration; never a private delivery queue."""
+    if not keep_config("REDIS", default=False, cast=bool):
+        raise ProviderException("Google Chat rate limiting requires Keep Redis")
+    settings = get_redis_settings()
+    options = {
+        "username": settings.username,
+        "password": settings.password,
+        "db": settings.database,
+        "socket_connect_timeout": 2,
+        "socket_timeout": 2,
+        "retry_on_timeout": False,
+        "ssl": settings.ssl,
+    }
+    if settings.ssl:
+        options.update(
+            ssl_cert_reqs=settings.ssl_cert_reqs,
+            ssl_check_hostname=settings.ssl_check_hostname,
+            ssl_ca_certs=settings.ssl_ca_certs,
+        )
+    if settings.sentinel:
+        sentinel = Sentinel(
+            settings.host,
+            sentinel_kwargs={"socket_timeout": 2, "socket_connect_timeout": 2},
+            **options,
+        )
+        for node in sentinel.sentinels:
+            stack.callback(node.close)
+        client = sentinel.master_for(settings.sentinel_master)
+    else:
+        client = redis.Redis(host=settings.host, port=settings.port, **options)
+    stack.callback(client.close)
+    return client
+
+
+def _wait_for_space(client, webhook_url):
+    """Coordinate all provider aliases for a Space without storing their secrets."""
+    parsed = urlsplit(str(webhook_url))
+    parts = parsed.path.strip("/").split("/")
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != "chat.googleapis.com"
+        or len(parts) != 4
+        or parts[:2] != ["v1", "spaces"]
+        or not parts[2]
+        or parts[3] != "messages"
+    ):
+        raise ProviderException("Rate limiting requires a Google Chat webhook URL")
+    space_hash = hashlib.sha256(parts[2].encode()).hexdigest()
+    key = f"keep:google-chat:space:{space_hash}"
+    deadline = time.monotonic() + 60
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ProviderException("Google Chat space remained busy for 60 seconds")
+        try:
+            if client.set(key, "1", nx=True, px=1100):
+                if time.monotonic() >= deadline:
+                    raise ProviderException(
+                        "Google Chat space remained busy for 60 seconds"
+                    )
+                return
+            delay_ms = client.pttl(key)
+        except redis.RedisError:
+            raise ProviderException("Google Chat rate limiter unavailable") from None
+        if delay_ms == -1:
+            raise ProviderException("Google Chat rate limiter key has no expiry")
+        remaining = max(0, deadline - time.monotonic())
+        time.sleep(min(remaining, max(0.01, delay_ms / 1000)))
 
 
 @pydantic.dataclasses.dataclass
@@ -53,6 +131,15 @@ class GoogleChatProvider(BaseProvider):
         pass
 
     def _notify(self, message="", **kwargs: dict):
+        if not message:
+            raise ProviderException("Message is required")
+        with ExitStack() as stack:
+            limiter = None
+            if keep_config("GOOGLE_CHAT_RATE_LIMIT_ENABLED", default=False, cast=bool):
+                limiter = _pacing_redis_client(stack)
+            return self._send_message(message, limiter)
+
+    def _send_message(self, message, limiter):
         """
         Notify a message to a Google Chat room using a webhook URL.
 
@@ -72,6 +159,8 @@ class GoogleChatProvider(BaseProvider):
         headers = {"Content-Type": "application/json; charset=UTF-8"}
         retries = 3
         for attempt in range(retries):
+            if limiter is not None:
+                _wait_for_space(limiter, webhook_url)
             response = None
             try:
                 response = requests.post(

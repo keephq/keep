@@ -41,3 +41,35 @@ queue. A timeout after Google accepted a message can still lead to a duplicate
 on retry. Workflow-level retries also multiply the provider's attempt count.
 
 See [Google Chat webhook limitations](https://developers.google.com/workspace/chat/quickstart/webhooks#limitations_and_considerations).
+
+## Optional shared-space pacing
+
+Set `GOOGLE_CHAT_RATE_LIMIT_ENABLED=true` in every Keep process that runs
+workflows, with Keep's existing `REDIS=true` configuration, to coordinate
+notification attempts across provider aliases and workers. All processes must
+use the same Redis database. No additional service or delivery queue is created.
+The default is disabled for compatibility.
+
+The limiter identifies the Google Chat Space from the webhook path, regardless
+of webhook token, provider alias, workflow, tenant, or client. It stores only a
+hash of the Space ID and an expiring permit. Each HTTP attempt must acquire a
+permit, with at least 1.1 seconds between permits for a Space. Different Spaces
+remain independent. This applies to retries as well as first attempts.
+
+A busy Space waits for at most 60 seconds per attempt. Redis errors, missing
+Redis configuration, invalid webhook paths, and exhausted waits fail the action
+explicitly before its HTTP request; they do not silently skip a notification or
+bypass rate limiting. A permit expires automatically if its worker stops. Direct
+Redis and Sentinel settings are taken from Keep's existing Redis configuration.
+
+This is bounded pacing inside the existing workflow executor, not a durable
+outbox. Waiting uses a workflow worker. Monitor workflow errors and backlog, keep
+spare workers for independent audiences, and recover failed deliveries through
+the workflow execution history. A process restart or a timeout after the remote
+server accepted a message can still require assisted recovery or produce a
+retry duplicate. Other applications using the same Space must also be included
+in its capacity assessment. Redis must be shared, available and protected from
+eviction for the limiter's keys; resetting it removes recent permits. The
+1.1-second permit interval reduces quota collisions but HTTP scheduling pauses
+and traffic outside Keep can still produce 429 responses, handled by the bounded
+retry policy above.
