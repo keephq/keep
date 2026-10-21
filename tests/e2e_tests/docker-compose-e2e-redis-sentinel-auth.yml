@@ -1,0 +1,155 @@
+services:
+  # Redis Master with authentication
+  # Supplied credentials:
+  #   REDIS_PASSWORD: password for Redis data nodes (master/replica)
+  #   REDIS_SENTINEL_PASSWORD: password for Sentinel nodes (defaults to REDIS_PASSWORD)
+  redis-master:
+    image: redis:7-alpine
+    container_name: redis-master-auth
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: >
+      sh -c "redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\" --replica-announce-ip redis-master --replica-announce-port 6379"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_master_data_auth:/data
+    networks:
+      - keep-test
+
+  # Redis Replica with authentication
+  redis-replica:
+    image: redis:7-alpine
+    container_name: redis-replica-auth
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: >
+      sh -c "sleep 2 &&
+      until ping -c 1 redis-master > /dev/null 2>&1; do echo 'Waiting for Redis master...'; sleep 1; done &&
+      MY_IP=$$(hostname -i) &&
+      redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\" --masterauth \"$$REDIS_PASSWORD\" --replica-announce-ip $$MY_IP --replicaof redis-master 6379"
+    depends_on:
+      - redis-master
+    networks:
+      - keep-test
+
+  # Redis Sentinel instances with authentication
+  redis-sentinel-1:
+    image: redis:7-alpine
+    container_name: redis-sentinel-1-auth
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_SENTINEL_PASSWORD=${REDIS_SENTINEL_PASSWORD:-$REDIS_PASSWORD}
+    command: >
+      sh -c "sleep 3 &&
+      until ping -c 1 redis-master > /dev/null 2>&1; do echo 'Waiting for Redis master to be reachable...'; sleep 1; done &&
+      REDIS_IP=$$(getent hosts redis-master | awk '{print $$1}') &&
+      MY_IP=$$(getent hosts redis-sentinel-1 | awk '{print $$1}') &&
+      echo 'port 26379' > /etc/redis-sentinel.conf &&
+      echo \"requirepass $$REDIS_SENTINEL_PASSWORD\" >> /etc/redis-sentinel.conf &&
+      echo \"sentinel sentinel-pass $$REDIS_SENTINEL_PASSWORD\" >> /etc/redis-sentinel.conf &&
+      echo \"sentinel announce-ip $$MY_IP\" >> /etc/redis-sentinel.conf &&
+      echo 'sentinel announce-port 26379' >> /etc/redis-sentinel.conf &&
+      echo \"sentinel monitor mymaster $$REDIS_IP 6379 2\" >> /etc/redis-sentinel.conf &&
+      echo \"sentinel auth-pass mymaster $$REDIS_PASSWORD\" >> /etc/redis-sentinel.conf &&
+      echo 'sentinel down-after-milliseconds mymaster 5000' >> /etc/redis-sentinel.conf &&
+      echo 'sentinel parallel-syncs mymaster 1' >> /etc/redis-sentinel.conf &&
+      echo 'sentinel failover-timeout mymaster 10000' >> /etc/redis-sentinel.conf &&
+      redis-sentinel /etc/redis-sentinel.conf"
+    ports:
+      - "26379:26379"
+    depends_on:
+      - redis-master
+    networks:
+      - keep-test
+
+  redis-sentinel-2:
+    image: redis:7-alpine
+    container_name: redis-sentinel-2-auth
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_SENTINEL_PASSWORD=${REDIS_SENTINEL_PASSWORD:-$REDIS_PASSWORD}
+    command: >
+      sh -c "sleep 3 &&
+      until ping -c 1 redis-master > /dev/null 2>&1; do echo 'Waiting for Redis master to be reachable...'; sleep 1; done &&
+      REDIS_IP=$$(getent hosts redis-master | awk '{print $$1}') &&
+      MY_IP=$$(getent hosts redis-sentinel-2 | awk '{print $$1}') &&
+      echo 'port 26379' > /etc/redis-sentinel.conf &&
+      echo \"requirepass $$REDIS_SENTINEL_PASSWORD\" >> /etc/redis-sentinel.conf &&
+      echo \"sentinel sentinel-pass $$REDIS_SENTINEL_PASSWORD\" >> /etc/redis-sentinel.conf &&
+      echo \"sentinel announce-ip $$MY_IP\" >> /etc/redis-sentinel.conf &&
+      echo 'sentinel announce-port 26379' >> /etc/redis-sentinel.conf &&
+      echo \"sentinel monitor mymaster $$REDIS_IP 6379 2\" >> /etc/redis-sentinel.conf &&
+      echo \"sentinel auth-pass mymaster $$REDIS_PASSWORD\" >> /etc/redis-sentinel.conf &&
+      echo 'sentinel down-after-milliseconds mymaster 5000' >> /etc/redis-sentinel.conf &&
+      echo 'sentinel parallel-syncs mymaster 1' >> /etc/redis-sentinel.conf &&
+      echo 'sentinel failover-timeout mymaster 10000' >> /etc/redis-sentinel.conf &&
+      redis-sentinel /etc/redis-sentinel.conf"
+    ports:
+      - "26380:26379"
+    depends_on:
+      - redis-master
+    networks:
+      - keep-test
+
+  redis-sentinel-3:
+    image: redis:7-alpine
+    container_name: redis-sentinel-3-auth
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_SENTINEL_PASSWORD=${REDIS_SENTINEL_PASSWORD:-$REDIS_PASSWORD}
+    command: >
+      sh -c "sleep 3 &&
+      until ping -c 1 redis-master > /dev/null 2>&1; do echo 'Waiting for Redis master to be reachable...'; sleep 1; done &&
+      REDIS_IP=$$(getent hosts redis-master | awk '{print $$1}') &&
+      MY_IP=$$(getent hosts redis-sentinel-3 | awk '{print $$1}') &&
+      echo 'port 26379' > /etc/redis-sentinel.conf &&
+      echo \"requirepass $$REDIS_SENTINEL_PASSWORD\" >> /etc/redis-sentinel.conf &&
+      echo \"sentinel sentinel-pass $$REDIS_SENTINEL_PASSWORD\" >> /etc/redis-sentinel.conf &&
+      echo \"sentinel announce-ip $$MY_IP\" >> /etc/redis-sentinel.conf &&
+      echo 'sentinel announce-port 26379' >> /etc/redis-sentinel.conf &&
+      echo \"sentinel monitor mymaster $$REDIS_IP 6379 2\" >> /etc/redis-sentinel.conf &&
+      echo \"sentinel auth-pass mymaster $$REDIS_PASSWORD\" >> /etc/redis-sentinel.conf &&
+      echo 'sentinel down-after-milliseconds mymaster 5000' >> /etc/redis-sentinel.conf &&
+      echo 'sentinel parallel-syncs mymaster 1' >> /etc/redis-sentinel.conf &&
+      echo 'sentinel failover-timeout mymaster 10000' >> /etc/redis-sentinel.conf &&
+      redis-sentinel /etc/redis-sentinel.conf"
+    ports:
+      - "26381:26379"
+    depends_on:
+      - redis-master
+    networks:
+      - keep-test
+
+  # Keep Backend for testing authenticated Sentinel integration
+  keep-backend:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile.api
+    container_name: keep-backend-sentinel-auth-test
+    environment:
+      - REDIS=true
+      - REDIS_SENTINEL_ENABLED=true
+      - REDIS_SENTINEL_HOSTS=redis-sentinel-1:26379,redis-sentinel-2:26379,redis-sentinel-3:26379
+      - REDIS_SENTINEL_SERVICE_NAME=mymaster
+      # Data-node (master) password
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # Sentinel-node password (defaults to REDIS_PASSWORD if unset)
+      - REDIS_SENTINEL_PASSWORD=${REDIS_SENTINEL_PASSWORD:-$REDIS_PASSWORD}
+      - AUTH_TYPE=NO_AUTH
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis-master
+      - redis-sentinel-1
+      - redis-sentinel-2
+      - redis-sentinel-3
+    networks:
+      - keep-test
+
+networks:
+  keep-test:
+    driver: bridge
+
+volumes:
+  redis_master_data_auth:
