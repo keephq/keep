@@ -106,9 +106,14 @@ async function refreshAccessToken(token: any) {
       );
     }
 
+    // For Okta, prefer id_token so the backend can read app-level claims (groups).
+    const newAccessToken =
+      authType === AuthType.OKTA
+        ? (refreshedTokens.id_token ?? refreshedTokens.access_token)
+        : refreshedTokens.access_token;
     return {
       ...token,
-      accessToken: refreshedTokens.access_token,
+      accessToken: newAccessToken,
       accessTokenExpires: Date.now() + (refreshedTokens.expires_in || 3600) * 1000,
       refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
     };
@@ -258,7 +263,7 @@ const baseProviderConfigs = {
       clientId: process.env.OKTA_CLIENT_ID!,
       clientSecret: process.env.OKTA_CLIENT_SECRET!,
       issuer: process.env.OKTA_ISSUER!,
-      authorization: { params: { scope: "openid email profile" } },
+      authorization: { params: { scope: "openid email profile groups" } },
     }),
   ],
   [AuthType.ONELOGIN]: [
@@ -362,10 +367,36 @@ export const config = {
           role = (profile as any).keep_role;
           accessToken = account.access_token;
         } else if (authType === AuthType.OKTA) {
-          // Extract tenant and role from Okta token
           tenantId = (profile as any).keep_tenant_id || "keep";
-          role = (profile as any).keep_role || "user";
-          accessToken = account.access_token;
+          // Use the ID token so the backend can see app-level claims (e.g. groups).
+          // App-level Okta group claims are embedded in the ID token only, not the
+          // access token or userinfo response.
+          accessToken = account.id_token ?? account.access_token;
+          // Explicit claim takes priority
+          role = (profile as any).keep_role || (profile as any).role;
+          // If no explicit claim, resolve from groups via OKTA_*_GROUPS mappings
+          if (!role) {
+            const groups: string[] = (profile as any).groups || [];
+            const groupMappings: Record<string, string> = {};
+            for (const [envVar, targetRole] of [
+              ["OKTA_ADMIN_GROUPS", "admin"],
+              ["OKTA_NOC_GROUPS", "noc"],
+              ["OKTA_WEBHOOK_GROUPS", "webhook"],
+            ] as const) {
+              const val = runtimeEnv(envVar) || "";
+              for (const g of val.split(",").map((s) => s.trim()).filter(Boolean)) {
+                groupMappings[g] = targetRole;
+              }
+            }
+            for (const priority of ["admin", "noc", "webhook"] as const) {
+              const match = groups.find((g) => groupMappings[g] === priority);
+              if (match) {
+                role = priority;
+                break;
+              }
+            }
+          }
+          role = role || "noc";
         } else if (authType === AuthType.ONELOGIN) {
           // Extract tenant and role from OneLogin token - use ID token for user data
           tenantId = (profile as any).keep_tenant_id || "keep";
