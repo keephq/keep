@@ -35,6 +35,14 @@ logger = logging.getLogger(__name__)
 
 class ProvidersService:
     @staticmethod
+    def _parse_pulling_enabled(value: bool | str) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str) and value.lower() in ("true", "false"):
+            return value.lower() == "true"
+        raise ValueError("pulling_enabled must be a boolean or 'true'/'false'")
+
+    @staticmethod
     def get_all_providers() -> List[ProviderModel]:
         return ProvidersFactory.get_all_providers()
 
@@ -153,6 +161,7 @@ class ProvidersService:
         validate_scopes: bool = True,
         pulling_enabled: bool = True,
     ) -> Dict[str, Any]:
+        pulling_enabled = ProvidersService._parse_pulling_enabled(pulling_enabled)
         provider_unique_id = uuid.uuid4().hex
         logger.info(
             "Installing provider",
@@ -268,11 +277,9 @@ class ProvidersService:
             if provider.provisioned and not allow_provisioned:
                 raise HTTPException(403, detail="Cannot update a provisioned provider")
 
-            pulling_enabled = provider_info.pop("pulling_enabled", True)
-
-            # if pulling_enabled is "true" or "false" cast it to boolean
-            if isinstance(pulling_enabled, str):
-                pulling_enabled = pulling_enabled.lower() == "true"
+            pulling_enabled = ProvidersService._parse_pulling_enabled(
+                provider_info.pop("pulling_enabled", True)
+            )
 
             provider_config = {
                 "authentication": provider_info,
@@ -545,10 +552,15 @@ class ProvidersService:
                         )
 
             for provider_name, provider_config in env_providers.items():
-                provider_info = provider_config.get("authentication", {})
-                install_webhook_env = os.environ.get(
-                    "KEEP_PROVIDERS_INSTALL_WEBHOOKS", "true"
-                ).lower() == "true"
+                provider_info = dict(provider_config.get("authentication", {}))
+                if "pulling_enabled" in provider_config:
+                    provider_info["pulling_enabled"] = provider_config[
+                        "pulling_enabled"
+                    ]
+                install_webhook_env = (
+                    os.environ.get("KEEP_PROVIDERS_INSTALL_WEBHOOKS", "true").lower()
+                    == "true"
+                )
                 install_webhook = provider_config.get(
                     "install_webhook", install_webhook_env
                 )
@@ -577,9 +589,14 @@ class ProvidersService:
                         provider_id=provider_config["type"],
                         provider_name=provider_name,
                         provider_type=provider_config["type"],
-                        provider_config=provider_info,
+                        provider_config={
+                            key: value
+                            for key, value in provider_info.items()
+                            if key != "pulling_enabled"
+                        },
                         provisioned=True,
                         validate_scopes=False,
+                        pulling_enabled=provider_config.get("pulling_enabled", True),
                     )
                     if install_webhook:
                         try:
@@ -618,11 +635,20 @@ class ProvidersService:
                             provider_yaml = cyaml.safe_load(yaml_file.read())
                             provider_name = provider_yaml["name"]
                             provider_type = provider_yaml["type"]
-                            provider_config = provider_yaml.get("authentication", {})
+                            provider_config = dict(
+                                provider_yaml.get("authentication", {})
+                            )
+                            if "pulling_enabled" in provider_yaml:
+                                provider_config["pulling_enabled"] = provider_yaml[
+                                    "pulling_enabled"
+                                ]
 
-                            install_webhook_env = os.environ.get(
-                                "KEEP_PROVIDERS_INSTALL_WEBHOOKS", "false"
-                            ).lower() == "true"
+                            install_webhook_env = (
+                                os.environ.get(
+                                    "KEEP_PROVIDERS_INSTALL_WEBHOOKS", "false"
+                                ).lower()
+                                == "true"
+                            )
                             install_webhook = provider_yaml.get(
                                 "install_webhook", install_webhook_env
                             )
@@ -657,9 +683,16 @@ class ProvidersService:
                                 provider_id=provider_type,
                                 provider_name=provider_name,
                                 provider_type=provider_type,
-                                provider_config=provider_config,
+                                provider_config={
+                                    key: value
+                                    for key, value in provider_config.items()
+                                    if key != "pulling_enabled"
+                                },
                                 provisioned=True,
                                 validate_scopes=False,
+                                pulling_enabled=provider_yaml.get(
+                                    "pulling_enabled", True
+                                ),
                             )
                             if install_webhook:
                                 try:
@@ -668,11 +701,16 @@ class ProvidersService:
                                         provider_type=installed_provider["type"],
                                         provider_id=installed_provider["id"],
                                     )
-                                    logger.info(f"Webhook installed for {provider_name}")
+                                    logger.info(
+                                        f"Webhook installed for {provider_name}"
+                                    )
                                 except Exception as e:
                                     logger.error(
                                         "Error installing webhook for provider from directory",
-                                        extra={"provider_name": provider_name, "exception": e},
+                                        extra={
+                                            "provider_name": provider_name,
+                                            "exception": e,
+                                        },
                                     )
                             else:
                                 logger.info(

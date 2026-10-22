@@ -9,6 +9,7 @@ This provider requires authentication.
 - **session_token**: AWS Session Token (required: False, sensitive: True)
 - **cloudwatch_sns_topic**: AWS Cloudwatch SNS Topic [ARN or name] (required: False, sensitive: False)
 - **protocol**: Protocol to use for the webhook (required: True, sensitive: False)
+- **webhook_only**: Receive webhooks only; do not access AWS APIs (required: False, sensitive: False)
 
 Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
 - **cloudwatch:DescribeAlarms**: Required to retrieve information about alarms. (mandatory) ([Documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_DescribeAlarms.html))
