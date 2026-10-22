@@ -169,24 +169,75 @@ let alertSidebarState = {
 
 // Mock the AlertSidebar to track its state
 jest.mock('@/features/alerts/alert-detail-sidebar', () => ({
-  AlertSidebar: ({ isOpen, toggle, alert }: any) => {
+  AlertSidebar: ({
+    isOpen,
+    toggle,
+    alert,
+    setRunWorkflowModalAlert,
+    setDismissModalAlert,
+    setChangeStatusAlert,
+  }: any) => {
     // Update our tracked state
     alertSidebarState.isOpen = isOpen;
     alertSidebarState.alert = alert;
     
     if (!isOpen) return null;
+    // Like AlertMenu in the sidebar: call the setter, then close the sidebar
+    const action = (label: string, onClick: () => void) => (
+      <button
+        onClick={() => {
+          onClick();
+          toggle();
+        }}
+      >
+        {label}
+      </button>
+    );
     return (
       <div data-testid="alert-sidebar">
         <div data-testid="alert-sidebar-content">
           <h3>{alert?.name || 'Alert Details'}</h3>
           <p>Severity: {alert?.severity}</p>
         </div>
+        {action('Run Workflow', () => setRunWorkflowModalAlert?.(alert))}
+        {action('Dismiss', () => setDismissModalAlert?.([alert]))}
+        {action('Change Status', () => setChangeStatusAlert?.(alert))}
         <button onClick={toggle} data-testid="close-sidebar">
           Close
         </button>
       </div>
     );
   },
+}));
+
+jest.mock('@/features/workflows/manual-run-workflow', () => ({
+  ManualRunWorkflowModal: ({ alert, onClose }: any) =>
+    alert ? (
+      <div data-testid="run-workflow-modal">
+        {alert.name}
+        <button onClick={onClose}>Close modal</button>
+      </div>
+    ) : null,
+}));
+
+jest.mock('@/features/alerts/dismiss-alert', () => ({
+  AlertDismissModal: ({ alert, handleClose }: any) =>
+    alert ? (
+      <div data-testid="dismiss-modal">
+        {alert[0].name}
+        <button onClick={handleClose}>Close modal</button>
+      </div>
+    ) : null,
+}));
+
+jest.mock('@/features/alerts/alert-change-status', () => ({
+  AlertChangeStatusModal: ({ alert, handleClose }: any) =>
+    alert ? (
+      <div data-testid="change-status-modal">
+        {alert.name}
+        <button onClick={handleClose}>Close modal</button>
+      </div>
+    ) : null,
 }));
 
 // Mock ViewAlertModal
@@ -418,6 +469,49 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
       expect(sidebarContent).toHaveTextContent('Severity: warning');
     });
     expect(alertSidebarState.alert?.name).toBe('Test Alert 2');
+  });
+
+  it.each([
+    ['Run Workflow', 'run-workflow-modal'],
+    ['Dismiss', 'dismiss-modal'],
+    ['Change Status', 'change-status-modal'],
+  ])('should open the modal for the "%s" sidebar action', async (label, modalTestId) => {
+    render(<IncidentAlerts incident={mockIncident} />);
+
+    fireEvent.click(screen.getByTestId('alert-row-alert-1'));
+    fireEvent.click(await screen.findByRole('button', { name: label }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(modalTestId)).toHaveTextContent('Test Alert 1');
+      expect(screen.queryByTestId('alert-sidebar')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
+    await waitFor(() => {
+      expect(screen.queryByTestId(modalTestId)).not.toBeInTheDocument();
+    });
+  });
+
+  it.each([
+    ['Dismiss', 'dismiss-modal'],
+    ['Change Status', 'change-status-modal'],
+  ])('should refetch incident alerts when the "%s" modal closes', async (label, modalTestId) => {
+    const mutate = jest.fn();
+    useIncidentAlerts.mockReturnValue({
+      data: mockIncidentAlerts,
+      isLoading: false,
+      error: null,
+      mutate,
+    });
+
+    render(<IncidentAlerts incident={mockIncident} />);
+
+    fireEvent.click(screen.getByTestId('alert-row-alert-1'));
+    fireEvent.click(await screen.findByRole('button', { name: label }));
+    await screen.findByTestId(modalTestId);
+    fireEvent.click(screen.getByRole('button', { name: 'Close modal' }));
+
+    expect(mutate).toHaveBeenCalled();
   });
 
   it('should show empty state when no alerts', () => {
