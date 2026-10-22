@@ -183,11 +183,14 @@ The authenticated entity will have:
 | :-------------------: | :-------------------------------: | :-------------------: | :-----------: | :--------------------------: |
 |  **PUSHER_DISABLED**  |    Disables Pusher integration    |          No           |    "false"    |      "true" or "false"       |
 |    **PUSHER_HOST**    |   Hostname of the Pusher server   |          No           |     None      | Valid hostname or IP address |
+| **PUSHER_HOST_INTERNAL** | Internal/private Pusher hostname for backend (takes precedence over PUSHER_HOST) | No | None | Valid hostname, URL, or service name |
 |    **PUSHER_PORT**    |     Port of the Pusher server     |          No           |     None      |    Any valid port number     |
+| **PUSHER_PORT_INTERNAL** | Internal port of the Pusher server (takes precedence over PUSHER_PORT) | No | None | Any valid port number |
 |   **PUSHER_APP_ID**   |       Pusher application ID       | Yes (if using Pusher) |     None      |     Valid Pusher App ID      |
 |  **PUSHER_APP_KEY**   |      Pusher application key       | Yes (if using Pusher) |     None      |     Valid Pusher App Key     |
 | **PUSHER_APP_SECRET** |     Pusher application secret     | Yes (if using Pusher) |     None      |   Valid Pusher App Secret    |
 |  **PUSHER_USE_SSL**   | Enables SSL for Pusher connection |          No           |     False     |     Boolean (True/False)     |
+| **PUSHER_USE_SSL_INTERNAL** | Enables SSL for internal Pusher connection | No | False | Boolean (True/False) |
 |  **PUSHER_CLUSTER**   |          Pusher cluster           |          No           |     None      |  Valid Pusher cluster name   |
 
 ### OpenAI
@@ -409,7 +412,9 @@ These endpoints are rate-limited according to the `KEEP_LIMIT_CONCURRENCY` setti
 |       Env var       |            Purpose            |        Required         | Default Value |        Valid options         |
 | :-----------------: | :---------------------------: | :---------------------: | :-----------: | :--------------------------: |
 | **PUSHER_DISABLED** |  Disables Pusher integration  |           No            |    "false"    |      "true" or "false"       |
-|   **PUSHER_HOST**   | Hostname of the Pusher server |           No            |  "localhost"  | Valid hostname or IP address |
+|   **PUSHER_HOST**   | Hostname of the Pusher server |           No            |  "localhost"  | Valid hostname, relative path, or URL |
+| **PUSHER_HOST_CLIENT** | Public/client Pusher host or reverse proxy path (takes precedence over PUSHER_HOST) | No | None | Valid hostname, relative path (e.g. /websocket), or URL |
 |   **PUSHER_PORT**   |   Port of the Pusher server   |           No            |     6001      |      Valid port number       |
+| **PUSHER_PORT_CLIENT** | Client port of the Pusher server (takes precedence over PUSHER_PORT) | No | None | Valid port number |
 | **PUSHER_APP_KEY**  |    Pusher application key     | Yes (if Pusher enabled) | "keepappkey"  |     Valid Pusher App Key     |
 | **PUSHER_CLUSTER**  |        Pusher cluster         |           No            |     None      |  Valid Pusher cluster name   |
