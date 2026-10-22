@@ -10,7 +10,7 @@ import { AuthType } from "@/utils/authenticationType";
 export function useSignOut() {
   const { data: configData } = useConfig();
 
-  return useCallback(() => {
+  return useCallback(async () => {
     if (!configData) {
       return;
     }
@@ -23,9 +23,9 @@ export function useSignOut() {
       posthog.reset();
     }
 
-    // For OAUTH2PROXY auth, redirect to oauth2-proxy's sign_out endpoint
-    // This properly clears the oauth2-proxy session
+    // Clear the Auth.js session before redirecting to oauth2-proxy's sign_out endpoint
     if (configData?.AUTH_TYPE === AuthType.OAUTH2PROXY) {
+      await signOut({ redirect: false });
       window.location.href = "/oauth2/sign_out";
       return;
     }

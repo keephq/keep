@@ -57,7 +57,8 @@ describe("useSignOut", () => {
     expect(locationHref).toBe("");
   });
 
-  it("should redirect to /oauth2/sign_out for OAUTH2PROXY auth type", () => {
+  it("should clear the Auth.js session and redirect to /oauth2/sign_out for OAUTH2PROXY auth type", async () => {
+    jest.mocked(signOut).mockResolvedValueOnce({ url: "/signin" });
     (useConfig as jest.Mock).mockReturnValue({
       data: {
         AUTH_TYPE: AuthType.OAUTH2PROXY,
@@ -68,12 +69,46 @@ describe("useSignOut", () => {
 
     const { result } = renderHook(() => useSignOut());
 
+    await act(async () => {
+      await result.current();
+    });
+
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(signOut).toHaveBeenCalledWith({ redirect: false });
+    expect(locationHref).toBe("/oauth2/sign_out");
+  });
+
+  it("should wait for Auth.js signOut to complete before redirecting to OAuth2 Proxy", async () => {
+    let resolveSignOut!: (value: { url: string }) => void;
+    const pendingSignOut = new Promise<{ url: string }>((resolve) => {
+      resolveSignOut = resolve;
+    });
+    jest.mocked(signOut).mockReturnValueOnce(pendingSignOut);
+    (useConfig as jest.Mock).mockReturnValue({
+      data: {
+        AUTH_TYPE: AuthType.OAUTH2PROXY,
+        SENTRY_DISABLED: "true",
+        POSTHOG_DISABLED: "true",
+      },
+    });
+
+    const { result } = renderHook(() => useSignOut());
+    let logoutPromise: Promise<void>;
+
     act(() => {
-      result.current();
+      logoutPromise = result.current();
+    });
+
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(signOut).toHaveBeenCalledWith({ redirect: false });
+    expect(locationHref).toBe("");
+
+    await act(async () => {
+      resolveSignOut({ url: "/signin" });
+      await logoutPromise;
     });
 
     expect(locationHref).toBe("/oauth2/sign_out");
-    expect(signOut).not.toHaveBeenCalled();
   });
 
   it("should call NextAuth signOut for DB auth type", () => {
