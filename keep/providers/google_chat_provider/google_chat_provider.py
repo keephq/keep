@@ -1,16 +1,138 @@
 import dataclasses
+import hashlib
 import http
 import os
 import time
+import uuid
+from contextlib import ExitStack, nullcontext
+from email.utils import parsedate_to_datetime
+from urllib.parse import urlsplit
 
 import pydantic
+import redis
 import requests
+from redis.sentinel import Sentinel
 
+from keep.api.core.config import config as keep_config
+from keep.api.redis_settings import get_redis_settings
 from keep.contextmanager.contextmanager import ContextManager
 from keep.exceptions.provider_exception import ProviderException
 from keep.providers.base.base_provider import BaseProvider
 from keep.providers.models.provider_config import ProviderConfig
 from keep.validation.fields import HttpsUrl
+
+
+def _pacing_redis_client(stack):
+    """Use Keep's existing Redis configuration; never a private delivery queue."""
+    if not keep_config("REDIS", default=False, cast=bool):
+        raise ProviderException("Google Chat rate limiting requires Keep Redis")
+    settings = get_redis_settings()
+    options = {
+        "username": settings.username,
+        "password": settings.password,
+        "db": settings.database,
+        "socket_connect_timeout": 2,
+        "socket_timeout": 2,
+        "retry_on_timeout": False,
+        "ssl": settings.ssl,
+    }
+    if settings.ssl:
+        options.update(
+            ssl_cert_reqs=settings.ssl_cert_reqs,
+            ssl_check_hostname=settings.ssl_check_hostname,
+            ssl_ca_certs=settings.ssl_ca_certs,
+        )
+    if settings.sentinel:
+        sentinel = Sentinel(
+            settings.host,
+            sentinel_kwargs={"socket_timeout": 2, "socket_connect_timeout": 2},
+            **options,
+        )
+        for node in sentinel.sentinels:
+            stack.callback(node.close)
+        client = sentinel.master_for(settings.sentinel_master)
+    else:
+        client = redis.Redis(host=settings.host, port=settings.port, **options)
+    stack.callback(client.close)
+    return client
+
+
+class _SpacePermit:
+    """A bounded owner lease; only its owner can start the final cooldown."""
+
+    def __init__(self, client, key, token):
+        self.client, self.key, self.token = client, key, token
+
+    def ensure_owned(self):
+        try:
+            owned = self.client.eval(
+                "if redis.call('GET', KEYS[1]) == ARGV[1] then "
+                "return redis.call('PEXPIRE', KEYS[1], 60000) else return 0 end",
+                1,
+                self.key,
+                self.token,
+            )
+        except redis.RedisError:
+            raise ProviderException("Google Chat rate limiter unavailable") from None
+        if not owned:
+            raise ProviderException("Google Chat space lease was lost before delivery")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        try:
+            self.client.eval(
+                "if redis.call('GET', KEYS[1]) == ARGV[1] then "
+                "redis.call('SET', KEYS[1], 'cooldown', 'PX', 1100); return 1 else return 0 end",
+                1,
+                self.key,
+                self.token,
+            )
+        except redis.RedisError:
+            if exc_type is None:
+                raise ProviderException(
+                    "Google Chat rate limiter unavailable after delivery"
+                ) from None
+            # Preserve the original failure; the bounded lease expires by itself.
+
+
+def _wait_for_space(client, webhook_url):
+    """Coordinate all provider aliases for a Space without storing their secrets."""
+    parsed = urlsplit(str(webhook_url))
+    parts = parsed.path.strip("/").split("/")
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != "chat.googleapis.com"
+        or len(parts) != 4
+        or parts[:2] != ["v1", "spaces"]
+        or not parts[2]
+        or parts[3] != "messages"
+    ):
+        raise ProviderException("Rate limiting requires a Google Chat webhook URL")
+    space_hash = hashlib.sha256(parts[2].encode()).hexdigest()
+    key = f"keep:google-chat:space:{space_hash}"
+    token = uuid.uuid4().hex
+    deadline = time.monotonic() + 60
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ProviderException("Google Chat space remained busy for 60 seconds")
+        try:
+            if client.set(key, token, nx=True, px=60000):
+                if time.monotonic() >= deadline:
+                    raise ProviderException(
+                        "Google Chat space remained busy for 60 seconds"
+                    )
+                return _SpacePermit(client, key, token)
+            delay_ms = client.pttl(key)
+        except redis.RedisError:
+            raise ProviderException("Google Chat rate limiter unavailable") from None
+        if delay_ms == -1:
+            raise ProviderException("Google Chat rate limiter key has no expiry")
+        remaining = max(0, deadline - time.monotonic())
+        # The owner normally finishes much earlier than its crash-recovery lease.
+        time.sleep(min(remaining, max(0.01, min(0.1, delay_ms / 1000))))
 
 
 @pydantic.dataclasses.dataclass
@@ -67,41 +189,82 @@ class GoogleChatProvider(BaseProvider):
         if not message:
             raise ProviderException("Message is required")
 
-        def __send_message(url, body, headers, retries=3):
+        with ExitStack() as stack:
+            limiter = None
+            if keep_config("GOOGLE_CHAT_RATE_LIMIT_ENABLED", default=False, cast=bool):
+                limiter = _pacing_redis_client(stack)
+            payload = {"text": message}
+            headers = {"Content-Type": "application/json; charset=UTF-8"}
+            retries = 3
             for attempt in range(retries):
+                response = None
                 try:
-                    resp = requests.post(url, json=body, headers=headers)
-                    if resp.status_code == http.HTTPStatus.OK:
-                        return resp
-
-                    self.logger.warning(
-                        f"Attempt {attempt + 1} failed with status code {resp.status_code}"
+                    permit = (
+                        _wait_for_space(limiter, webhook_url)
+                        if limiter is not None
+                        else nullcontext()
                     )
-
-                except requests.exceptions.RequestException as e:
-                    self.logger.error(f"Attempt {attempt + 1} failed: {e}")
-
+                    with permit as admission:
+                        if admission is not None:
+                            admission.ensure_owned()
+                        response = requests.post(
+                            webhook_url, json=payload, headers=headers, timeout=(5, 15)
+                        )
+                except requests.exceptions.RequestException as error:
+                    # Request exception messages can contain the secret webhook URL.
+                    self.logger.warning(
+                        "Google Chat attempt %s failed with %s",
+                        attempt + 1,
+                        type(error).__name__,
+                    )
+                else:
+                    if response.status_code == http.HTTPStatus.OK:
+                        self.logger.debug(
+                            "Alert message sent to Google Chat successfully"
+                        )
+                        return "Alert message sent to Google Chat successfully"
+                    if response.status_code not in (408, 429) and not (
+                        500 <= response.status_code < 600
+                    ):
+                        raise ProviderException(
+                            f"Google Chat rejected the message with status {response.status_code}"
+                        )
+                    self.logger.warning(
+                        "Google Chat attempt %s failed with status %s",
+                        attempt + 1,
+                        response.status_code,
+                    )
                 if attempt < retries - 1:
-                    time.sleep(1)
+                    time.sleep(self._retry_delay(response, attempt))
 
-            raise requests.exceptions.RequestException(
-                f"Failed to notify message after {retries} attempts"
-            )
-
-        payload = {
-            "text": message,
-        }
-
-        request_headers = {"Content-Type": "application/json; charset=UTF-8"}
-
-        response = __send_message(webhook_url, body=payload, headers=request_headers)
-        if response.status_code != http.HTTPStatus.OK:
             raise ProviderException(
-                f"Failed to notify message to Google Chat: {response.text}"
+                f"Failed to notify Google Chat after {retries} attempts"
             )
 
-        self.logger.debug("Alert message sent to Google Chat successfully")
-        return "Alert message sent to Google Chat successfully"
+    @staticmethod
+    def _retry_delay(response, attempt):
+        """Respect Retry-After without blocking a worker for an unbounded period."""
+        delay = 2**attempt
+        retry_after = (
+            response.headers.get("Retry-After") if response is not None else None
+        )
+        if retry_after:
+            try:
+                delay = max(delay, int(retry_after))
+            except (TypeError, ValueError):
+                try:
+                    delay = max(
+                        delay,
+                        parsedate_to_datetime(retry_after).timestamp() - time.time(),
+                    )
+                except (TypeError, ValueError, OverflowError):
+                    pass
+        if delay > 60:
+            # Retrying sooner than the server requested would amplify rate limiting.
+            raise ProviderException(
+                "Google Chat Retry-After exceeds the 60 second limit"
+            )
+        return delay
 
 
 if __name__ == "__main__":
