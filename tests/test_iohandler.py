@@ -111,6 +111,47 @@ def test_with_function_2(context_manager):
     assert s == "hello 1"
 
 
+def test_dictget_with_quotes_and_parentheses_in_rendered_alert(context_manager):
+    description = "Hello ('Hola') everyone. How are you all doing?"
+    context_manager.event_context = AlertDto(
+        id="test",
+        name="test",
+        lastReceived="2024-03-20T00:00:00.000Z",
+        description=description,
+    )
+    iohandler = IOHandler(context_manager)
+
+    assert (
+        iohandler.render("keep.dictget('{{ alert }}', 'description', 'unknown')")
+        == description
+    )
+    assert (
+        iohandler.render('keep.dictget("{{ alert }}", "description", "unknown")')
+        == description
+    )
+    assert (
+        iohandler.render(
+            "Description: keep.dictget('{{ alert }}', 'description', 'unknown')"
+        )
+        == f"Description: {description}"
+    )
+    assert (
+        iohandler.render(
+            "keep.dictget('{{ alert }}', 'description', 'unknown') | "
+            "keep.dictget('{{ alert }}', 'some_field', 'unknown')"
+        )
+        == f"{description} | unknown"
+    )
+
+
+@pytest.mark.parametrize("value", ["(abc", "[WARN", "{name", "(don't)"])
+def test_extract_function_with_non_json_literal_prefix(context_manager, value):
+    iohandler = IOHandler(context_manager)
+    template = f'keep.split("{value}", "x")'
+
+    assert len(iohandler.extract_keep_functions(template)) == 1
+
+
 def test_with_json_dumps(context_manager):
     iohandler = IOHandler(context_manager)
     context_manager.steps_context = {
