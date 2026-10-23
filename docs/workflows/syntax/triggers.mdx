@@ -98,6 +98,21 @@ triggers:
       - update
 ```
 
+### Maintenance Window Trigger
+
+Runs workflows when a maintenance window is created, updated, or deleted. This is useful for notifying stakeholders when scheduled maintenance changes.
+
+```yaml
+triggers:
+  - type: maintenance
+    events:
+      - created
+      - updated
+      - deleted
+```
+
+The maintenance window is available to the workflow through the `maintenance` context, for example `{{ maintenance.name }}`, `{{ maintenance.start_time }}` and `{{ maintenance.end_time }}`.
+
 ### Field Change Trigger
 
 Executes a workflow when specific fields in an alert change, such as status or severity.
