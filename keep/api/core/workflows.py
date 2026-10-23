@@ -425,4 +425,4 @@ def get_workflow_potential_facet_fields(tenant_id: str) -> list[str]:
         field_configuration.map_from_pattern
         for field_configuration in workflow_field_configurations
         if "*" not in field_configuration.map_from_pattern
-            ]
+    ]
