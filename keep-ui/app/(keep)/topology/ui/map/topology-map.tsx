@@ -454,7 +454,9 @@ export function TopologyMap({
 
   const { data: allIncidents } = useIncidents({});
   const { useLastAlerts } = useAlerts();
-  const { data: allAlerts } = useLastAlerts(undefined);
+  // a query must be passed: with undefined the SWR key is null and /alerts/query
+  // never runs, so alert badges never render on topology nodes
+  const { data: allAlerts } = useLastAlerts({ cel: "", limit: 1000, offset: 0 });
 
   useEffect(
     function createAndSetLayoutedNodesAndEdges() {
