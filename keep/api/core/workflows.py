@@ -14,6 +14,7 @@ from keep.api.core.cel_to_sql.properties_metadata import (
     FieldMappingConfiguration,
     PropertiesMetadata,
     PropertyMetadataInfo,
+    SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider,
@@ -105,7 +106,22 @@ static_facets = [
 static_facets_dict = {facet.id: facet for facet in static_facets}
 
 
-def __build_workflow_executions_query(tenant_id: str):
+EXECUTION_FIELDS = {"started", "last_execution_status", "last_execution_time"}
+
+
+def __requires_executions(involved_fields: list[PropertyMetadataInfo]) -> bool:
+    # SQL mappings are stable even when providers bracket logical field names.
+    return any(
+        isinstance(mapping, SimpleFieldMapping)
+        and mapping.map_to in {"started", "status", "execution_time"}
+        for field in involved_fields
+        for mapping in field.field_mappings
+    )
+
+
+def __build_workflow_executions_query(
+    tenant_id: str, workflow_ids: list[str] | None = None
+):
     query = (
         select(
             WorkflowExecution.workflow_id,
@@ -128,13 +144,17 @@ def __build_workflow_executions_query(tenant_id: str):
         )
     )
 
+    if workflow_ids is not None:
+        # Filter the input before ranking, including for an empty page.
+        query = query.where(WorkflowExecution.workflow_id.in_(workflow_ids))
+
     return query
 
 
 def build_workflow_executions_query(
     tenant_id: str, workflow_ids: list[str], limit_per_workflow: int
 ):
-    query = __build_workflow_executions_query(tenant_id).cte(
+    query = __build_workflow_executions_query(tenant_id, workflow_ids).cte(
         "workflow_executions_query"
     )
 
@@ -147,7 +167,6 @@ def build_workflow_executions_query(
             query.c.status,
         )
         .select_from(query)
-        .where(query.c.workflow_id.in_(workflow_ids))
         .where(query.c.row_num <= limit_per_workflow)
     )
 
@@ -159,8 +178,9 @@ def __build_base_query(
     fetch_last_executions: int = 1,
     select_statements=None,
     latest_executions_subquery_cte=None,
+    include_executions: bool = True,
 ):
-    if latest_executions_subquery_cte is None:
+    if include_executions and latest_executions_subquery_cte is None:
         latest_executions_subquery_cte = __build_workflow_executions_query(
             tenant_id
         ).cte("latest_executions_subquery")
@@ -182,34 +202,37 @@ def __build_base_query(
     workflows_with_last_executions_query = (
         select(*select_statements)
         .select_from(Workflow)
-        .outerjoin(
-            latest_executions_subquery_cte,
-            and_(
-                Workflow.id == latest_executions_subquery_cte.c.workflow_id,
-                latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
-            ),
-        )
         .where(Workflow.tenant_id == tenant_id)
         .where(Workflow.is_deleted == False)
         .where(Workflow.is_test == False)
     )
 
+    if include_executions:
+        workflows_with_last_executions_query = (
+            workflows_with_last_executions_query.outerjoin(
+                latest_executions_subquery_cte,
+                and_(
+                    Workflow.id == latest_executions_subquery_cte.c.workflow_id,
+                    latest_executions_subquery_cte.c.row_num <= fetch_last_executions,
+                ),
+            )
+        )
+
     return workflows_with_last_executions_query
 
 
 def build_workflows_total_count_query(tenant_id: str, cel: str):
+    cel_result = get_cel_to_sql_provider(properties_metadata).convert_to_sql_str_v2(cel)
     query = __build_base_query(
-        tenant_id=tenant_id, select_statements=[func.count(func.distinct(Workflow.id))]
+        tenant_id=tenant_id,
+        select_statements=[func.count(func.distinct(Workflow.id))],
+        include_executions=__requires_executions(cel_result.involved_fields),
     )
 
-    if cel:
-        cel_to_sql_instance = get_cel_to_sql_provider(properties_metadata)
-        sql_filter_str = cel_to_sql_instance.convert_to_sql_str(cel)
-        query = query.filter(text(sql_filter_str))
+    if cel_result.sql:
+        query = query.filter(text(cel_result.sql))
 
-    query = query.distinct()
-
-    return query
+    return query.distinct()
 
 
 def build_workflows_query(
@@ -375,13 +398,17 @@ def get_workflow_facets_data(
 
     def base_query_factory(
         facet_property_path: str,
-        involved_fields: PropertyMetadataInfo,
+        involved_fields: list[PropertyMetadataInfo],
         select_statement,
     ):
         return __build_base_query(
             tenant_id=tenant_id,
             select_statements=select_statement,
             latest_executions_subquery_cte=latest_executions_subquery_cte,
+            include_executions=(
+                facet_property_path in EXECUTION_FIELDS
+                or __requires_executions(involved_fields)
+            ),
         )
 
     return get_facet_options(
