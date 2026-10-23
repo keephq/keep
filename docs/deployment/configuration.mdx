@@ -290,14 +290,25 @@ The authenticated entity will have:
   instance. Redis sentinel is used when you have a redis cluster and it acts as a broker.
 </Info>
 
-|               Env var               |        Purpose              | Required |    Default Value    |                Valid options                |
-| :---------------------------------: | :----------------------:    | :------: | :-----------------: | :-----------------------------------------: |
-|             **REDIS**               |        Redis enabled        |    No    |       false         |              true or false                  |
-|      **REDIS_SENTINEL_HOSTS**       |   Redis sentinel server(s)  |    No    |  "localhost:26379"  | "host1:port1,host2:port2" (comma-separated) |
-|   **REDIS_SENTINEL_SERVICE_NAME**   | Redis sentinel service name |    No    |    "mymaster"       |         Valid service name string           |
-|            **REDIS_DB**             |     Redis database slot     |    No    |         0           |             Valid DB number                  |
-|         **REDIS_USERNAME**          |      Redis username         |    No    |       None          |           Valid username string             |
-|         **REDIS_PASSWORD**          |      Redis password         |    No    |       None          |           Valid password string             |
+|                  Env var                   |                       Purpose                        | Required |    Default Value    |                Valid options                |
+| :----------------------------------------: | :--------------------------------------------------: | :------: | :-----------------: | :-----------------------------------------: |
+|               **REDIS**                    |                   Redis enabled                      |    No    |       false         |              true or false                  |
+|        **REDIS_SENTINEL_HOSTS**            |            Redis sentinel server(s)                  |    No    |  "localhost:26379"  | "host1:port1,host2:port2" (comma-separated) |
+|     **REDIS_SENTINEL_SERVICE_NAME**        |          Redis sentinel service name                 |    No    |    "mymaster"       |         Valid service name string           |
+|              **REDIS_DB**                  |               Redis database slot                    |    No    |         0           |             Valid DB number                 |
+|           **REDIS_USERNAME**               |    Redis data-node username (master connection)      |    No    |       None          |           Valid username string             |
+|           **REDIS_PASSWORD**               |    Redis data-node password (master connection)      |    No    |       None          |           Valid password string             |
+|       **REDIS_SENTINEL_PASSWORD**          | Password for authenticating **to Sentinel nodes** (port 26379). Defaults to `REDIS_PASSWORD` when unset. Set this separately when your Sentinel nodes use a different password than the data node. |    No    |  *(REDIS_PASSWORD)* |           Valid password string             |
+|       **REDIS_SENTINEL_USERNAME**          | Username for authenticating **to Sentinel nodes** (port 26379). Defaults to `REDIS_USERNAME` when unset. |    No    |  *(REDIS_USERNAME)* |           Valid username string             |
+|          **REDIS_SENTINEL_SSL**             | Enables SSL/TLS when connecting **to Sentinel nodes** (port 26379). Use `REDIS_SSL` for data nodes. |    No    |       false         |              true or false                  |
+
+<Note>
+  **Password-protected Sentinel nodes** require authentication separately from the Redis
+  data node.  If your Sentinel instances (`requirepass` on port 26379) use the **same**
+  password as the master data node, setting only `REDIS_PASSWORD` is sufficient.  If they
+  use a **different** password, set `REDIS_SENTINEL_PASSWORD` explicitly.  Existing
+  deployments without a Sentinel password are unaffected.
+</Note>
 
 
 ### ARQ
