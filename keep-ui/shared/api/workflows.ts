@@ -71,6 +71,7 @@ export type Workflow = {
   alertRule?: boolean;
   revision?: number;
   canRun?: boolean;
+  manual_visible?: boolean;
 };
 
 export type MockProvider = {

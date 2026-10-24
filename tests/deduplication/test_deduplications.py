@@ -28,6 +28,14 @@ from tests.fixtures.client import client, setup_api_key, test_app  # noqa
 logging.basicConfig(level=logging.DEBUG)
 
 
+@pytest.fixture(autouse=True)
+def mock_datadog_webhook(monkeypatch):
+    # These tests exercise local deduplication with fake provider credentials,
+    # not webhook installation against the live Datadog API.
+    provider_class = ProvidersFactory.get_provider_class("datadog")
+    monkeypatch.setattr(provider_class, "setup_webhook", lambda *args, **kwargs: None)
+
+
 def wait_for_alerts(client, num_alerts):
     alerts = client.get("/alerts", headers={"x-api-key": "some-api-key"}).json()
     print(f"------------- Total alerts: {len(alerts)}")

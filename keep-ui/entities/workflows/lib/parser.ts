@@ -144,7 +144,8 @@ export function getWorkflowDefinition(
   conditions: V2Step[],
   triggers: { [key: string]: { [key: string]: string } } = {},
   inputs: WorkflowInput[] = [],
-  onFailure?: V2ActionStep
+  onFailure?: V2ActionStep,
+  manualVisible?: boolean
 ): Definition {
   /**
    * Generate the workflow definition
@@ -157,6 +158,7 @@ export function getWorkflowDefinition(
       name: name,
       description: description,
       disabled: disabled,
+      manual_visible: manualVisible,
       isLocked: true,
       consts: consts,
       inputs: inputs,
@@ -287,7 +289,8 @@ export function parseWorkflow(
     conditions,
     triggers,
     workflow?.inputs ?? [],
-    onFailure
+    onFailure,
+    workflow.manual_visible
   );
 }
 
@@ -583,6 +586,7 @@ export function getYamlWorkflowDefinition(
     name: name,
     description: description,
     disabled: Boolean(disabled),
+    manual_visible: alert.properties.manual_visible,
     triggers: triggers,
     inputs: alert.properties.inputs,
     owners: owners,

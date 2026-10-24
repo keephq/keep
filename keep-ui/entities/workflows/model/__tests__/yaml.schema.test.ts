@@ -517,3 +517,39 @@ describe("getYamlWorkflowDefinitionSchema", () => {
     expect(() => schema.parse(workflowWithDisposableEnrichAlert)).not.toThrow();
   });
 });
+
+describe("manual_visible", () => {
+  it.each([true, false])("accepts and retains %s", (manual_visible) => {
+    const parsed = YamlWorkflowDefinitionSchema.parse({
+      workflow: {
+        id: "automated",
+        manual_visible,
+        triggers: [{ type: "manual" }],
+        actions: [
+          {
+            name: "log",
+            provider: { type: "console", with: { message: "hello" } },
+          },
+        ],
+      },
+    });
+    expect(parsed.workflow.manual_visible).toBe(manual_visible);
+  });
+  it("rejects non-boolean settings", () => {
+    expect(() =>
+      YamlWorkflowDefinitionSchema.parse({
+        workflow: {
+          id: "automated",
+          manual_visible: "false",
+          triggers: [{ type: "manual" }],
+          actions: [
+            {
+              name: "log",
+              provider: { type: "console", with: { message: "hello" } },
+            },
+          ],
+        },
+      })
+    ).toThrow();
+  });
+});

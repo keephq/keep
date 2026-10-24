@@ -114,3 +114,32 @@ triggers:
 Triggers are a powerful way to control the execution of workflows, ensuring that they respond appropriately to manual actions, schedules, or events. By leveraging CEL expressions or filters, workflows can be fine-tuned to execute only under specific conditions.
 
 For more information about CEL expressions, refer to the [CEL Language Definition](https://github.com/google/cel-spec/blob/master/doc/langdef.md) and experiment with expressions in the [CEL Playground](https://playcel.undistro.io/).
+
+## Manual run list visibility
+
+Set `manual_visible: false` at the workflow level to hide an automated workflow
+from the **Run Workflow** picker on alerts and incidents. Available workflows are
+sorted by name. If the property is omitted or `true`, the workflow remains visible
+subject to its existing enabled state and run permissions.
+
+```yaml
+workflow:
+  id: automatic-incident-update
+  name: Automatic incident update
+  manual_visible: false
+  triggers:
+    - type: incident
+      events:
+        - created
+  actions:
+    - name: log-incident
+      provider:
+        type: console
+        with:
+          message: "Incident created"
+```
+
+This setting only controls visibility in the picker. It does not disable the
+workflow, change scheduled or event-triggered execution, or revoke access to
+explicit runs from the workflow page or API. Use workflow permissions to restrict
+who can run a workflow.
