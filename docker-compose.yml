@@ -29,6 +29,22 @@ services:
       file: docker-compose.common.yml
       service: keep-websocket-server-common
 
+  keep-mcp:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mcp
+    profiles:
+      - mcp
+    ports:
+      - "127.0.0.1:8001:8001"
+    environment:
+      - KEEP_API_URL=http://keep-backend:8080
+      # WARNING: keep-backend uses NO_AUTH here; do not expose this port remotely.
+      # Clients must send their own X-API-KEY; add hosts here when exposing remotely
+      - MCP_ALLOWED_HOSTS=localhost:*,127.0.0.1:*,keep-mcp:*
+    depends_on:
+      - keep-backend
+
   grafana:
     image: grafana/grafana:latest
     profiles:
