@@ -102,6 +102,17 @@ The provider must allow the redirect URI:
        keep it off, or list full paths in `KEEP_OIDC_*_ROLES`)
 4. Create groups `keep-admins` / `keep-noc` and assign users.
 
+Recommended scopes for Keycloak: `openid email profile` (see
+`KEEP_OIDC_SCOPES` below the examples):
+
+- the `groups` scope does not exist in a default realm — the Group Membership
+  mapper adds the `groups` claim to the token even when the scope is not
+  requested, so simply do not request it;
+- `offline_access` requires the client to allow offline tokens — a default
+  client returns `offline_tokens_not_allowed` on the token request. Either
+  omit the scope (refresh tokens keep working for the duration of the SSO
+  session) or enable offline access for the client.
+
 ```bash
 # keep-api
 AUTH_TYPE=OIDC
@@ -174,10 +185,13 @@ KEEP_OIDC_SCOPES=openid email profile groups offline_access
 
 Notes:
 
+- To skip the consent screen set `oauth2.skipApprovalScreen: true` (not
+  `skipApproval`).
 - Static (`staticPasswords`) users do not carry a `groups` claim — they cannot
   get a role in keep by design. Use them as break-glass IdP accounts, or put
   directory users in the mapped groups.
-- The `offline_access` scope is required for refresh tokens.
+- With the ldap connector, request the `groups` scope — Dex adds the `groups`
+  claim only when that scope is granted.
 
 ### Authentik
 
@@ -216,3 +230,6 @@ Notes:
 | `403 No valid role found` | The token has no group from `KEEP_OIDC_*_ROLES`. For Keycloak check the Group Membership mapper and the "Full group path" setting (`/keep-admins` vs `keep-admins`). |
 | Redirect URI rejected at the provider | The client's allowed redirect URIs must contain exactly `https://<your-keep-domain>/api/auth/callback/oidc`. |
 | UI error after login, backend logs `401` | `AUTH_TYPE`/issuer/client id mismatch between keep-ui and keep-api env. |
+| Provider error `invalid_scope` (Keycloak) | The realm has no client scope with the requested name — drop `groups` from `KEEP_OIDC_SCOPES` (the mapper emits the claim anyway). |
+| Provider error `offline_tokens_not_allowed` / `not_allowed` (Keycloak) | The client does not allow offline tokens — drop `offline_access` from `KEEP_OIDC_SCOPES` or enable offline access for the client. |
+| Provider TLS errors in the logs (self-signed/private CA) | Backend: set `SSL_CERT_FILE`/`REQUESTS_CA_BUNDLE` to your CA bundle. keep-ui (Node): set `NODE_EXTRA_CA_CERTS` to the CA file. |
