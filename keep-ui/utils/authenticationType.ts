@@ -8,6 +8,7 @@ export enum AuthType {
   AZUREAD = "AZUREAD",
   OKTA = "OKTA",
   ONELOGIN = "ONELOGIN",
+  OIDC = "OIDC",
   NOAUTH = "NOAUTH", // Default
 }
 
