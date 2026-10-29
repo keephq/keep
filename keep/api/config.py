@@ -63,6 +63,7 @@ def on_starting(server=None):
         IdentityManagerTypes.NOAUTH.value,
         IdentityManagerTypes.OAUTH2PROXY.value,
         IdentityManagerTypes.ONELOGIN.value,
+        IdentityManagerTypes.OIDC.value,
         IdentityManagerTypes.KEYCLOAK.value,
         IdentityManagerTypes.OKTA.value,
         "no_auth",  # backwards compatibility
@@ -71,6 +72,7 @@ def on_starting(server=None):
         excluded_from_default_user = [
             IdentityManagerTypes.OAUTH2PROXY.value,
             IdentityManagerTypes.ONELOGIN.value,
+            IdentityManagerTypes.OIDC.value,
             IdentityManagerTypes.KEYCLOAK.value,
             IdentityManagerTypes.OKTA.value,
         ]
