@@ -1,0 +1,218 @@
+---
+title: "Generic OIDC Authentication"
+---
+
+This document provides comprehensive information about generic OpenID Connect (OIDC)
+authentication in Keep. It works with any standards-compliant OIDC provider:
+[Dex](https://dexidp.io/), [Authentik](https://goauthentik.io/),
+[Zitadel](https://zitadel.com/), [Authelia](https://www.authelia.com/),
+[Kanidm](https://kanidm.com/), a plain Keycloak realm, and similar.
+
+## Overview
+
+`AUTH_TYPE=OIDC` enables SSO against any OIDC provider:
+
+- Authorization code flow with PKCE (performed by keep-ui via NextAuth; the client
+  secret stays on the UI server side only)
+- RS256 bearer token verification in the backend via the provider's JWKS
+  (discovered from `{issuer}/.well-known/openid-configuration`)
+- Group-to-role mapping: provider groups are mapped to keep roles
+  (`admin` / `noc` / `webhook`) with comma-separated lists
+- Just-in-time user provisioning: users are created on first sign-in, and their
+  role is refreshed from the token on **every** API request (a group change on
+  the provider takes effect without re-login)
+- Token refresh (requires the `offline_access` scope)
+
+This is a single-tenant auth type (tenant `keep`), like Okta/OneLogin. It does
+**not** replace the Keycloak EE integration, which additionally provides custom
+roles, resource-based permissions, multi-org and in-app user/group management.
+
+## How It Works
+
+```
+browser → keep-ui (NextAuth authorization code + PKCE → provider)
+        → session stores the id_token (default) or access_token
+        → every API request: Authorization: Bearer <token>
+        → keep-api: verifies signature via provider JWKS, iss, aud and exp,
+          maps the groups claim to a role, JIT-provisions the user
+```
+
+By default the **id_token** is validated, because the OIDC spec guarantees
+`aud=client_id` for it. Keycloak access tokens default to `aud="account"`, so
+`id_token` is the safe default. To validate access tokens instead, set
+`KEEP_OIDC_TOKEN_TYPE=access_token` and (if needed) `KEEP_OIDC_AUDIENCE`.
+
+A user whose token carries no group matching any `KEEP_OIDC_*_ROLES` list gets
+**403** — there is deliberately no default role.
+
+## Environment Variables
+
+### Backend (keep-api)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AUTH_TYPE` | Set to `OIDC` | `NOAUTH` |
+| `KEEP_OIDC_ISSUER` | (**required**) Issuer URL, e.g. `https://dex.example.com` or `https://kc.example.com/realms/keep` | — |
+| `KEEP_OIDC_CLIENT_ID` | (**required**) OAuth2 client id registered at the provider | — |
+| `KEEP_OIDC_ADMIN_ROLES` | Comma-separated provider groups mapped to the `admin` role | empty |
+| `KEEP_OIDC_NOC_ROLES` | Comma-separated provider groups mapped to the `noc` role | empty |
+| `KEEP_OIDC_WEBHOOK_ROLES` | Comma-separated provider groups mapped to the `webhook` role | empty |
+| `KEEP_OIDC_GROUPS_CLAIM` | Token claim that carries the groups | `groups` |
+| `KEEP_OIDC_TOKEN_TYPE` | Which token the UI sends as bearer: `id_token` or `access_token` | `id_token` |
+| `KEEP_OIDC_AUDIENCE` | Override the expected `aud` (default: the client id) | client id |
+| `KEEP_OIDC_JWKS_URL` | Override the JWKS URL (default: discovered) | discovered |
+| `KEEP_OIDC_AUTO_CREATE_USER` | Just-in-time user creation | `true` |
+
+When a group appears in several lists, the priority is `admin` > `noc` > `webhook`.
+
+### Frontend (keep-ui)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AUTH_TYPE` | Set to `OIDC` (same value as the backend) | `NOAUTH` |
+| `KEEP_OIDC_ISSUER` | Same issuer as the backend | — |
+| `KEEP_OIDC_CLIENT_ID` | Same client id as the backend | — |
+| `KEEP_OIDC_CLIENT_SECRET` | (**required**) Client secret — UI side only, the backend never needs it | — |
+| `KEEP_OIDC_SCOPES` | Requested scopes | `openid email profile groups offline_access` |
+| `KEEP_OIDC_TOKEN_TYPE` | Same value as the backend | `id_token` |
+| `KEEP_OIDC_ADMIN_ROLES` / `KEEP_OIDC_NOC_ROLES` / `KEEP_OIDC_WEBHOOK_ROLES` | Same lists as the backend (used for UI-level role display; the backend re-checks on every request) | empty |
+
+The provider must allow the redirect URI:
+`https://<your-keep-domain>/api/auth/callback/oidc`.
+
+## Provider Configuration Examples
+
+### Keycloak (any realm, no EE license required)
+
+1. Create a realm (e.g. `keep`) or use an existing one. The issuer is
+   `https://<keycloak-host>/realms/<realm>`.
+2. Create a client:
+   - **Client type**: Confidential
+   - **Client ID**: `keep`
+   - **Client authentication**: On
+   - **Standard flow**: Enabled, **Direct access grants**: Disabled
+   - **Valid redirect URIs**: `https://<your-keep-domain>/api/auth/callback/oidc`
+   - Copy the client secret from the *Credentials* tab.
+3. Add the groups claim (Keycloak does not include groups in tokens by default):
+   - **Client scopes** → select the `keep` client's dedicated scope → **Add mapper**
+     → **Group Membership**:
+     - Token claim name: `groups`
+     - Add to ID token: **On** (sufficient for the default `id_token` mode)
+     - Full group path: **Off** (otherwise claims look like `/keep-admins` — either
+       keep it off, or list full paths in `KEEP_OIDC_*_ROLES`)
+4. Create groups `keep-admins` / `keep-noc` and assign users.
+
+```bash
+# keep-api
+AUTH_TYPE=OIDC
+KEEP_OIDC_ISSUER=https://kc.example.com/realms/keep
+KEEP_OIDC_CLIENT_ID=keep
+KEEP_OIDC_ADMIN_ROLES=keep-admins
+KEEP_OIDC_NOC_ROLES=keep-noc
+# keep-ui (additionally)
+KEEP_OIDC_CLIENT_SECRET=***
+```
+
+### Dex
+
+Dex is useful on its own and as an LDAP/AD federation front (its ldap connector
+brings directory groups into the `groups` claim).
+
+```yaml
+# dex config.yaml
+issuer: https://dex.example.com
+
+staticClients:
+  - id: keep
+    name: Keep
+    secret: <same value as KEEP_OIDC_CLIENT_SECRET>
+    redirectURIs:
+      - https://<your-keep-domain>/api/auth/callback/oidc
+
+enablePasswordDB: true
+staticPasswords:            # break-glass local accounts (no groups claim!)
+  - email: admin@example.com
+    hash: $2a$10$...        # bcrypt
+    username: admin
+    userID: 11111111-1111-1111-1111-111111111111
+
+connectors:
+  - type: ldap              # directory users + groups
+    id: ldap
+    name: LDAP
+    config:
+      host: ldap.example.com:389
+      bindDN: cn=readonly,dc=example,dc=com
+      bindPW: ***
+      userSearch:
+        baseDN: ou=people,dc=example,dc=com
+        filter: "(objectClass=person)"
+        username: uid
+        idAttr: uid
+        emailAttr: mail
+        nameAttr: cn
+      groupSearch:
+        baseDN: ou=groups,dc=example,dc=com
+        filter: "(objectClass=groupOfNames)"
+        userMatchers:
+          - userAttr: DN
+            groupAttr: member
+        nameAttr: cn
+```
+
+```bash
+# keep-api
+AUTH_TYPE=OIDC
+KEEP_OIDC_ISSUER=https://dex.example.com
+KEEP_OIDC_CLIENT_ID=keep
+KEEP_OIDC_ADMIN_ROLES=keep-admins
+KEEP_OIDC_NOC_ROLES=keep-noc
+# keep-ui (additionally)
+KEEP_OIDC_CLIENT_SECRET=***
+KEEP_OIDC_SCOPES=openid email profile groups offline_access
+```
+
+Notes:
+
+- Static (`staticPasswords`) users do not carry a `groups` claim — they cannot
+  get a role in keep by design. Use them as break-glass IdP accounts, or put
+  directory users in the mapped groups.
+- The `offline_access` scope is required for refresh tokens.
+
+### Authentik
+
+1. Create an OAuth2/OpenID provider:
+   - **Client type**: Confidential
+   - **Redirect URIs**: `https://<your-keep-domain>/api/auth/callback/oidc`
+   - **Scopes**: add `email`, `profile`, `offline_access` and a group-membership
+     scope mapping (Authentik's default "groups" property mapping emits the
+     `groups` claim).
+2. The issuer is shown on the provider page:
+   `https://authentik.example.com/application/o/<slug>/`.
+3. Assign users to keep groups (`keep-admins`/`keep-noc`) and use the same env
+   variables as in the examples above.
+
+## Security Notes
+
+- Tokens are verified on every API request: RS256 signature via JWKS,
+  `iss` = `KEEP_OIDC_ISSUER`, `aud` = client id (or override), `exp` with a 60s
+  leeway. Key rotation on the provider is handled automatically (JWKS is
+  re-fetched for unknown key ids).
+- The discovery document is fetched once per issuer and cached; it is not
+  requested per API call.
+- No mapped group → 403 (there is no fallback role).
+- API keys are unaffected by provider availability (they use a separate code
+  path). If the provider is down, previously issued tokens stay valid until
+  they expire, but no new ones can be obtained.
+- Sign out clears the keep session; the SSO session at the provider stays alive
+  (same behavior as the Okta/OneLogin integrations).
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| `401 Invalid token: Audience` | The UI sends the wrong token type — align `KEEP_OIDC_TOKEN_TYPE` on both sides, or set `KEEP_OIDC_AUDIENCE` (e.g. Keycloak access tokens have `aud=account`). |
+| `401 Invalid token: Signature` | Provider keys rotated and JWKS cache holds old keys — it refreshes automatically on the next request; check `KEEP_OIDC_JWKS_URL` if you pinned it. |
+| `403 No valid role found` | The token has no group from `KEEP_OIDC_*_ROLES`. For Keycloak check the Group Membership mapper and the "Full group path" setting (`/keep-admins` vs `keep-admins`). |
+| Redirect URI rejected at the provider | The client's allowed redirect URIs must contain exactly `https://<your-keep-domain>/api/auth/callback/oidc`. |
+| UI error after login, backend logs `401` | `AUTH_TYPE`/issuer/client id mismatch between keep-ui and keep-api env. |
