@@ -9,6 +9,8 @@ from urllib.parse import urlencode, urljoin
 import pydantic
 import requests
 
+from keep.providers.site24x7_provider.tag_parser import parse_tags
+
 from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider
@@ -225,20 +227,7 @@ class Site24X7Provider(BaseProvider):
     ) -> AlertDto:
         site24x7_status = event.get("STATUS", "DOWN")
 
-        # Parse TAGS field: Site24x7 sends comma-separated "key:value" pairs
-        # e.g. "env:prod,team:backend" or plain "tagname"
-        tags_raw = event.get("TAGS", "")
-        labels = {}
-        if isinstance(tags_raw, str) and tags_raw:
-            for tag in tags_raw.split(","):
-                tag = tag.strip()
-                if ":" in tag:
-                    key, value = tag.split(":", 1)
-                    labels[key.strip()] = value.strip()
-                elif tag:
-                    labels[tag] = tag
-        elif isinstance(tags_raw, dict):
-            labels = tags_raw
+        labels = parse_tags(event.get("TAGS"))
 
         return AlertDto(
             url=event.get("MONITORURL", ""),
@@ -277,3 +266,4 @@ class Site24X7Provider(BaseProvider):
                 "Failed to get alerts", extra={"response": response.json()}
             )
             raise Exception("Could not get alerts")
+

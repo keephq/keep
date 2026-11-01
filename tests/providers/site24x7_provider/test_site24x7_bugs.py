@@ -111,6 +111,16 @@ class TestTagsParsing:
         )
         assert alert.labels == {"env": "prod", "team": "backend"}
 
+    def test_empty_tag_names_are_ignored(self):
+        alert = Site24X7Provider._format_alert(
+            _minimal_event(TAGS=":invalid, :invalid,env:prod")
+        )
+        assert alert.labels == {"env": "prod"}
+
+    def test_non_string_non_mapping_tags_are_ignored(self):
+        alert = Site24X7Provider._format_alert(_minimal_event(TAGS=42))
+        assert alert.labels == {}
+
     def test_tags_as_dict_passed_through(self):
         """If TAGS is already a dict, it must be used as-is."""
         alert = Site24X7Provider._format_alert(
