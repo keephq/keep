@@ -290,7 +290,8 @@
             "deployment/authentication/oauth2proxy-auth",
             "deployment/authentication/oauth2-proxy-gitlab",
             "deployment/authentication/okta-auth",
-            "deployment/authentication/onelogin-auth"
+            "deployment/authentication/onelogin-auth",
+            "deployment/authentication/oidc-auth"
           ]
         },
         {
