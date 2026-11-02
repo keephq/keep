@@ -35,6 +35,55 @@ interface Props {
   onSubmit?: ({ inputs }: { inputs: Record<string, any> }) => void;
 }
 
+// These must live at module scope. react-select treats `components` entries as
+// React component types, so defining them inside the modal creates new types on
+// every render, which remounts the Select and closes its open menu (the modal
+// re-renders whenever the alerts table polls or workflows revalidate).
+const CustomOption = (props: OptionProps<Workflow>) => {
+  const workflow: Workflow = props.data;
+
+  return (
+    <components.Option {...props}>
+      <div className="flex justify-between">
+        <Title className="max-w-[300px] overflow-ellipsis">
+          {workflow.name}
+        </Title>
+        <small>by {workflow.created_by}</small>
+      </div>
+      <Text>{workflow.description}</Text>
+      <div className="pt-2 flex gap-1">
+        {workflow.triggers.map((trigger: Trigger) => (
+          <WorkflowTriggerBadge
+            key={trigger.type}
+            trigger={trigger}
+            showTooltip={false}
+            onClick={() => {}}
+          />
+        ))}
+      </div>
+    </components.Option>
+  );
+};
+
+const CustomControl = (props: ControlProps<Workflow>) => {
+  return (
+    <components.Control
+      {...props}
+      innerProps={
+        {
+          "data-testid": "manual-run-workflow-select-control",
+          ...props.innerProps,
+        } as unknown as React.HTMLAttributes<HTMLDivElement>
+      }
+    />
+  );
+};
+
+const WORKFLOW_SELECT_COMPONENTS = {
+  Option: CustomOption,
+  Control: CustomControl,
+};
+
 export function ManualRunWorkflowModal({
   alert,
   incident,
@@ -174,50 +223,6 @@ export function ManualRunWorkflowModal({
     }
   };
 
-  const WorkflowSelect = (props: any) => {
-    return <Select<Workflow> {...props} />;
-  };
-
-  const CustomOption = (props: OptionProps<Workflow>) => {
-    const workflow: Workflow = props.data;
-
-    return (
-      <components.Option {...props}>
-        <div className="flex justify-between">
-          <Title className="max-w-[300px] overflow-ellipsis">
-            {workflow.name}
-          </Title>
-          <small>by {workflow.created_by}</small>
-        </div>
-        <Text>{workflow.description}</Text>
-        <div className="pt-2 flex gap-1">
-          {workflow.triggers.map((trigger: Trigger) => (
-            <WorkflowTriggerBadge
-              key={trigger.type}
-              trigger={trigger}
-              showTooltip={false}
-              onClick={() => {}}
-            />
-          ))}
-        </div>
-      </components.Option>
-    );
-  };
-
-  const CustomControl = (props: ControlProps<Workflow>) => {
-    return (
-      <components.Control
-        {...props}
-        innerProps={
-          {
-            "data-testid": "manual-run-workflow-select-control",
-            ...props.innerProps,
-          } as unknown as React.HTMLAttributes<HTMLDivElement>
-        }
-      />
-    );
-  };
-
   return (
     <Modal
       onClose={clearAndClose}
@@ -246,7 +251,7 @@ export function ManualRunWorkflowModal({
                   permissions.
                 </Callout>
               )}
-              <WorkflowSelect
+              <Select<Workflow>
                 placeholder="Select workflow"
                 value={selectedWorkflow}
                 getOptionValue={(w: any) => w.id}
@@ -270,10 +275,7 @@ export function ManualRunWorkflowModal({
                     workflow.id.toLowerCase().indexOf(query.toLowerCase()) > -1
                   );
                 }}
-                components={{
-                  Option: CustomOption,
-                  Control: CustomControl,
-                }}
+                components={WORKFLOW_SELECT_COMPONENTS}
                 options={filteredWorkflows}
               />
             </div>
