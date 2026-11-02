@@ -18,6 +18,21 @@ interface MonacoCelProps extends EditorProps {
 const monacoConfigPromise: Promise<void> | null =
   typeof window !== "undefined"
     ? import("monaco-editor").then((monaco) => {
+        // Workers are pre-built into public/monaco-workers by the
+        // build-monaco-workers script; Next.js standalone output doesn't
+        // trace the workers webpack emits from node_modules, so they are
+        // missing from the production Docker image otherwise.
+        self.MonacoEnvironment = {
+          getWorkerUrl: (_moduleId: string, label: string) => {
+            if (label === "json") {
+              return "/monaco-workers/json.worker.js";
+            }
+            if (label === "yaml") {
+              return "/monaco-workers/yaml.worker.js";
+            }
+            return "/monaco-workers/editor.worker.js";
+          },
+        };
         loader.config({ monaco });
       })
     : null;
