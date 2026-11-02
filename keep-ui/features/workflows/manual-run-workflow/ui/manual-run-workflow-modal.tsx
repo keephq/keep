@@ -258,7 +258,7 @@ export function ManualRunWorkflowModal({
                 getOptionLabel={(workflow: Workflow) =>
                   `${workflow.name} (${workflow.description})`
                 }
-                onChange={setSelectedWorkflow}
+                onChange={(w) => setSelectedWorkflow(w ?? undefined)}
                 filterOption={(
                   { data: workflow }: FilterOptionOption<Workflow>,
                   query: string
