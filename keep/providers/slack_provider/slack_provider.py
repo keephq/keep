@@ -184,6 +184,10 @@ class SlackProvider(BaseProvider):
                 raise ProviderException(
                     "Message is required - see for example https://github.com/keephq/keep/blob/main/examples/workflows/slack_basic.yml#L16"
                 )
+        if message and len(message) > 3000:
+            self.logger.warning("Slack message too long, truncating to 3000 characters")
+            message = message[:3000] + "... (truncated)"
+        
         payload = OrderedDict(
             {
                 "channel": channel,
