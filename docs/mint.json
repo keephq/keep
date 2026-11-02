@@ -90,7 +90,10 @@
     },
     {
       "group": "Incidents",
-      "pages": ["incidents/overview", "incidents/facets"]
+      "pages": [
+        "incidents/overview",
+        "incidents/facets"
+      ]
     },
     {
       "group": "Workflow Automation",
@@ -151,6 +154,7 @@
             "providers/documentation/anthropic-provider",
             "providers/documentation/appdynamics-provider",
             "providers/documentation/asana-provider",
+            "providers/documentation/bedrock-provider",
             "providers/documentation/s3-provider",
             "providers/documentation/argocd-provider",
             "providers/documentation/auth0-provider",
@@ -323,14 +327,19 @@
         },
         {
           "group": "Local LLM",
-          "pages": ["deployment/local-llm/keep-with-litellm"]
+          "pages": [
+            "deployment/local-llm/keep-with-litellm"
+          ]
         },
         "deployment/stress-testing"
       ]
     },
     {
       "group": "Development",
-      "pages": ["development/getting-started", "development/external-url"]
+      "pages": [
+        "development/getting-started",
+        "development/external-url"
+      ]
     },
     {
       "group": "Keep CLI",
@@ -369,7 +378,10 @@
                 "cli/commands/workflow-runs",
                 {
                   "group": "keep workflow runs",
-                  "pages": ["cli/commands/runs-logs", "cli/commands/runs-list"]
+                  "pages": [
+                    "cli/commands/runs-logs",
+                    "cli/commands/runs-list"
+                  ]
                 }
               ]
             },
