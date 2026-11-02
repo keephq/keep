@@ -56,7 +56,9 @@ describe("useAlertTableCols alertMenu column", () => {
     function StatefulMenu() {
       const [open, setOpen] = useState(false);
       return (
-        <button onClick={() => setOpen(true)}>{open ? "open" : "closed"}</button>
+        <button onClick={() => setOpen(true)}>
+          {open ? "open" : "closed"}
+        </button>
       );
     }
     const MenuComponent = () => <StatefulMenu />;

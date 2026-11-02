@@ -5,7 +5,8 @@ import { ManualRunWorkflowModal } from "../manual-run-workflow-modal";
 
 jest.mock("@/components/ui/Modal", () => ({
   __esModule: true,
-  default: ({ isOpen, children }: any) => (isOpen ? <div>{children}</div> : null),
+  default: ({ isOpen, children }: any) =>
+    isOpen ? <div>{children}</div> : null,
 }));
 jest.mock("@/shared/lib/hooks/useApi", () => ({
   useApi: jest.fn(() => ({ post: jest.fn() })),
@@ -45,7 +46,9 @@ describe("ManualRunWorkflowModal workflow select", () => {
     }
 
     render(<Harness />);
-    fireEvent.mouseDown(screen.getByTestId("manual-run-workflow-select-control"));
+    fireEvent.mouseDown(
+      screen.getByTestId("manual-run-workflow-select-control")
+    );
     expect(screen.getByText("Sample workflow")).toBeTruthy();
 
     fireEvent.click(screen.getByText("rerender"));
