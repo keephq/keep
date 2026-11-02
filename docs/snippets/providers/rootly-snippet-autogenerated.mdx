@@ -1,0 +1,59 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **api_key**: Rootly API Key (Global, Team, or Personal) (required: True, sensitive: True)
+- **api_url**: Rootly API base URL (required: False, sensitive: False)
+- **pull_incidents**: Also pull incidents (in addition to alerts) (required: False, sensitive: False)
+
+Certain scopes may be required to perform specific actions or queries via the provider. Below is a summary of relevant scopes and their use cases:
+- **authenticated**: User is authenticated with Rootly API (mandatory) 
+- **read_alerts**: User can read alerts from Rootly (mandatory) 
+- **read_incidents**: User can read incidents from Rootly  
+
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+
+As "action" to make changes or update data, example:
+```yaml
+actions:
+    - name: Query rootly
+      provider: rootly
+      config: "{{ provider.my_provider_name }}"
+      with:
+        title: {value}  
+        summary: {value}  
+        severity: {value}  
+        status: {value}  
+        incident_id: {value}  
+        alert_id: {value}  
+```
+
+
+
+If you need workflow examples with this provider, please raise a [GitHub issue](https://github.com/keephq/keep/issues).
+
+## Connecting via Webhook (omnidirectional)
+
+Receive Rootly alerts and incident events
+
+
+To send Rootly events to Keep, configure a webhook in Rootly:
+
+1. Go to **Rootly** → **Settings** → **Integrations** → **Webhooks**
+2. Click **Add Webhook**
+3. Set the **Endpoint URL** to: `KEEP_BACKEND_URL/alerts/event/rootly`
+4. Under **Events**, select the events you want to forward:
+   - `alert.created`, `alert.updated`, `alert.resolved`
+   - `incident.created`, `incident.updated`, `incident.mitigated`, `incident.resolved`, `incident.cancelled`
+5. Add a header `X-API-KEY: {api_key}` under **Headers**
+6. Click **Save**
+
+Keep will now receive real-time alerts and incident updates from Rootly.
+
