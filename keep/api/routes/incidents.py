@@ -427,7 +427,7 @@ def update_incident(
 def bulk_delete_incidents(
     incident_ids: List[UUID] = Body(..., embed=True),
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+        IdentityManagerFactory.get_auth_verifier(["delete:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
     session: Session = Depends(get_session),
@@ -445,7 +445,7 @@ def bulk_delete_incidents(
 def delete_incident(
     incident_id: UUID,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+        IdentityManagerFactory.get_auth_verifier(["delete:incident"])
     ),
     pusher_client: Pusher | None = Depends(get_pusher_client),
     session: Session = Depends(get_session),
@@ -549,7 +549,7 @@ def get_incident_alerts(
     offset: int = 0,
     include_unlinked: bool = False,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:incidents"])
+        IdentityManagerFactory.get_auth_verifier(["read:incident"])
     ),
 ) -> AlertWithIncidentLinkMetadataPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
@@ -601,7 +601,7 @@ def get_future_incidents_for_an_incident(
     limit: int = 25,
     offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:incidents"])
+        IdentityManagerFactory.get_auth_verifier(["read:incident"])
     ),
 ) -> IncidentsPaginatedResultsDto:
     tenant_id = authenticated_entity.tenant_id
@@ -653,7 +653,7 @@ def get_incident_workflows(
     limit: int = 25,
     offset: int = 0,
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["read:incidents"])
+        IdentityManagerFactory.get_auth_verifier(["read:incident"])
     ),
 ) -> WorkflowExecutionsPaginatedResultsDto:
     """
@@ -718,7 +718,7 @@ def delete_alerts_from_incident(
     incident_id: UUID,
     fingerprints: List[str],
     authenticated_entity: AuthenticatedEntity = Depends(
-        IdentityManagerFactory.get_auth_verifier(["write:incident"])
+        IdentityManagerFactory.get_auth_verifier(["delete:incident"])
     ),
     session=Depends(get_session),
     pusher_client: Pusher | None = Depends(get_pusher_client),
