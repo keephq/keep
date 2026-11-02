@@ -16,6 +16,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, R
 from fastapi.responses import JSONResponse
 from pusher import Pusher
 from sqlalchemy_utils import UUIDType
+from sqlalchemy.exc import DataError
 from sqlmodel import Session
 
 from keep.api.arq_pool import get_pool
@@ -227,6 +228,14 @@ def query_alerts(
         logger.exception(f'Error parsing CEL expression "{query.cel}". {str(e)}')
         raise HTTPException(
             status_code=400, detail=f"Error parsing CEL expression: {query.cel}"
+        ) from e
+    except DataError as e:
+        logger.exception(
+            f'Database type error while executing query "{query.cel}". {str(e)}'
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid value in query - a field may contain a non-UUID value: {query.cel}",
         ) from e
 
     db_alerts = enrich_alerts_with_incidents(tenant_id, db_alerts)
