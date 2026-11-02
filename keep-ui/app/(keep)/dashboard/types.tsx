@@ -32,6 +32,7 @@ export enum WidgetType {
 export enum PresetPanelType {
   ALERT_TABLE = "ALERT_TABLE",
   ALERT_COUNT_PANEL = "ALERT_COUNT_PANEL",
+  ALERT_TIME_SERIES = "ALERT_TIME_SERIES",
 }
 
 export interface WidgetData extends LayoutItem {
