@@ -16,8 +16,8 @@ jest.mock("@/entities/workflows/model/useWorkflowsV2", () => ({
     workflows: [
       {
         id: "wf-1",
-        name: "One click COLA",
-        description: "Runs COLA",
+        name: "Sample workflow",
+        description: "A sample manual workflow",
         created_by: "someone",
         canRun: true,
         triggers: [],
@@ -46,11 +46,11 @@ describe("ManualRunWorkflowModal workflow select", () => {
 
     render(<Harness />);
     fireEvent.mouseDown(screen.getByTestId("manual-run-workflow-select-control"));
-    expect(screen.getByText("One click COLA")).toBeTruthy();
+    expect(screen.getByText("Sample workflow")).toBeTruthy();
 
     fireEvent.click(screen.getByText("rerender"));
     fireEvent.click(screen.getByText("rerender"));
 
-    expect(screen.getByText("One click COLA")).toBeTruthy();
+    expect(screen.getByText("Sample workflow")).toBeTruthy();
   });
 });
