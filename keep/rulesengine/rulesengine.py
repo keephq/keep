@@ -28,6 +28,7 @@ from keep.api.models.db.alert import Incident
 from keep.api.models.db.rule import Rule
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.cel_utils import preprocess_cel_expression
+from keep.api.consts import KEEP_STORE_RAW_ALERTS
 from keep.api.utils.enrichment_helpers import convert_db_alerts_to_dto_alerts
 
 # Shahar: this is performance enhancment https://github.com/cloud-custodian/cel-python/issues/68
@@ -224,12 +225,18 @@ class RulesEngine:
 
         return list(incidents_dto.values())
 
-    def get_value_from_event(self, event: AlertDto, var: str) -> str:
+    def get_value_from_event(
+        self, event: AlertDto, var: str, raw_payload: dict | None = None
+    ) -> str:
         """
         Extract value from event based on template variable
         e.g., alert.labels.host -> event['labels']['host']
             alert.service -> event['service']
         """
+        var = var.strip()
+        if var.startswith("raw.") or "[" in var:
+            return self._resolve_template_value(event, var, raw_payload)
+
         # Remove 'alert.' prefix
         path = var.replace("alert.", "").split(".")
 
@@ -238,13 +245,19 @@ class RulesEngine:
             for part in path:
                 part = part.strip()
                 current = current.get(part)
-            return str(current) if current is not None else "N/A"
+            value = str(current) if current is not None else "N/A"
         except (KeyError, AttributeError):
-            return "N/A"
+            value = "N/A"
+
+        if value != "N/A":
+            return value
+        if KEEP_STORE_RAW_ALERTS:
+            return self._resolve_template_value(event, var, raw_payload)
+        return "N/A"
 
     def get_vaiables(self, incident_name_template):
         regex = r"\{\{\s*([^}]+)\s*\}\}"
-        return re.findall(regex, incident_name_template)
+        return [var.strip() for var in re.findall(regex, incident_name_template)]
 
     def _get_or_create_incident(
         self, rule: Rule, rule_fingerprint, session, event, creation_allowed=True
@@ -257,6 +270,7 @@ class RulesEngine:
             session=session,
         )
 
+        
         if existed_incident and not expired and rule.incident_prefix:
             if rule.incident_prefix not in existed_incident.user_generated_name:
                 existed_incident.user_generated_name = f"{rule.incident_prefix}-{existed_incident.running_number} - {existed_incident.user_generated_name}"
@@ -346,6 +360,9 @@ class RulesEngine:
                     else f"{rule_fingerprint} - {incident_name}"
                 )
 
+            incident_enrichments = (
+                self._enrich_incident(rule, event) if KEEP_STORE_RAW_ALERTS else {}
+            )
             incident = create_incident_for_grouping_rule(
                 tenant_id=self.tenant_id,
                 rule=rule,
@@ -354,8 +371,10 @@ class RulesEngine:
                 incident_name=incident_name,
                 past_incident=existed_incident,
                 assignee=rule.assignee,
+                enrichments=incident_enrichments,
             )
-            return incident, True
+            if incident:
+                return incident, True
         return None, False
 
     def _process_event_for_history_based_rule(
@@ -752,6 +771,122 @@ class RulesEngine:
                 filtered_alerts.append(alert)
 
         return filtered_alerts
+
+    @staticmethod
+    def _parse_template_path(path: str) -> list[str]:
+        """Split a template path into steps. Supports dots and brackets, e.g. data[0].model -> ['data', '0', 'model']."""
+        parts: list[str] = []
+        current = ""
+        index = 0
+        while index < len(path):
+            char = path[index]
+            if char == ".":
+                if current:
+                    parts.append(current)
+                    current = ""
+                index += 1
+                continue
+            if char == "[":
+                if current:
+                    parts.append(current)
+                    current = ""
+                closing = path.find("]", index + 1)
+                if closing == -1:
+                    parts.append(path[index:])
+                    break
+                parts.append(path[index + 1 : closing].strip())
+                index = closing + 1
+                continue
+            current += char
+            index += 1
+        if current:
+            parts.append(current)
+        return [part.strip() for part in parts if part.strip()]
+
+    def _resolve_path(self, data, path_parts: list[str]) -> str:
+        """Walk a dict/list by path_parts and return the value as a string, or 'N/A' if missing."""
+        current = data
+        for part in path_parts:
+            part = part.strip()
+            if current is None:
+                return "N/A"
+            if isinstance(current, dict):
+                current = current.get(part)
+            elif isinstance(current, list):
+                try:
+                    current = current[int(part)]
+                except (ValueError, IndexError, TypeError):
+                    return "N/A"
+            else:
+                return "N/A"
+        if current is None:
+            return "N/A"
+        if isinstance(current, (dict, list)):
+            return json.dumps(current)
+        return str(current)
+
+    def _load_raw_payload(self, event: AlertDto) -> dict | None:
+        """Raw webhook is only available in-memory during ingestion (keep_raw_payload)."""
+        return None
+
+    def _resolve_raw_payload(self, event: AlertDto) -> dict | None:
+        """Get raw payload from in-memory keep_raw_payload set during ingestion."""
+        if isinstance(event.keep_raw_payload, dict):
+            return event.keep_raw_payload
+        return self._load_raw_payload(event)
+
+    def _resolve_template_value(
+        self, event: AlertDto, var: str, raw_payload: dict | None = None
+    ) -> str:
+        """
+        Resolve a {{ var }} placeholder that uses raw.* paths or bracket notation.
+        Tries formatted alert first, then raw payload fallback.
+        """
+        var = var.strip()
+        if var.startswith("raw."):
+            if raw_payload is None:
+                raw_payload = self._resolve_raw_payload(event)
+            if raw_payload is None:
+                return "N/A"
+            path = self._parse_template_path(var.replace("raw.", "", 1))
+            return self._resolve_path(raw_payload, path)
+
+        path_str = var.replace("alert.", "", 1) if var.startswith("alert.") else var
+        path = self._parse_template_path(path_str)
+        alert_value = self._resolve_path(event.dict(), path)
+        if alert_value != "N/A":
+            return alert_value
+
+        if raw_payload is None:
+            raw_payload = self._resolve_raw_payload(event)
+        if raw_payload is None:
+            return "N/A"
+        return self._resolve_path(raw_payload, path)
+
+    def _enrich_incident(self, rule: Rule, event: AlertDto) -> dict:
+        """Render rule.incident_enrichments templates into key/value pairs for a new incident."""
+        templates = rule.incident_enrichments or {}
+        if not isinstance(templates, dict) or not templates:
+            return {}
+
+        raw_payload = self._resolve_raw_payload(event)
+        enrichments: dict = {}
+        for key, template in templates.items():
+            if not key:
+                continue
+            if not isinstance(template, str):
+                enrichments[key] = template
+                continue
+            rendered = template
+            for var in self.get_vaiables(template):
+                resolved = self.get_value_from_event(
+                    event, var, raw_payload=raw_payload
+                )
+                rendered = re.sub(
+                    r"\{\{\s*" + re.escape(var) + r"\s*\}\}", resolved, rendered
+                )
+            enrichments[key] = rendered
+        return enrichments
 
     @staticmethod
     def send_workflow_event(
