@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ColumnDef,
   FilterFn,
@@ -6,6 +6,7 @@ import {
   VisibilityState,
   createColumnHelper,
   Cell,
+  CellContext,
   AccessorKeyColumnDef,
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
@@ -238,6 +239,49 @@ export const useAlertTableCols = (
     {}
   );
   const { severityMapping: severityMappingConfig } = useSeverityMapping();
+
+  // flexRender treats a function passed as `cell` as a React component, so a new
+  // function on every render makes React unmount and remount every row's menu.
+  // That resets the dropdown's open state whenever alerts are polled (every 1-2s
+  // on busy instances). Keep the cell identity stable and read the latest props
+  // through a ref instead.
+  const alertMenuPropsRef = useRef({
+    presetName,
+    MenuComponent,
+    setRunWorkflowModalAlert,
+    setDismissModalAlert,
+    setChangeStatusAlert,
+    setTicketModalAlert,
+    setNoteModalAlert,
+  });
+  alertMenuPropsRef.current = {
+    presetName,
+    MenuComponent,
+    setRunWorkflowModalAlert,
+    setDismissModalAlert,
+    setChangeStatusAlert,
+    setTicketModalAlert,
+    setNoteModalAlert,
+  };
+  const renderAlertMenuCell = useCallback(
+    (context: CellContext<AlertDto, unknown>) => {
+      const props = alertMenuPropsRef.current;
+      return props.MenuComponent ? (
+        props.MenuComponent(context.row.original)
+      ) : (
+        <AlertMenu
+          presetName={props.presetName.toLowerCase()}
+          alert={context.row.original}
+          setRunWorkflowModalAlert={props.setRunWorkflowModalAlert}
+          setDismissModalAlert={props.setDismissModalAlert}
+          setChangeStatusAlert={props.setChangeStatusAlert}
+          setTicketModalAlert={props.setTicketModalAlert}
+          setNoteModalAlert={props.setNoteModalAlert}
+        />
+      );
+    },
+    []
+  );
 
   const filteredAndGeneratedCols = additionalColsToGenerate.map((colName) =>
     columnHelper.accessor(
@@ -673,20 +717,7 @@ export const useAlertTableCols = (
           columnHelper.display({
             id: "alertMenu",
             minSize: 120,
-            cell: (context) =>
-              MenuComponent ? (
-                MenuComponent(context.row.original)
-              ) : (
-                <AlertMenu
-                  presetName={presetName.toLowerCase()}
-                  alert={context.row.original}
-                  setRunWorkflowModalAlert={setRunWorkflowModalAlert}
-                  setDismissModalAlert={setDismissModalAlert}
-                  setChangeStatusAlert={setChangeStatusAlert}
-                  setTicketModalAlert={setTicketModalAlert}
-                  setNoteModalAlert={setNoteModalAlert}
-                />
-              ),
+            cell: renderAlertMenuCell,
             meta: {
               tdClassName: "p-0 md:p-2",
               thClassName: "p-0 md:p-2",
