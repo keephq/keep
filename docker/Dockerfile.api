@@ -1,4 +1,4 @@
-FROM python:3.13.5-alpine as base
+FROM python:3.13.17-alpine as base
 
 # Install bash and runtime dependencies for grpc
 RUN apk add --no-cache bash libstdc++
