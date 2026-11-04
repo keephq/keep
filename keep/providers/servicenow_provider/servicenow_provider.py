@@ -306,7 +306,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
                 sysparm_limit  # Limit number of records per request
             )
         if sysparm_offset:
-            params["sysparm_offset"] = sysparm_offset  # use the recevied offset
+            params["sysparm_offset"] = sysparm_offset
 
         try:
             response = requests.get(
