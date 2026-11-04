@@ -769,7 +769,7 @@ def get_last_workflow_execution_by_workflow_id(
         if exclude_ids:
             query = query.where(col(WorkflowExecution.id).notin_(exclude_ids))
 
-        workflow_execution = session.exec(query).first()
+        workflow_execution = session.exec(query.limit(1)).first()
     return workflow_execution
 
 
