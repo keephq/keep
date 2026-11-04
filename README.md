@@ -482,6 +482,12 @@
 </tr>
 <tr>
   <td align="center" width="150">
+      <a href="https://docs.keephq.dev/providers/documentation/rocketchat-provider" target="_blank">
+          <img width="40" src="keep-ui/public/icons/rocketchat-icon.png" alt="Rocket.Chat"/><br/>
+          Rocket.Chat
+      </a>
+  </td>
+  <td align="center" width="150">
       <a href="https://docs.keephq.dev/providers/documentation/sendgrid-provider" target="_blank">
           <img width="40" src="keep-ui/public/icons/sendgrid-icon.png" alt="SendGrid"/><br/>
           SendGrid
