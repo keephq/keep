@@ -746,6 +746,15 @@ class TopologiesService:
         all_applications: list[TopologyApplicationDtoIn] = []
         all_dependencies: list[TopologyServiceDependencyCreateRequestDto] = []
         try:
+            # Preserve existing application IDs across imports by name so UUIDs
+            # remain stable and don't orphan topology incidents.
+            existing_applications = {
+                app.name: app.id
+                for app in session.query(TopologyApplication)
+                .filter(TopologyApplication.tenant_id == tenant_id)
+                .all()
+            }
+
             # Clean existing data for the tenant before import
             TopologiesService.clean_before_import(tenant_id=tenant_id, session=session)
 
@@ -756,6 +765,11 @@ class TopologiesService:
                 application["services"] = [
                     {"id": _id} for _id in application["services"]
                 ]
+                if (
+                    not application.get("id")
+                    and application.get("name") in existing_applications
+                ):
+                    application["id"] = existing_applications[application["name"]]
                 all_applications.append(TopologyApplicationDtoIn(**application))
 
             for dependency in topology_data["dependencies"]:
