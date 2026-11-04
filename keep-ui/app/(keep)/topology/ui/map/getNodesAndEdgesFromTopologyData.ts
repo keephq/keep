@@ -32,14 +32,31 @@ export function getNodesAndEdgesFromTopologyData(
         incident.services.includes(service.display_name) ||
         incident.services.includes(service.service)
     );
+    const matchingAlerts = allAlerts.filter(
+      (alert) =>
+        alert.service === service.service ||
+        alert.service === service.display_name
+    );
+    const severities = matchingAlerts.map((a) => (a.severity || "").toLowerCase());
+    let maxSeverity: string | undefined = undefined;
+    if (severities.some((s) => s === "critical" || s === "fatal")) {
+      maxSeverity = "critical";
+    } else if (severities.some((s) => s === "high" || s === "error")) {
+      maxSeverity = "high";
+    } else if (severities.some((s) => s === "warning" || s === "medium")) {
+      maxSeverity = "warning";
+    } else if (severities.some((s) => s === "low" || s === "info")) {
+      maxSeverity = "low";
+    }
+
     const node: ServiceNodeType = {
       id: service.id.toString(),
       type: "service",
       data: {
         ...service,
         incidents: numIncidentsToService.length,
-        alerts: allAlerts.filter((alert) => alert.service === service.service)
-          .length,
+        alerts: matchingAlerts.length,
+        maxSeverity,
         topologyMutator,
       },
       position: { x: 0, y: 0 }, // Dagre will handle the actual positioning

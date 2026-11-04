@@ -110,15 +110,33 @@ export function ServiceNode({ data, selected }: NodeProps<ServiceNodeType>) {
 
   const incidentsCount = data.incidents ?? 0;
   const alertsCount = data.alerts ?? 0;
-  const badgeColor =
-    incidentsCount < THRESHOLD ? "bg-orange-500" : "bg-red-500";
+
+  let badgeColor = "bg-green-500";
+  let borderColor = "border-gray-200";
+
+  if (incidentsCount > 0) {
+    badgeColor = incidentsCount < THRESHOLD ? "bg-orange-500" : "bg-red-500";
+    borderColor = incidentsCount < THRESHOLD ? "border-orange-400" : "border-red-500";
+  } else if (alertsCount > 0) {
+    if (data.maxSeverity === "critical" || data.maxSeverity === "high") {
+      badgeColor = "bg-red-500";
+      borderColor = "border-red-500";
+    } else if (data.maxSeverity === "warning") {
+      badgeColor = "bg-amber-500";
+      borderColor = "border-amber-400";
+    } else {
+      badgeColor = "bg-blue-500";
+      borderColor = "border-blue-400";
+    }
+  }
 
   return (
     <>
       <div
         className={clsx(
-          "flex flex-col gap-1 bg-white p-4 border-2 border-gray-200 rounded-xl shadow-lg relative transition-colors",
-          selected && "border-tremor-brand"
+          "flex flex-col gap-1 bg-white p-4 border-2 rounded-xl shadow-lg relative transition-colors",
+          borderColor,
+          selected && "!border-tremor-brand"
         )}
         onMouseEnter={() => setShowDetails(true)}
         onMouseLeave={() => setShowDetails(false)}
