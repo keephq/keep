@@ -14,6 +14,10 @@ from keep.api.core.db import (
     save_workflow_results,
 )
 from keep.api.core.metrics import workflow_execution_duration
+from keep.api.core.source_event_ordering import (
+    source_ordered_event_id,
+    workflow_enrichments,
+)
 from keep.api.models.alert import AlertDto, AlertSeverity
 from keep.api.models.incident import IncidentDto
 from keep.identitymanager.identitymanagerfactory import IdentityManagerTypes
@@ -476,7 +480,9 @@ class WorkflowManager:
                     self.logger.info("Enriching alert")
                     alert_enrichment = get_enrichment(tenant_id, event.fingerprint)
                     if alert_enrichment:
-                        for k, v in alert_enrichment.enrichments.items():
+                        for k, v in workflow_enrichments(
+                            event, alert_enrichment.enrichments
+                        ).items():
                             setattr(event, k, v)
                     self.logger.info("Alert enriched")
                     # apply only_on_change (https://github.com/keephq/keep/issues/801)
@@ -484,9 +490,17 @@ class WorkflowManager:
                     severity_changed = trigger.get("severity_changed", False)
                     # if there are fields that needs to be changed, get the previous alert
                     if fields_that_needs_to_be_change or severity_changed:
-                        previous_alert = get_previous_alert_by_fingerprint(
-                            tenant_id, event.fingerprint
-                        )
+                        source_event_id = source_ordered_event_id(event)
+                        if source_event_id is not None:
+                            previous_alert = get_previous_alert_by_fingerprint(
+                                tenant_id,
+                                event.fingerprint,
+                                source_event_id=source_event_id,
+                            )
+                        else:
+                            previous_alert = get_previous_alert_by_fingerprint(
+                                tenant_id, event.fingerprint
+                            )
                         if severity_changed:
                             fields_that_needs_to_be_change.append("severity")
                         # now compare:
