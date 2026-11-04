@@ -355,3 +355,177 @@ class TestJiraProvider:
 
                 # If we get here without the "string indices must be integers" error, the fix worked
                 assert result is not None
+
+    def test_browse_host_defaults_to_the_connection_host(
+        self, jira_provider, jiraonprem_provider
+    ):
+        """With ticket_creation_url unset the links come from the connection host"""
+        assert jira_provider.browse_host == jira_provider.jira_host
+        assert jiraonprem_provider.browse_host == jiraonprem_provider.jira_host
+
+    @staticmethod
+    def _jiraonprem_with_creation_url(context_manager, ticket_creation_url):
+        return JiraonpremProvider(
+            context_manager,
+            "test_jiraonprem",
+            ProviderConfig(
+                description="Test Jira On-Prem Provider",
+                authentication={
+                    "host": "https://jira.internal.svc",
+                    "personal_access_token": "test_token",
+                    "ticket_creation_url": ticket_creation_url,
+                },
+            ),
+        )
+
+    @staticmethod
+    def _jira_with_creation_url(context_manager, ticket_creation_url):
+        return JiraProvider(
+            context_manager,
+            "test_jira",
+            ProviderConfig(
+                description="Test Jira Provider",
+                authentication={
+                    "email": "test@example.com",
+                    "api_token": "test_token",
+                    "host": "https://jira.internal.svc",
+                    "ticket_creation_url": ticket_creation_url,
+                },
+            ),
+        )
+
+    def test_browse_host_reads_the_public_url_from_the_create_form_link(
+        self, context_manager
+    ):
+        """The field holds a link to the new-issue form, the base of it is the public host"""
+        provider = self._jiraonprem_with_creation_url(
+            context_manager, "https://jira.company.com/secure/CreateIssue.jspa"
+        )
+
+        assert provider.browse_host == "https://jira.company.com"
+        assert provider.jira_host == "https://jira.internal.svc"
+
+    @pytest.mark.parametrize(
+        "configured, expected",
+        [
+            # the link the UI hands out
+            (
+                "https://jira.company.com/secure/CreateIssue.jspa",
+                "https://jira.company.com",
+            ),
+            # Jira spells the same form in more than one way, and hangs the project
+            # and issue type off it as a query string
+            (
+                "https://jira.company.com/secure/CreateIssue!default.jspa?pid=10000&issuetype=1",
+                "https://jira.company.com",
+            ),
+            (
+                "https://jira.company.com/secure/CreateIssueDetails!init.jspa",
+                "https://jira.company.com",
+            ),
+            # served under a context path, which the browse link has to keep
+            (
+                "https://company.com/jira/secure/CreateIssue.jspa?pid=10000",
+                "https://company.com/jira",
+            ),
+            # a plain base url, with or without a trailing slash or a scheme
+            ("https://jira.company.com", "https://jira.company.com"),
+            ("https://jira.company.com/", "https://jira.company.com"),
+            ("jira.company.com", "https://jira.company.com"),
+            ("jira.company.com/secure/CreateIssue.jspa", "https://jira.company.com"),
+            # a port and a plain-http host survive as they are
+            (
+                "jira.company.com:8443/secure/CreateIssue.jspa",
+                "https://jira.company.com:8443",
+            ),
+            ("https://jira.company.com:8443", "https://jira.company.com:8443"),
+            (
+                "http://jira.company.com/secure/CreateIssue.jspa",
+                "http://jira.company.com",
+            ),
+            # copied out of a text field with whitespace around it
+            (
+                "  https://jira.company.com/secure/CreateIssue.jspa  ",
+                "https://jira.company.com",
+            ),
+        ],
+    )
+    def test_browse_host_reads_every_shape_of_the_create_form_link(
+        self, context_manager, configured, expected
+    ):
+        """Both providers derive the same public base from the link they are given"""
+        assert (
+            self._jiraonprem_with_creation_url(context_manager, configured).browse_host
+            == expected
+        )
+        assert (
+            self._jira_with_creation_url(context_manager, configured).browse_host
+            == expected
+        )
+
+    @pytest.mark.parametrize(
+        "configured",
+        ["", "   ", "/secure/CreateIssue.jspa", "/jira/", "not a url at all"],
+    )
+    def test_browse_host_falls_back_when_the_link_names_no_host(
+        self, context_manager, configured
+    ):
+        """A blank, host-less or unreadable value leaves the links on the connection host"""
+        provider = self._jiraonprem_with_creation_url(context_manager, configured)
+
+        assert provider.browse_host == provider.jira_host
+
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jiraonprem_ticket_url_points_at_the_public_host(
+        self, mock_get, mock_put, context_manager
+    ):
+        """An updated issue is linked by its public address, not the internal one"""
+        provider = JiraonpremProvider(
+            context_manager,
+            "test_jiraonprem",
+            ProviderConfig(
+                description="Test Jira On-Prem Provider",
+                authentication={
+                    "host": "https://jira.internal.svc",
+                    "personal_access_token": "test_token",
+                    "ticket_creation_url": "https://jira.company.com/secure/CreateIssue.jspa",
+                },
+            ),
+        )
+
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"key": "TEST-123"}
+        mock_put.return_value.status_code = 204
+
+        result = provider._notify(issue_id="TEST-123", summary="Test Summary")
+
+        assert result["ticket_url"] == "https://jira.company.com/browse/TEST-123"
+
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jira_cloud_ticket_url_points_at_the_public_host(
+        self, mock_get, mock_put, context_manager
+    ):
+        """The cloud provider builds the link from the same field"""
+        provider = JiraProvider(
+            context_manager,
+            "test_jira",
+            ProviderConfig(
+                description="Test Jira Provider",
+                authentication={
+                    "email": "test@example.com",
+                    "api_token": "test_token",
+                    "host": "https://jira.internal.svc",
+                    "ticket_creation_url": "https://company.atlassian.net/secure/CreateIssue.jspa",
+                },
+            ),
+        )
+
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"key": "TEST-123"}
+        mock_put.return_value.status_code = 204
+
+        result = provider._notify(issue_id="TEST-123", summary="Test Summary")
+
+        assert result["ticket_url"] == "https://company.atlassian.net/browse/TEST-123"
