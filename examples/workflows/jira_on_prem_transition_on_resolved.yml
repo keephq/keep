@@ -1,0 +1,26 @@
+workflow:
+  id: jira-on-prem-transition-on-resolved
+  name: Transition Jira On-Prem Ticket to Done
+  description: Close an on-premises Jira ticket when the alert behind it is resolved.
+  disabled: false
+  triggers:
+    - type: alert
+      cel: status == "resolved"
+  actions:
+    - name: jiraonprem-action
+      provider:
+        type: jiraonprem
+        config: "{{ providers.JiraOnPrem }}"
+        with:
+          issue_id: "{{ alert.ticket_id }}"
+          summary: "{{ alert.name }} - {{ alert.description }} (resolved)"
+          description: |
+            "Alert has been resolved automatically by Keep.
+
+            Resolved at: {{ alert.lastReceived }}
+
+            Original Alert Details:
+            {code:json}
+            {{ alert }}
+            {code}"
+          transition_to: Done  # Change to your workflow's status name
