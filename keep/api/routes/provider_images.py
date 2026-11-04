@@ -99,7 +99,7 @@ async def get_provider_image(
                 f"Default image not found at {DEFAULT_IMAGE_PATH}, using fallback path: {fallback_path}"
             )
             path = fallback_path
-        with open(DEFAULT_IMAGE_PATH, "rb") as f:
+        with open(path, "rb") as f:
             return Response(content=f.read(), media_type="image/png")
     except FileNotFoundError:
         raise HTTPException(404, "Default image not found")
