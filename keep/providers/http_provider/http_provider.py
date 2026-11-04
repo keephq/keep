@@ -63,7 +63,9 @@ class HttpProvider(BaseProvider):
         """
         Send a HTTP request to the given url.
         """
-        return self.query(
+        # _query, not query: BaseProvider.notify() already appends the result,
+        # and BaseProvider.query() would append it a second time (#6431).
+        return self._query(
             url=url,
             method=method,
             headers=headers,
