@@ -758,3 +758,75 @@ steps:
 ```
 
 ---
+
+---
+
+## Workflow Status Check Functions
+
+These functions report how the current workflow run is going, so a step or action can branch on the outcome of the steps that already ran. They mirror the [GitHub Actions status check functions](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/evaluate-expressions-in-workflows-and-actions#status-check-functions).
+
+### `success`
+
+**Description:** Returns `true` when no step of the current run has failed so far.
+
+**Example:**
+
+```yaml
+actions:
+  - name: celebrate
+    if: keep.success()
+    provider:
+      type: slack
+      with:
+        message: "All steps succeeded"
+```
+
+### `failure`
+
+**Description:** Returns `true` when at least one step of the current run has failed.
+
+**Example:**
+
+```yaml
+actions:
+  - name: page-oncall
+    if: keep.failure()
+    provider:
+      type: slack
+      with:
+        message: "A step failed - please take a look"
+```
+
+### `cancelled`
+
+**Description:** Returns `true` when the current run was cancelled: a step failed without `continue_on_error`, so the remaining steps never ran.
+
+**Example:**
+
+```yaml
+actions:
+  - name: report-abort
+    if: keep.cancelled()
+    provider:
+      type: slack
+      with:
+        message: "Workflow aborted early"
+```
+
+### `always`
+
+**Description:** Always returns `true`, so the step or action runs whatever happened before.
+
+**Example:**
+
+```yaml
+actions:
+  - name: cleanup
+    if: keep.always()
+    provider:
+      type: slack
+      with:
+        message: "Run finished (successfully or not)"
+```
+
+---

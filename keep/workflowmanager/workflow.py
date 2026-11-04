@@ -78,6 +78,9 @@ class Workflow:
                     extra={"step_id": step.step_id},
                 )
                 step_ran = step.run()
+                self.context_manager.set_step_status(
+                    step.step_id, "success" if step_ran else "skipped"
+                )
                 if step_ran:
                     self.logger.info(
                         "Step %s ran successfully",
@@ -95,6 +98,7 @@ class Workflow:
                     break
             except (StepError, ActionError) as e:
                 threading.current_thread().step_id = None
+                self.context_manager.set_step_status(step.step_id, "failure")
                 if step.continue_on_error:
                     self.logger.warning(
                         "Step %s failed but continue_on_error is True, continuing",
@@ -103,6 +107,8 @@ class Workflow:
                     )
                     continue
                 self.logger.error(f"Step {step.step_id} failed: {e}")
+                # the run aborts here: the remaining steps are cancelled, not condition-skipped
+                self.context_manager.workflow_cancelled = True
                 raise
         self.logger.debug(f"Steps for workflow {self.workflow_id} ran successfully")
 
@@ -115,6 +121,9 @@ class Workflow:
         try:
             action_stop = False
             action_ran = action.run()
+            self.context_manager.set_step_status(
+                action.step_id, "success" if action_ran else "skipped"
+            )
             action_error = None
             if action_ran:
                 self.logger.info(
@@ -134,6 +143,7 @@ class Workflow:
                 )
                 action_stop = True
         except Exception as e:
+            self.context_manager.set_step_status(action.step_id, "failure")
             self.logger.error(
                 f"Action {action.name} failed: {e}",
                 extra={

@@ -674,3 +674,37 @@ def dict_merge(*args) -> dict:
             
     return result
 
+
+def success(steps_status=None, **kwargs) -> bool:
+    """
+    GitHub Actions-style status check: True when no step of the current workflow run has failed so far.
+
+    Useful in an action's "if" to run only when everything before went well: keep.success()
+    """
+    statuses = (steps_status or {}).get("steps", {})
+    return not any(status == "failure" for status in statuses.values())
+
+
+def failure(steps_status=None, **kwargs) -> bool:
+    """
+    GitHub Actions-style status check: True when at least one step of the current workflow run has failed.
+
+    Useful in an action's "if" to run only on failure, e.g. notify on-call: keep.failure()
+    """
+    statuses = (steps_status or {}).get("steps", {})
+    return any(status == "failure" for status in statuses.values())
+
+
+def cancelled(steps_status=None, **kwargs) -> bool:
+    """
+    GitHub Actions-style status check: True when the current workflow run was cancelled - a step failed
+    without continue_on_error, so the remaining steps never ran.
+    """
+    return bool((steps_status or {}).get("cancelled"))
+
+
+def always(**kwargs) -> bool:
+    """
+    GitHub Actions-style status check: always True, so the step or action runs whatever happened before.
+    """
+    return True

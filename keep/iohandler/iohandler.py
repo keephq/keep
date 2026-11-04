@@ -392,6 +392,13 @@ class IOHandler:
                 if "kwargs" in func_signature.parameters:
                     _kwargs["tenant_id"] = self.context_manager.tenant_id
 
+                # Add the current run's step outcomes if the function asks for them (status check functions)
+                if "steps_status" in func_signature.parameters:
+                    _kwargs["steps_status"] = {
+                        "steps": self.context_manager.get_steps_status(),
+                        "cancelled": self.context_manager.workflow_cancelled,
+                    }
+
                 try:
                     # Call function with both positional and keyword arguments
                     val = keep_func(*_args, **_kwargs)
