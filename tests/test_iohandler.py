@@ -1154,3 +1154,25 @@ def test_safe_tuple_literal_still_works(context_manager):
     ):
         result = iohandler.render(template)
     assert result == "True"
+
+def test_iohandler_does_not_drop_falsy_arguments(context_manager):
+    """Verify that IOHandler does not drop empty list, empty dict, empty tuple, or literal False arguments (#6728)."""
+    iohandler = IOHandler(context_manager)
+    context_manager.steps_context = {
+        "empty_list": [],
+        "empty_dict": {},
+        "empty_tuple": (),
+        "false_val": False,
+        "zero_val": 0,
+        "empty_str": "",
+    }
+    # Test keep.len on empty list
+    assert iohandler.render("keep.len({{ steps.empty_list }})") == "0"
+    assert iohandler.render("keep.len([])") == "0"
+
+    # Test keep.eq with False and empty collections
+    assert iohandler.render("keep.eq({{ steps.false_val }}, False)") == "True"
+    assert iohandler.render("keep.eq(False, False)") == "True"
+    assert iohandler.render("keep.eq({{ steps.empty_dict }}, {})") == "True"
+    assert iohandler.render("keep.eq({{ steps.empty_list }}, [])") == "True"
+    assert iohandler.render("keep.eq({{ steps.empty_tuple }}, ())") == "True"
