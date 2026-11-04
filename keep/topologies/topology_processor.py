@@ -142,13 +142,6 @@ class TopologyProcessor:
             self.logger.info(f"No topology data found for tenant {tenant_id}")
             return
 
-        # Currently topology-based incidents are created for applications only
-        # SHAHAR: this is harder to implement service-related incidents without applications
-        # TODO: add support for service-related incidents
-        if not applications:
-            self.logger.info(f"No applications found for tenant {tenant_id}")
-            return
-
         # TODO: get only alerts with service ( if lot of alerts it will be hidden)
         db_last_alerts = get_last_alerts(tenant_id, with_incidents=True)
         last_alerts = convert_db_alerts_to_dto_alerts(db_last_alerts)
@@ -165,10 +158,15 @@ class TopologyProcessor:
                     continue
                 services_to_alerts[alert.service].append(alert)
 
+        # track every service that belongs to some application, so alerts on the
+        # remaining ("standalone") services can still get an incident below
+        services_in_applications: Set[str] = set()
+
         for application in applications:
             # check if there is an incident for the application
             incident = self._get_application_based_incident(tenant_id, application)
             application_services = [t.service for t in application.services]
+            services_in_applications.update(application_services)
             services_with_alerts = [
                 service
                 for service in application_services
@@ -203,6 +201,30 @@ class TopologyProcessor:
                 self._create_application_based_incident(
                     tenant_id, application, services_to_alerts
                 )
+
+        # Services with alerts that aren't part of any application would otherwise
+        # never get an incident at all - handle those on their own, keyed by service
+        # rather than application.
+        standalone_services_with_alerts = [
+            service
+            for service in services_to_alerts
+            if service not in services_in_applications
+        ]
+        for service in standalone_services_with_alerts:
+            alerts = services_to_alerts[service]
+            incident = self._get_service_based_incident(tenant_id, service)
+            if incident:
+                self.logger.info(
+                    f"Found existing incident for standalone service {service}"
+                )
+                self._update_service_based_incident(
+                    tenant_id, service, incident, alerts
+                )
+            else:
+                self.logger.info(
+                    f"No existing incident found for standalone service {service}, creating"
+                )
+                self._create_service_based_incident(tenant_id, service, alerts)
 
     def _get_topology_based_incidents(self, tenant_id: str) -> Dict[str, Incident]:
         """Get all topology-based incidents for a tenant"""
@@ -247,8 +269,11 @@ class TopologyProcessor:
     def _get_topology_data(self, tenant_id: str):
         """Get topology data for a tenant"""
         with existed_or_new_session() as session:
+            # include_empty_deps=True: a service with no dependency edges at all
+            # is exactly the "standalone service" case (#6702) this processor
+            # needs to raise incidents for, so it can't be filtered out here.
             topology_data = TopologiesService.get_all_topology_data(
-                tenant_id=tenant_id, session=session
+                tenant_id=tenant_id, session=session, include_empty_deps=True
             )
             return topology_data
 
@@ -391,3 +416,120 @@ class TopologyProcessor:
             # Trigger the workflow event
             RulesEngine.send_workflow_event(tenant_id, session, incident_dto, "created")
             self.logger.info(f"Created new incident for application {application.name}")
+
+    def _get_service_based_incident(
+        self, tenant_id: str, service: str
+    ) -> Optional[Incident]:
+        """Get the standalone topology incident for a service that isn't part of
+        any application, if one already exists"""
+        with existed_or_new_session() as session:
+            # incident_application is None here, same reasoning as
+            # _get_application_based_incident applies to excluding deleted incidents
+            incident = session.exec(
+                select(Incident).where(
+                    Incident.tenant_id == tenant_id,
+                    Incident.incident_type == "topology",
+                    Incident.incident_application.is_(None),
+                    Incident.user_generated_name == f"Service incident: {service}",
+                    Incident.status != IncidentStatus.DELETED.value,
+                )
+            ).first()
+            return incident
+
+    def _update_service_based_incident(
+        self,
+        tenant_id: str,
+        service: str,
+        incident: Incident,
+        alerts: list[AlertDto],
+    ) -> None:
+        """Update an existing standalone service incident with new alerts and status"""
+        self.logger.info(f"Updating incident for standalone service {service}")
+
+        with existed_or_new_session() as session:
+            # Assign all alerts to the incident if they're not already assigned
+            add_alerts_to_incident(
+                tenant_id=tenant_id,
+                incident=incident,
+                fingerprints=[alert.fingerprint for alert in alerts],
+                session=session,
+                exclude_unlinked_alerts=True,
+            )
+
+            # Check if incident should be resolved
+            if incident.resolve_on == "all_resolved":
+                self.logger.info("Checking if incident should be resolved")
+                incident = enrich_incidents_with_alerts(tenant_id, [incident], session)[
+                    0
+                ]
+                alert_dtos = convert_db_alerts_to_dto_alerts(incident.alerts)
+                statuses = []
+                for alert in alert_dtos:
+                    if isinstance(alert.status, str):
+                        statuses.append(alert.status)
+                    else:
+                        statuses.append(alert.status.value)
+                all_resolved = all(
+                    [
+                        s == AlertStatus.RESOLVED.value
+                        or s == AlertStatus.SUPPRESSED.value
+                        for s in statuses
+                    ]
+                )
+                if all_resolved and incident.status != IncidentStatus.RESOLVED.value:
+                    self.logger.info(
+                        "All alerts are resolved, updating incident status to resolved"
+                    )
+                    incident.status = IncidentStatus.RESOLVED.value
+                    session.add(incident)
+                    session.commit()
+                elif (
+                    incident.status == IncidentStatus.RESOLVED.value
+                    and not all_resolved
+                ):
+                    self.logger.info(
+                        "Alerts are not resolved, updating incident status to updated"
+                    )
+                    incident.status = IncidentStatus.FIRING.value
+                    session.add(incident)
+                    session.commit()
+
+            incident_dto = IncidentDto.from_db_incident(incident)
+            RulesEngine.send_workflow_event(tenant_id, session, incident_dto, "updated")
+            self.logger.info(f"Updated incident for standalone service {service}")
+
+    def _create_service_based_incident(
+        self, tenant_id: str, service: str, alerts: list[AlertDto]
+    ) -> None:
+        """Create a new topology incident for a service that isn't part of any
+        application"""
+        self.logger.info(f"Creating new incident for standalone service {service}")
+
+        with existed_or_new_session() as session:
+            incident = Incident(
+                tenant_id=tenant_id,
+                user_generated_name=f"Service incident: {service}",
+                user_summary=f"Service {service} is experiencing issues",
+                incident_type="topology",
+                incident_application=None,
+                is_candidate=False,  # Topology-based incidents are always confirmed
+                is_visible=True,  # Topology-based incidents are always confirmed
+                is_predicted=True,  # Topology-based incidents are algorithmically generated
+            )
+
+            # Persist incident to database before adding alerts, same reasoning as
+            # _create_application_based_incident
+            session.add(incident)
+            session.flush()
+
+            for alert in alerts:
+                incident = assign_alert_to_incident(
+                    fingerprint=alert.fingerprint,
+                    incident=incident,
+                    tenant_id=tenant_id,
+                    session=session,
+                )
+
+            incident_dto = IncidentDto.from_db_incident(incident)
+            RulesEngine.send_workflow_event(tenant_id, session, incident_dto, "created")
+            self.logger.info(f"Created new incident for standalone service {service}")
