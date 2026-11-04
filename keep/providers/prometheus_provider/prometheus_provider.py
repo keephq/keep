@@ -87,6 +87,8 @@ receivers:
     STATUS_MAP = {
         "firing": AlertStatus.FIRING,
         "resolved": AlertStatus.RESOLVED,
+        # /api/v1/alerts reports alerts still inside their `for:` window as pending
+        "pending": AlertStatus.PENDING,
     }
 
     PROVIDER_SCOPES = [
