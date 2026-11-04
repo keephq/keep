@@ -521,7 +521,7 @@ class JiraonpremProvider(BaseProvider):
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
-        priority: str = "Medium",
+        priority: str = None,
         **kwargs: dict,
     ):
         """
@@ -548,6 +548,9 @@ class JiraonpremProvider(BaseProvider):
                     labels=labels,
                     components=components,
                     custom_fields=custom_fields,
+                    # __update_issue writes whatever priority it is handed, so the
+                    # workflow's value goes through as it is: None leaves the ticket
+                    # with the priority it already has
                     priority=priority,
                     **kwargs,
                 )
@@ -574,7 +577,9 @@ class JiraonpremProvider(BaseProvider):
                 labels=labels,
                 components=components,
                 custom_fields=custom_fields,
-                priority=priority,
+                # the create screen always carries a priority field, so a new issue
+                # falls back to Medium when the workflow names none
+                priority=priority or "Medium",
                 **kwargs,
             )
             result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
