@@ -12,9 +12,18 @@ declare global {
   }
 }
 
+// useSession() returns undefined when rendered outside <SessionProvider>, e.g.
+// in app/global-error.tsx, which replaces the root layout. Treat that as
+// "loading" so callers such as useApi() never destructure undefined.
+const NO_SESSION_PROVIDER: ReturnType<typeof useSession> = {
+  data: null,
+  status: "loading",
+  update: async () => null,
+};
+
 export function useHydratedSession() {
   const [isHydrated, setIsHydrated] = useState(false);
-  const session = useSession();
+  const session = useSession() ?? NO_SESSION_PROVIDER;
 
   useEffect(() => {
     setIsHydrated(true);
