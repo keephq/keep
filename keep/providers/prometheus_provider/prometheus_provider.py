@@ -15,6 +15,7 @@ from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.contextmanager.contextmanager import ContextManager
 from keep.providers.base.base_provider import BaseProvider, ProviderHealthMixin
 from keep.providers.models.provider_config import ProviderConfig, ProviderScope
+from keep.providers.models.provider_method import ProviderMethod
 
 
 @pydantic.dataclasses.dataclass
@@ -94,6 +95,15 @@ receivers:
             name="connectivity", description="Connectivity Test", mandatory=True
         )
     ]
+    PROVIDER_METHODS = [
+        ProviderMethod(
+            name="Query Prometheus",
+            func_name="query_instant",
+            scopes=["connectivity"],
+            description="Run an instant PromQL query and return the result set",
+            type="view",
+        ),
+    ]
     FINGERPRINT_FIELDS = ["fingerprint"]
 
     def __init__(
@@ -116,6 +126,24 @@ receivers:
         except Exception as e:
             validated_scopes["connectivity"] = str(e)
         return validated_scopes
+
+    def query_instant(self, query: str) -> dict:
+        """
+        Run an instant PromQL query against the Prometheus server.
+
+        Exposed as a provider method so it can be called from the UI and by
+        agents, which previously saw `methods: []` on this provider and had no
+        way to run a query (#6475).
+
+        Args:
+            query (str): a PromQL expression, e.g. `up{job="prometheus"}` or
+                `rate(http_requests_total[5m])`.
+
+        Returns:
+            dict: the Prometheus response envelope; the samples are under
+                `data.result`.
+        """
+        return self._query(query)
 
     def _query(self, query):
         """
