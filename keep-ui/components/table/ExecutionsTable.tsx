@@ -18,9 +18,14 @@ interface Pagination {
 interface Props {
   executions: PaginatedEnrichmentExecutionDto;
   setPagination: Dispatch<SetStateAction<Pagination>>;
+  basePath?: "mapping" | "extraction";
 }
 
-export function ExecutionsTable({ executions, setPagination }: Props) {
+export function ExecutionsTable({
+  executions,
+  setPagination,
+  basePath = "mapping",
+}: Props) {
   const columnHelper = createColumnHelper<EnrichmentEvent>();
   const router = useRouter();
 
@@ -86,7 +91,7 @@ export function ExecutionsTable({ executions, setPagination }: Props) {
         setPagination({ limit: newLimit, offset: newOffset })
       }
       onRowClick={(row: EnrichmentEvent) => {
-        router.push(`/mapping/${row.rule_id}/executions/${row.id}`);
+        router.push(`/${basePath}/${row.rule_id}/executions/${row.id}`);
       }}
     />
   );
