@@ -185,6 +185,11 @@ class TopologyProcessor:
             self.logger.info(
                 f"Found alerts for application {application.name}, creating/updating incident"
             )
+            # scope the alerts to this application's services only, so an
+            # application's incident never picks up another application's alerts
+            application_services_to_alerts = {
+                service: services_to_alerts[service] for service in services_with_alerts
+            }
             # if an incident exists, we will update it
             # NOTE: we support only one incident per application for now
             if incident:
@@ -193,7 +198,7 @@ class TopologyProcessor:
                 )
                 # update the incident with new alerts / status / severity
                 self._update_application_based_incident(
-                    tenant_id, application, incident, services_to_alerts
+                    tenant_id, application, incident, application_services_to_alerts
                 )
             else:
                 self.logger.info(
@@ -201,7 +206,7 @@ class TopologyProcessor:
                 )
                 # create a new incident with the alerts
                 self._create_application_based_incident(
-                    tenant_id, application, services_to_alerts
+                    tenant_id, application, application_services_to_alerts
                 )
 
     def _get_topology_based_incidents(self, tenant_id: str) -> Dict[str, Incident]:
