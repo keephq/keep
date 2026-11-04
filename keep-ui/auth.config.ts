@@ -51,6 +51,31 @@ export const proxyUrl =
   process.env.http_proxy ||
   process.env.https_proxy;
 
+// Map provider groups (KEEP_OIDC_*_ROLES env, comma separated) to a keep role
+// for the session. Mirrors the backend OidcAuthVerifier mapping; used only for
+// UI gating - the backend enforces the role again on every API request.
+function mapOidcGroupsToRole(groups: unknown): string {
+  const groupList =
+    typeof groups === "string"
+      ? groups.split(",")
+      : Array.isArray(groups)
+        ? groups.map((group) => String(group))
+        : [];
+  const normalizedGroups = groupList.map((group) => group.trim());
+  const roleMapping: Array<[string, string]> = [
+    [runtimeEnv("KEEP_OIDC_ADMIN_ROLES") || "", "admin"],
+    [runtimeEnv("KEEP_OIDC_NOC_ROLES") || "", "noc"],
+    [runtimeEnv("KEEP_OIDC_WEBHOOK_ROLES") || "", "webhook"],
+  ];
+  for (const [rolesEnv, role] of roleMapping) {
+    const allowedGroups = rolesEnv.split(",").map((group) => group.trim());
+    if (normalizedGroups.some((group) => allowedGroups.includes(group))) {
+      return role;
+    }
+  }
+  return "user";
+}
+
 async function refreshAccessToken(token: any) {
   let issuerUrl = "";
   let clientId = "";
@@ -77,6 +102,19 @@ async function refreshAccessToken(token: any) {
       clientId = process.env.ONELOGIN_CLIENT_ID || "";
       clientSecret = process.env.ONELOGIN_CLIENT_SECRET || "";
       refreshTokenUrl = `${issuerUrl}/token`;
+      break;
+    }
+    case AuthType.OIDC: {
+      issuerUrl = runtimeEnv("KEEP_OIDC_ISSUER") || "";
+      clientId = runtimeEnv("KEEP_OIDC_CLIENT_ID") || "";
+      clientSecret = runtimeEnv("KEEP_OIDC_CLIENT_SECRET") || "";
+      // The token endpoint is discovered per the OIDC Discovery spec;
+      // refreshes are rare enough that an extra GET is fine
+      const discoveryResponse = await fetch(
+        `${issuerUrl}/.well-known/openid-configuration`
+      );
+      const discovery = await discoveryResponse.json();
+      refreshTokenUrl = discovery.token_endpoint;
       break;
     }
     default: {
@@ -106,9 +144,17 @@ async function refreshAccessToken(token: any) {
       );
     }
 
+    // In the default id_token mode the bearer sent to the backend is the
+    // id_token, so the refreshed id_token must replace it
+    const refreshedAccessToken =
+      authType === AuthType.OIDC &&
+      runtimeEnv("KEEP_OIDC_TOKEN_TYPE") !== "access_token"
+        ? refreshedTokens.id_token || refreshedTokens.access_token
+        : refreshedTokens.access_token;
+
     return {
       ...token,
-      accessToken: refreshedTokens.access_token,
+      accessToken: refreshedAccessToken,
       accessTokenExpires: Date.now() + (refreshedTokens.expires_in || 3600) * 1000,
       refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
     };
@@ -269,6 +315,27 @@ const baseProviderConfigs = {
       authorization: { params: { scope: "openid email profile groups" } },
     }),
   ],
+  [AuthType.OIDC]: [
+    {
+      // Generic OIDC provider (Dex, Authentik, Zitadel, Authelia, Kanidm,
+      // Keycloak without EE, ...): authorization code flow with PKCE, the
+      // endpoints and JWKS are inferred from the issuer via discovery
+      id: "oidc",
+      name: "OIDC",
+      type: "oidc" as const,
+      clientId: runtimeEnv("KEEP_OIDC_CLIENT_ID")!,
+      clientSecret: runtimeEnv("KEEP_OIDC_CLIENT_SECRET")!,
+      issuer: runtimeEnv("KEEP_OIDC_ISSUER"),
+      authorization: {
+        params: {
+          scope:
+            runtimeEnv("KEEP_OIDC_SCOPES") ||
+            "openid email profile groups offline_access",
+        },
+      },
+      checks: ["pkce" as const],
+    },
+  ],
   [AuthType.AZUREAD]: [
     MicrosoftEntraID({
       clientId: process.env.KEEP_AZUREAD_CLIENT_ID!,
@@ -371,6 +438,17 @@ export const config = {
           tenantId = (profile as any).keep_tenant_id || "keep";
           role = (profile as any).keep_role || "user";
           accessToken = account.id_token; // Use ID token instead of access token
+        } else if (authType === AuthType.OIDC) {
+          // Generic OIDC: tenant/role come from the profile claims; the role
+          // is derived from the same KEEP_OIDC_*_ROLES lists the backend uses
+          tenantId = (profile as any)?.keep_tenant_id || "keep";
+          role = mapOidcGroupsToRole((profile as any)?.groups);
+          // id_token is the default bearer (aud=client_id per the OIDC spec);
+          // access_token mode is opt-in via KEEP_OIDC_TOKEN_TYPE
+          accessToken =
+            runtimeEnv("KEEP_OIDC_TOKEN_TYPE") === "access_token"
+              ? account.access_token
+              : account.id_token;
         } else {
           accessToken =
             user.accessToken || account.access_token || account.id_token;
@@ -460,14 +538,14 @@ export const config = {
           }
         }
 
-        // Refresh token logic for Keycloak, Okta and OneLogin
-        if (authType === AuthType.KEYCLOAK || authType === AuthType.OKTA || authType === AuthType.ONELOGIN) {
+        // Refresh token logic for Keycloak, Okta, OneLogin and generic OIDC
+        if (authType === AuthType.KEYCLOAK || authType === AuthType.OKTA || authType === AuthType.ONELOGIN || authType === AuthType.OIDC) {
           token.refreshToken = account.refresh_token;
           token.accessTokenExpires =
             Date.now() + (account.expires_in as number) * 1000;
         }
       } else if (
-        (authType === AuthType.KEYCLOAK || authType === AuthType.OKTA || authType === AuthType.ONELOGIN) &&
+        (authType === AuthType.KEYCLOAK || authType === AuthType.OKTA || authType === AuthType.ONELOGIN || authType === AuthType.OIDC) &&
         token.refreshToken &&
         token.accessTokenExpires &&
         typeof token.accessTokenExpires === "number" &&
