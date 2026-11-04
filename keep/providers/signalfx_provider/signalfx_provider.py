@@ -153,13 +153,20 @@ class SignalfxProvider(BaseProvider):
         incidents = response.json()
         # Map SignalFx alert data to AlertDto objects
         alerts = []
+        first_formatting_error = None
         # TODO: incident may have more than one alert?
         for incident in incidents:
             try:
                 alerts.append(self._format_alert_get_alert(incident))
             except Exception as e:
                 self.logger.error(f"Failed to format SignalFx alert: {e}")
-                pass
+                if first_formatting_error is None:
+                    first_formatting_error = e
+
+        if incidents and not alerts:
+            raise RuntimeError(
+                f"Failed to format any of {len(incidents)} SignalFx incidents"
+            ) from first_formatting_error
 
         return alerts
 
