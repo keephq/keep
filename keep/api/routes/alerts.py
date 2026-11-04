@@ -382,16 +382,19 @@ def delete_alert(
 
     # overwrite the enrichment
     enrichment_bl = EnrichmentsBl(tenant_id)
-    enrichment_bl.enrich_entity(
-        fingerprint=delete_alert.fingerprint,
-        enrichments={
-            "deletedAt": deleted_last_received,
-            "assignees": assignees_last_receievd,
-        },
-        action_type=ActionType.DELETE_ALERT,
-        action_description=f"Alert deleted by {user_email}",
-        action_callee=user_email,
-    )
+    try:
+        enrichment_bl.enrich_entity(
+            fingerprint=delete_alert.fingerprint,
+            enrichments={
+                "deletedAt": deleted_last_received,
+                "assignees": assignees_last_receievd,
+            },
+            action_type=ActionType.DELETE_ALERT,
+            action_description=f"Alert deleted by {user_email}",
+            action_callee=user_email,
+        )
+    finally:
+        enrichment_bl.close()
 
     logger.info(
         "Deleted alert successfully",
@@ -447,14 +450,17 @@ def assign_alert(
         enrichments["status"] = "acknowledged"
 
     enrichment_bl = EnrichmentsBl(tenant_id)
-    enrichment_bl.enrich_entity(
-        fingerprint=fingerprint,
-        enrichments=enrichments,
-        action_type=ActionType.ACKNOWLEDGE,
-        action_description=f"Alert assigned to {user_email}, status: {status}",
-        action_callee=user_email,
-        dispose_on_new_alert=True,
-    )
+    try:
+        enrichment_bl.enrich_entity(
+            fingerprint=fingerprint,
+            enrichments=enrichments,
+            action_type=ActionType.ACKNOWLEDGE,
+            action_description=f"Alert assigned to {user_email}, status: {status}",
+            action_callee=user_email,
+            dispose_on_new_alert=True,
+        )
+    finally:
+        enrichment_bl.close()
 
     try:
         if not unassign:  # if we're assigning the alert to someone, send email
@@ -1211,6 +1217,7 @@ def unenrich_alert(
         )
         return {"status": "failed"}
 
+    enrichement_bl = None
     try:
         enrichement_bl = EnrichmentsBl(tenant_id)
         if "status" in enrich_data.enrichments:
@@ -1288,6 +1295,9 @@ def unenrich_alert(
     except Exception as e:
         logger.exception("Failed to un-enrich alert", extra={"error": str(e)})
         return {"status": "failed"}
+    finally:
+        if enrichement_bl is not None:
+            enrichement_bl.close()
 
 
 @router.post(

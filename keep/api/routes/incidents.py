@@ -1131,14 +1131,17 @@ async def unenrich_incident(
 
     # Use the existing enrichment infrastructure
     enrichment_bl = EnrichmentsBl(tenant_id)
-    enrichment_bl.enrich_entity(
-        fingerprint=enrichment.fingerprint,
-        enrichments=new_enrichments,
-        action_type=ActionType.INCIDENT_UNENRICH,
-        action_callee=authenticated_entity.email,
-        action_description=f"Incident un-enriched by {authenticated_entity.email}",
-        force=True,
-    )
+    try:
+        enrichment_bl.enrich_entity(
+            fingerprint=enrichment.fingerprint,
+            enrichments=new_enrichments,
+            action_type=ActionType.INCIDENT_UNENRICH,
+            action_callee=authenticated_entity.email,
+            action_description=f"Incident un-enriched by {authenticated_entity.email}",
+            force=True,
+        )
+    finally:
+        enrichment_bl.close()
 
     # Notify clients if pusher is available
     if pusher_client:

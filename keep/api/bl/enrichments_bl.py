@@ -97,12 +97,43 @@ class EnrichmentsBl:
         self.tenant_id = tenant_id
         self.__logs: list[EnrichmentLog] = []
         self.enrichment_event_id: UUID | None = None
-        if not EnrichmentsBl.ENRICHMENT_DISABLED:
-            self.db_session = db or get_session_sync()
-            self.elastic_client = ElasticClient(tenant_id=tenant_id)
-        else:
-            self.db_session = None
-            self.elastic_client = None
+        # Track whether this instance created its own session, so close()
+        # never tears down a session owned by the caller (e.g. FastAPI's
+        # Depends(get_session), or a session passed in from another BL/task).
+        self._owns_session = db is None
+        self.db_session = None
+        self.elastic_client = None
+        try:
+            if not EnrichmentsBl.ENRICHMENT_DISABLED:
+                self.db_session = db if db is not None else get_session_sync()
+                self.elastic_client = ElasticClient(tenant_id=tenant_id)
+        except Exception:
+            # If anything after session creation fails (e.g. ElasticClient
+            # raising on bad config), the constructor never returns an
+            # instance, so no caller's try/finally can call close() on it -
+            # close the session ourselves before propagating.
+            self.close()
+            raise
+
+    def close(self) -> None:
+        """
+        Close the DB session if (and only if) this instance created it
+        itself via get_session_sync(). Safe to call multiple times.
+
+        Callers that pass their own `db` session remain responsible for its
+        lifecycle; EnrichmentsBl must never close a session it doesn't own.
+        """
+        if self._owns_session and self.db_session is not None:
+            try:
+                self.db_session.close()
+            finally:
+                self.db_session = None
+
+    def __enter__(self) -> "EnrichmentsBl":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
 
     def run_mapping_rule_by_id(self, rule_id: int, alert_id: UUID) -> AlertDto:
         rule = get_mapping_rule_by_id(self.tenant_id, rule_id, session=self.db_session)
