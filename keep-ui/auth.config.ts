@@ -68,7 +68,12 @@ function mapOidcGroupsToRole(groups: unknown): string {
     [runtimeEnv("KEEP_OIDC_WEBHOOK_ROLES") || "", "webhook"],
   ];
   for (const [rolesEnv, role] of roleMapping) {
-    const allowedGroups = rolesEnv.split(",").map((group) => group.trim());
+    // `"".split(",")` yields `[""]`, so an unset list must not match an empty
+    // group entry (e.g. a trailing comma in a comma separated groups claim).
+    const allowedGroups = rolesEnv
+      .split(",")
+      .map((group) => group.trim())
+      .filter(Boolean);
     if (normalizedGroups.some((group) => allowedGroups.includes(group))) {
       return role;
     }
