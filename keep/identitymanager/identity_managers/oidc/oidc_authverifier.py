@@ -76,7 +76,11 @@ class OidcAuthVerifier(AuthVerifierBase):
         self.oidc_client_id = config("KEEP_OIDC_CLIENT_ID", default=None)
         self.oidc_audience = config("KEEP_OIDC_AUDIENCE", default=None)
         self.groups_claim = config("KEEP_OIDC_GROUPS_CLAIM", default="groups")
-        self.auto_create_user = config("KEEP_OIDC_AUTO_CREATE_USER", default=True)
+        # `config()` without a cast returns the raw string, and every non-empty
+        # string is truthy: compare explicitly, like the rest of the codebase.
+        self.auto_create_user = (
+            config("KEEP_OIDC_AUTO_CREATE_USER", default="true") == "true"
+        )
 
         if not self.oidc_issuer or not self.oidc_client_id:
             raise Exception(
