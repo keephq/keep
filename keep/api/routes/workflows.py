@@ -1237,7 +1237,12 @@ def write_workflow_secret(
     except Exception:
         existing_secrets = {}
 
-    existing_secrets.update(secret_data)
+    # A name with surrounding whitespace could not be addressed again: clients strip it from the
+    # URL of the delete route, so the secret would be listed but impossible to delete.
+    new_secrets = {name.strip(): value for name, value in secret_data.items()}
+    if "" in new_secrets:
+        raise HTTPException(400, "Secret name cannot be empty")
+    existing_secrets.update(new_secrets)
 
     # Write back the updated secret object
     secret_manager.write_secret(
@@ -1304,10 +1309,13 @@ def delete_workflow_secret(
 
     secrets = secret_manager.read_secret(secret_key, is_json=True)
 
-    if secret_name not in secrets:
+    # Also match names saved with surrounding whitespace before names were trimmed on write.
+    matching_names = [name for name in secrets if name.strip() == secret_name.strip()]
+    if not matching_names:
         raise HTTPException(404, f"Secret '{secret_name}' not found")
 
-    del secrets[secret_name]  # Remove only the specific key
+    for name in matching_names:
+        del secrets[name]  # Remove only the specific key
     secret_manager.write_secret(
         secret_name=secret_key,
         secret_value=json.dumps(secrets),
