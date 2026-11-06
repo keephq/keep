@@ -120,6 +120,30 @@ def test_oidc_valid_token_admin_group(db_session, client, test_app, monkeypatch)
     assert user_exists(tenant_id=SINGLE_TENANT_UUID, username="user@keep.local")
 
 
+@pytest.mark.parametrize(
+    "test_app", [{**OIDC_ENV, "KEEP_OIDC_AUTO_CREATE_USER": "false"}], indirect=True
+)
+def test_oidc_auto_create_user_disabled(db_session, client, test_app, monkeypatch):
+    """KEEP_OIDC_AUTO_CREATE_USER=false -> authenticated, but no JIT user creation"""
+    private_pem, public_pem = generate_test_keys()
+    _patch_jwks_client(monkeypatch, public_pem)
+
+    token = _make_token(private_pem, groups=["keep-admins"])
+
+    # force the JIT precondition (user not in the db) so the assertion below
+    # cannot be satisfied by leftover state from another test
+    with patch.object(
+        oidc_authverifier, "user_exists", return_value=False
+    ), patch.object(oidc_authverifier, "create_user") as mock_create_user:
+        result = _get_verifier()(
+            token=token, api_key=None, authorization=None, request=None
+        )
+
+    assert isinstance(result, AuthenticatedEntity)
+    assert result.role == "admin"
+    assert not mock_create_user.called
+
+
 @pytest.mark.parametrize("test_app", [OIDC_ENV], indirect=True)
 def test_oidc_groups_as_comma_separated_string(
     db_session, client, test_app, monkeypatch
