@@ -9,6 +9,7 @@ from pympler.asizeof import asizeof
 from keep.api.core.config import config
 from keep.api.core.db import get_last_workflow_execution_by_workflow_id, get_session
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.maintenance_window import MaintenanceWindowDto
 from keep.api.models.incident import IncidentDto
 
 
@@ -35,6 +36,7 @@ class ContextManager:
         self.actions_context = {}
         self.event_context: AlertDto = {}
         self.incident_context: IncidentDto | None = None
+        self.maintenance_context: MaintenanceWindowDto | None = None
         self.foreach_context: ForeachContext = {
             "value": None,
             "items": None,
@@ -122,6 +124,9 @@ class ContextManager:
     def set_incident_context(self, incident):
         self.incident_context = incident
 
+    def set_maintenance_context(self, maintenance):
+        self.maintenance_context = maintenance
+
     def set_consts_context(self, consts):
         self.consts_context = consts
 
@@ -174,6 +179,7 @@ class ContextManager:
             "last_workflow_run_time": self.last_workflow_run_time,
             "alert": self.event_context,  # this is an alias so workflows will be able to use alert.source
             "incident": self.incident_context,  # this is an alias so workflows will be able to use alert.source
+            "maintenance": self.maintenance_context,
             "consts": self.consts_context,
             "vars": self.current_step_vars,
             "aliases": self.current_step_aliases,
