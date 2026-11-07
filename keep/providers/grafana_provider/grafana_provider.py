@@ -406,9 +406,9 @@ class GrafanaProvider(BaseTopologyProvider, ProviderHealthMixin):
         formatted_alerts = []
         for alert in alerts:
             labels = alert.get("labels", {})
-            # map status and severity to Keep format:
+            # map status and severity to Keep format (use per-alert status with fallback to group event status):
             status = GrafanaProvider.STATUS_MAP.get(
-                event.get("status"), AlertStatus.FIRING
+                alert.get("status") or event.get("status"), AlertStatus.FIRING
             )
             severity = GrafanaProvider.SEVERITIES_MAP.get(
                 labels.get("severity"), AlertSeverity.INFO
