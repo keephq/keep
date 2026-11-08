@@ -2,6 +2,7 @@ import {
   YamlWorkflowDefinitionSchema,
   getYamlWorkflowDefinitionSchema,
 } from "@/entities/workflows/model/yaml.schema";
+import { generateWorkflowYamlJsonSchema } from "@/entities/workflows/lib/generateWorkflowYamlJsonSchema";
 import { Provider } from "@/shared/api/providers";
 
 describe("YamlWorkflowDefinitionSchema", () => {
@@ -515,5 +516,59 @@ describe("getYamlWorkflowDefinitionSchema", () => {
     };
 
     expect(() => schema.parse(workflowWithDisposableEnrichAlert)).not.toThrow();
+  });
+});
+
+describe("provider `with` keys in the generated JSON schema", () => {
+  const makeProvider = (type: string, notify_params: string[]): Provider => ({
+    id: type,
+    display_name: type,
+    tags: [],
+    type,
+    can_query: false,
+    can_notify: true,
+    query_params: [],
+    notify_params,
+    config: {},
+    installed: true,
+    linked: true,
+    last_alert_received: "",
+    details: {
+      authentication: {},
+    },
+    pulling_available: false,
+    validatedScopes: {},
+    pulling_enabled: false,
+    categories: [],
+    coming_soon: false,
+    health: false,
+  });
+
+  // Finds the `with` schema of the action provider with the given type
+  const findWithSchema = (node: any, type: string): any => {
+    if (!node || typeof node !== "object") return undefined;
+    if (node.properties?.type?.const === type && node.properties?.with) {
+      return node.properties.with;
+    }
+    for (const value of Object.values(node)) {
+      const found = findWithSchema(value, type);
+      if (found) return found;
+    }
+    return undefined;
+  };
+
+  it("allows keys that are not listed for providers whose _notify takes **kwargs", () => {
+    const jsonSchema = generateWorkflowYamlJsonSchema(
+      getYamlWorkflowDefinitionSchema([
+        makeProvider("kubernetes", ["action", "kwargs"]),
+        makeProvider("plain", ["message"]),
+      ])
+    );
+
+    // kubernetes rollout_restart takes kind/name/namespace through **kwargs
+    expect(findWithSchema(jsonSchema, "kubernetes").additionalProperties).not.toBe(
+      false
+    );
+    expect(findWithSchema(jsonSchema, "plain").additionalProperties).toBe(false);
   });
 });
