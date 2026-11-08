@@ -2000,17 +2000,44 @@ def get_alerts_by_ids(
         return session.exec(query).all()
 
 
-def get_previous_alert_by_fingerprint(tenant_id: str, fingerprint: str) -> Alert:
-    # get the previous alert for a given fingerprint
+def get_previous_alert_by_fingerprint(
+    tenant_id: str, fingerprint: str, *, source_event_id: str | None = None
+) -> Alert:
+    """Get the previous operational event, retaining the legacy default lookup.
+
+    Ordered workflow comparisons identify their accepted current row explicitly.
+    Rejected rows remain in history, and worker ingestion clocks do not define
+    which accepted source transition preceded that row.
+    """
     with Session(engine) as session:
-        alert = (
-            session.query(Alert)
-            .filter(Alert.tenant_id == tenant_id)
-            .filter(Alert.fingerprint == fingerprint)
-            .order_by(Alert.timestamp.desc())
-            .limit(2)
-            .all()
+        query = session.query(Alert).filter(
+            Alert.tenant_id == tenant_id, Alert.fingerprint == fingerprint
         )
+        if source_event_id is not None:
+            current = query.filter(Alert.id == UUID(source_event_id)).first()
+            if current is None:
+                raise ValueError("Source-ordered workflow event was not found")
+            context = current.event.get("sourceEventOrdering", {})
+            source_time = context.get("sourceTime")
+            if context.get("accepted") is not True or not isinstance(source_time, str):
+                raise ValueError(
+                    "Workflow comparison requires an accepted source event"
+                )
+            accepted = Alert.event["sourceEventOrdering"]["accepted"].as_boolean()
+            previous_source_time = Alert.event["sourceEventOrdering"][
+                "sourceTime"
+            ].as_string()
+            return (
+                query.filter(
+                    Alert.provider_id == current.provider_id,
+                    Alert.provider_type == current.provider_type,
+                    accepted.is_(True),
+                    previous_source_time < source_time,
+                )
+                .order_by(previous_source_time.desc())
+                .first()
+            )
+        alert = query.order_by(Alert.timestamp.desc()).limit(2).all()
     if len(alert) > 1:
         return alert[1]
     else:
