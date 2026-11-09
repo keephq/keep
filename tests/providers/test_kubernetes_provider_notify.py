@@ -1,7 +1,8 @@
 import inspect
 from unittest.mock import MagicMock
 
-from keep.providers.kubernetes_provider.kubernetes_provider import \n    KubernetesProvider
+from keep.providers.kubernetes_provider.kubernetes_provider import \
+    KubernetesProvider
 
 
 def test_notify_declares_the_action_arguments():
