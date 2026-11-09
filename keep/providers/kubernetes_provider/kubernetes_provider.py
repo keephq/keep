@@ -195,7 +195,26 @@ class KubernetesProvider(BaseProvider):
         else:
             raise NotImplementedError(f"Command type {command_type} is not implemented")
 
-    def _notify(self, action: str, **kwargs):
+    def _notify(
+        self,
+        action: str,
+        kind: str = None,
+        name: str = None,
+        namespace: str = None,
+        labels: str = None,
+        pod_name: str = None,
+        container_name: str = None,
+        message: str = None,
+        node_name: str = None,
+        force: bool = None,
+        ignore_daemonsets: bool = None,
+        delete_emptydir_data: bool = None,
+        deployment_name: str = None,
+        statefulset_name: str = None,
+        replicas: int = None,
+        command: str | list = None,
+        **kwargs,
+    ):
         """
         Perform actions on Kubernetes resources.
         Args:
@@ -208,8 +227,40 @@ class KubernetesProvider(BaseProvider):
                 - scale_deployment: Scale deployment up/down
                 - scale_statefulset: Scale statefulset up/down
                 - exec_pod_command: Execute command in pod
+            Each action reads only the arguments it needs; the others are ignored.
+            kind, name, namespace, labels: rollout_restart
+            namespace, pod_name, container_name, message: restart_pod
+            node_name: cordon_node, uncordon_node
+            node_name, force, ignore_daemonsets, delete_emptydir_data: drain_node
+            namespace, deployment_name, replicas: scale_deployment
+            namespace, statefulset_name, replicas: scale_statefulset
+            namespace, pod_name, command, container_name: exec_pod_command
             **kwargs: Additional arguments for the action.
         """
+        # Only forward what was set, so each action keeps its own defaults.
+        kwargs.update(
+            {
+                key: value
+                for key, value in {
+                    "kind": kind,
+                    "name": name,
+                    "namespace": namespace,
+                    "labels": labels,
+                    "pod_name": pod_name,
+                    "container_name": container_name,
+                    "message": message,
+                    "node_name": node_name,
+                    "force": force,
+                    "ignore_daemonsets": ignore_daemonsets,
+                    "delete_emptydir_data": delete_emptydir_data,
+                    "deployment_name": deployment_name,
+                    "statefulset_name": statefulset_name,
+                    "replicas": replicas,
+                    "command": command,
+                }.items()
+                if value is not None
+            }
+        )
         if action == "rollout_restart":
             return self.__rollout_restart(**kwargs)
         elif action == "restart_pod":
