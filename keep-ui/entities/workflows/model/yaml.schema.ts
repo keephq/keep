@@ -119,12 +119,11 @@ function getYamlProviderSchema(
   type: "step" | "action"
 ) {
   // Get all valid parameter keys from the provider
-  const providerParams =
-    (type === "step" ? provider.query_params : provider.notify_params) || [];
-  const validKeys = providerParams.filter((key) => key !== "kwargs");
-  // A provider method declared with **kwargs (e.g. kubernetes `_notify`) takes
-  // parameters that are not listed, so extra keys in `with` must be allowed.
-  const acceptsExtraKeys = providerParams.includes("kwargs");
+  const validKeys = [
+    ...(type === "step"
+      ? provider.query_params || []
+      : provider.notify_params || []),
+  ].filter((key) => key !== "kwargs");
 
   // TODO: use the correct type from the provider methods _query and _notify
   const valueSchema = z.union([
@@ -135,7 +134,7 @@ function getYamlProviderSchema(
     z.object({}),
     z.array(z.any()),
   ]);
-  const baseWithSchema = z.object({
+  const withSchema = z.object({
     ...Object.fromEntries(
       // TODO: type each key with the correct type (backend should return types)
       validKeys.map((key) => [key, valueSchema.optional()])
@@ -143,9 +142,6 @@ function getYamlProviderSchema(
     enrich_alert: EnrichDisposableKeyValueSchema.optional(),
     enrich_incident: EnrichKeyValueSchema.optional(),
   });
-  const withSchema = acceptsExtraKeys
-    ? baseWithSchema.passthrough()
-    : baseWithSchema;
 
   if (provider.type === "mock") {
     return z.object({
