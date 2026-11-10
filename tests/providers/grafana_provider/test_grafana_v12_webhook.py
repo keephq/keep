@@ -1,3 +1,4 @@
+from keep.api.models.alert import AlertStatus
 from keep.providers.grafana_provider.grafana_provider import GrafanaProvider
 
 
@@ -101,3 +102,39 @@ class TestFormatAlertGrafana12:
 
         assert len(alerts) == 1
         assert alerts[0].url is None
+
+    def test_each_alert_in_group_uses_own_status(self):
+        event = _grafana12_test_payload()
+        event["status"] = "firing"
+        event["alerts"] = [
+            {
+                "status": "firing",
+                "labels": {"alertname": "AlertFiring"},
+                "fingerprint": "fp1",
+            },
+            {
+                "status": "resolved",
+                "labels": {"alertname": "AlertResolved"},
+                "fingerprint": "fp2",
+            },
+        ]
+
+        alerts = GrafanaProvider._format_alert(event)
+        assert len(alerts) == 2
+        assert alerts[0].status == AlertStatus.FIRING
+        assert alerts[1].status == AlertStatus.RESOLVED
+
+    def test_alert_without_status_falls_back_to_group_status(self):
+        event = _grafana12_test_payload()
+        event["status"] = "firing"
+        event["alerts"] = [
+            {
+                "labels": {"alertname": "AlertNoStatus"},
+                "fingerprint": "fp3",
+            }
+        ]
+
+        alerts = GrafanaProvider._format_alert(event)
+        assert len(alerts) == 1
+        assert alerts[0].status == AlertStatus.FIRING
+
