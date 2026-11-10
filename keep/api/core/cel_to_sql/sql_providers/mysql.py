@@ -1,6 +1,9 @@
 from datetime import datetime
 from typing import List
 from uuid import UUID
+
+from sqlalchemy import Dialect
+
 from keep.api.core.cel_to_sql.ast_nodes import (
     ComparisonNode,
     ComparisonNodeOperator,
@@ -13,18 +16,29 @@ from keep.api.core.cel_to_sql.ast_nodes import (
 )
 from keep.api.core.cel_to_sql.properties_metadata import (
     JsonFieldMapping,
+    PropertiesMetadata,
     SimpleFieldMapping,
 )
 from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 
 class CelToMySqlProvider(BaseCelToSqlProvider):
 
+    def __init__(self, dialect: Dialect, properties_metadata: PropertiesMetadata):
+        super().__init__(dialect, properties_metadata)
+        # MySQL treats backslashes in string literals as escapes unless the
+        # NO_BACKSLASH_ESCAPES sql_mode is set, which SQLAlchemy detects on connect.
+        self._backslash_escapes = getattr(dialect, "_backslash_escapes", True)
+
+    def _sql_string_literal(self, value: str) -> str:
+        if self._backslash_escapes:
+            value = value.replace("\\", "\\\\")
+        return super()._sql_string_literal(value)
+
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         return f"JSON_UNQUOTE({self._json_extract(column, path)})"
 
     def _json_contains_path(self, column: str, path: list[str]) -> str:
-        property_path_str = ".".join([f'"{item}"' for item in path])
-        return f"JSON_CONTAINS_PATH({column}, 'one', '$.{property_path_str}')"
+        return f"JSON_CONTAINS_PATH({column}, 'one', {self._json_path_literal(path)})"
 
     def cast(self, expression_to_cast: str, to_type, force=False):
         if to_type == DataType.BOOLEAN:
@@ -55,8 +69,7 @@ class CelToMySqlProvider(BaseCelToSqlProvider):
             return expression_to_cast
 
     def _json_extract(self, column: str, path: list[str]) -> str:
-        property_path_str = ".".join([f'"{item}"' for item in path])
-        return f"JSON_EXTRACT({column}, '$.{property_path_str}')"
+        return f"JSON_EXTRACT({column}, {self._json_path_literal(path)})"
 
     def get_order_by_expression(self, sort_options: list[tuple[str, str]]) -> str:
         sort_expressions: list[str] = []

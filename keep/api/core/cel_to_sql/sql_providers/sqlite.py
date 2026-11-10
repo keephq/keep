@@ -14,8 +14,7 @@ from keep.api.core.cel_to_sql.sql_providers.base import BaseCelToSqlProvider
 class CelToSqliteProvider(BaseCelToSqlProvider):
 
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
-        property_path_str = ".".join([f'"{item}"' for item in path])
-        return f"json_extract({column}, '$.{property_path_str}')"
+        return f"json_extract({column}, {self._json_path_literal(path)})"
 
     def _json_contains_path(self, column: str, path: list[str]) -> str:
         """
@@ -58,9 +57,7 @@ class CelToSqliteProvider(BaseCelToSqlProvider):
             )
             key_name = last_key
 
-        return (
-            f"EXISTS (SELECT 1 FROM {json_each_exp} WHERE json_each.key = '{key_name}')"
-        )
+        return f"EXISTS (SELECT 1 FROM {json_each_exp} WHERE json_each.key = {self._sql_string_literal(key_name)})"
 
     def cast(self, expression_to_cast: str, to_type: DataType, force=False):
         if to_type == DataType.STRING:

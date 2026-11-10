@@ -20,14 +20,13 @@ from keep.api.core.cel_to_sql.ast_nodes import DataType
 class CelToPostgreSqlProvider(BaseCelToSqlProvider):
 
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
-        all_columns = [column] + [f"'{item}'" for item in path]
+        all_columns = [column] + [self._sql_string_literal(item) for item in path]
 
         json_property_path = " -> ".join(all_columns[:-1])
         return f"({json_property_path}) ->> {all_columns[-1]}"  # (json_column -> 'labels' -> tags) ->> 'service'
 
     def _json_contains_path(self, column: str, path: list[str]) -> str:
-        property_path_str = ".".join([f'"{item}"' for item in path])
-        return f"JSONB_PATH_EXISTS({column}::JSONB, '$.{property_path_str}')"
+        return f"JSONB_PATH_EXISTS({column}::JSONB, {self._json_path_literal(path)})"
 
     def cast(self, expression_to_cast: str, to_type: DataType, force=False):
         if to_type == DataType.STRING:

@@ -1,3 +1,4 @@
+import json
 from typing import Any, List
 
 from sqlalchemy import Dialect, String
@@ -223,6 +224,28 @@ class BaseCelToSqlProvider:
 
     def json_extract_as_text(self, column: str, path: list[str]) -> str:
         raise NotImplementedError("Extracting JSON is not implemented. Must be implemented in the child class.")
+
+    def _sql_string_literal(self, value: str) -> str:
+        """
+        Quotes a string for direct use in SQL text by doubling single quotes.
+
+        The dialect's literal processor is not used here because it also doubles
+        '%' for the DBAPI, which the text() wrapper does again.
+        """
+        return "'" + value.replace("'", "''") + "'"
+
+    def _json_path_literal(self, path: list[str]) -> str:
+        """
+        Builds a JSON path such as $."labels"."team" as a quoted SQL string literal.
+
+        Each key is written as a JSON string, so quotes and backslashes in it are escaped
+        for the JSON path, and the whole path is quoted as an SQL string, so a key taken
+        from a CEL query can never end the SQL string.
+        """
+        property_path_str = ".".join(
+            json.dumps(item, ensure_ascii=False) for item in path
+        )
+        return self._sql_string_literal(f"$.{property_path_str}")
 
     def _json_contains_path(self, column: str, path: list[str]) -> str:
         raise NotImplementedError(
