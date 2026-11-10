@@ -223,6 +223,48 @@ def test_run_extraction_rules_with_conditions(mock_session, mock_alert_dto):
     assert enriched_event.source_name == "test_source"
 
 
+def test_run_extraction_rule_by_id_with_condition(mock_session):
+    """
+    Executing a rule with a CEL condition against a stored alert must not fail
+    on the alert id (a UUID), and must leave the stored event untouched.
+    """
+    alert_id = uuid.uuid4()
+    stored_event = {
+        "name": "Test Alert",
+        "status": "firing",
+        "source": ["test_source"],
+    }
+    alert = Alert(
+        id=alert_id,
+        tenant_id="test_tenant",
+        provider_type="test",
+        provider_id="test",
+        fingerprint="mock_fingerprint",
+        event=dict(stored_event),
+    )
+    rule = ExtractionRule(
+        id=3,
+        tenant_id="test_tenant",
+        priority=1,
+        attribute="{{ name }}",
+        regex="(?P<service_name>Test) (?P<alert_type>Alert)",
+        disabled=False,
+        pre=False,
+        condition='status == "firing"',
+    )
+
+    enrichment_bl = EnrichmentsBl(tenant_id="test_tenant", db=mock_session)
+    with patch(
+        "keep.api.bl.enrichments_bl.get_extraction_rule_by_id", return_value=rule
+    ):
+        enriched_event = enrichment_bl.run_extraction_rule_by_id(rule.id, alert)
+
+    assert enriched_event["service_name"] == "Test"
+    assert enriched_event["alert_type"] == "Alert"
+    assert enriched_event["event_id"] == str(alert_id)
+    assert alert.event == stored_event
+
+
 def test_run_mapping_rules_applies(mock_session, mock_alert_dto):
     # Setup a mapping rule
     rule = MappingRule(
