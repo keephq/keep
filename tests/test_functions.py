@@ -396,6 +396,36 @@ def test_add_time_to_date():
     assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
 
 
+@pytest.mark.parametrize(
+    "time_str",
+    ["1y", "3M", "10", "", "2 d", "next week"],
+    ids=["years", "months", "no-unit", "empty", "space-before-unit", "prose"],
+)
+def test_add_time_to_date_refuses_a_string_it_cannot_read(time_str):
+    """A string with no readable unit is a mistake, not a zero delta.
+
+    The regex matches a digit followed by w, d, h, m or s and nothing else,
+    so "1y" and "3M" matched nothing and the function returned the date it
+    was given. A workflow computing a deadline that way got the start date
+    and looked like it had worked.
+    """
+    with pytest.raises(ValueError, match="could not read any time"):
+        functions.add_time_to_date("2024-07-01", "%Y-%m-%d", time_str)
+
+
+@pytest.mark.parametrize(
+    ("time_str", "expected"),
+    [
+        ("1w", datetime.datetime(2024, 7, 8)),
+        ("45s", datetime.datetime(2024, 7, 1, 0, 0, 45)),
+        ("1w 2d 3h 30m", datetime.datetime(2024, 7, 10, 3, 30)),
+    ],
+)
+def test_add_time_to_date_still_reads_every_supported_spelling(time_str, expected):
+    """The guard fires on nothing that parsed before, spaces included."""
+    assert functions.add_time_to_date("2024-07-01", "%Y-%m-%d", time_str) == expected
+
+
 def test_add_time_to_date_with_datetime_string():
     """
     Test the add_time_to_date function with a specific datetime string input
