@@ -1297,6 +1297,8 @@ def _enrich_entity(
         enrichments (dict): The enrichments to add to the alert.
         force (bool): Whether to force the enrichment to be updated. This is used to dispose enrichments if necessary.
     """
+    from keep.api.bl.inventory_attention_guards import guard_enrichment
+    guard_enrichment([fingerprint], engine, tenant_id)
     enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
     if enrichment:
         # if force - override exisitng enrichments. being used to dispose enrichments if necessary
@@ -1387,6 +1389,8 @@ def batch_enrich(
     Returns:
         List[AlertEnrichment]: List of enriched alert objects.
     """
+    from keep.api.bl.inventory_attention_guards import guard_enrichment
+    guard_enrichment(fingerprints, engine, tenant_id)
     with existed_or_new_session(session) as session:
         # Get all existing enrichments in one query
         existing_enrichments = {
@@ -4132,6 +4136,8 @@ def update_incident_from_dto_by_id(
     updated_incident_dto: IncidentDtoIn | IncidentDto,
     generated_by_ai: bool = False,
 ) -> Optional[Incident]:
+    from keep.api.bl.inventory_attention_guards import guard_incidents
+    guard_incidents(engine, tenant_id, [incident_id])
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
 
@@ -4192,6 +4198,8 @@ def get_incident_by_fingerprint(
 def delete_incident_by_id(
     tenant_id: str, incident_id: UUID, session: Optional[Session] = None
 ) -> bool:
+    from keep.api.bl.inventory_attention_guards import guard_incidents
+    guard_incidents(engine, tenant_id, [incident_id])
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
     with existed_or_new_session(session) as session:
@@ -4819,6 +4827,8 @@ def merge_incidents_to_id(
     destination_incident_id: UUID,
     merged_by: str | None = None,
 ) -> Tuple[List[UUID], List[UUID], List[UUID]]:
+    from keep.api.bl.inventory_attention_guards import guard_incidents
+    guard_incidents(engine, tenant_id, [destination_incident_id] + list(source_incident_ids))
     with Session(engine) as session:
         destination_incident = session.exec(
             select(Incident).where(

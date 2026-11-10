@@ -482,6 +482,9 @@ class IncidentBl:
         change_by: AuthenticatedEntity,
     ) -> IncidentDto:
 
+        from keep.api.bl.inventory_attention_guards import guard_incidents
+        from keep.api.core.db import engine
+        guard_incidents(engine, self.tenant_id, [incident_id])
         self.logger.info(
             "Fetching incident",
             extra={

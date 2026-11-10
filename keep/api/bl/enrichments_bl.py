@@ -854,6 +854,9 @@ class EnrichmentsBl:
         """
         Dispose of enrichments from the alert
         """
+        from keep.api.bl.inventory_attention_guards import guard_enrichment
+        from keep.api.core.db import engine
+        guard_enrichment([fingerprint], engine, self.tenant_id)
         if EnrichmentsBl.ENRICHMENT_DISABLED:
             self.logger.debug("Enrichment is disabled, skipping dispose enrichments")
             return

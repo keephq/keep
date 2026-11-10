@@ -1,0 +1,15 @@
+workflow:
+  id: inventory-attention
+  name: Inventory attention candidate
+  description: Inactive native durable Inventory incident intake. No recovery.
+  disabled: true
+  triggers:
+    - type: alert
+      cel: source.contains("grafana") && has(inventory_attention_owner) && inventory_attention_owner == "inventory-attention-v1"
+  actions:
+    - name: persist-and-notify
+      provider:
+        type: inventory_attention
+        with:
+          operation: ingest
+          alert: "keep.json_loads('{{ alert }}')"

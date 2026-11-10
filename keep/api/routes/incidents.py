@@ -470,6 +470,9 @@ async def split_incident(
     pusher_client: Pusher | None = Depends(get_pusher_client),
     session: Session = Depends(get_session),
 ) -> SplitIncidentResponseDto:
+    from keep.api.bl.inventory_attention_guards import guard_incidents
+    from keep.api.core.db import engine
+    guard_incidents(engine, authenticated_entity.tenant_id, [incident_id, command.destination_incident_id])
     tenant_id = authenticated_entity.tenant_id
     logger.info(
         "Splitting incident",
@@ -815,6 +818,9 @@ def assign_incident(
     ),
     session: Session = Depends(get_session),
 ):
+    from keep.api.bl.inventory_attention_guards import guard_incidents
+    from keep.api.core.db import engine
+    guard_incidents(engine, authenticated_entity.tenant_id, [incident_id])
     logger.info(
         "Assigning incident to user",
         extra={"incident_id": incident_id, "assignee": authenticated_entity.email},
@@ -850,6 +856,11 @@ def change_incident_status(
     session: Session = Depends(get_session),
 ) -> IncidentDto:
     tenant_id = authenticated_entity.tenant_id
+    from keep.api.bl.inventory_attention_ack import acknowledge_owned_incident
+    from keep.api.core.db import engine
+    if acknowledge_owned_incident(engine, incident_id, change.status, authenticated_entity):
+        incident = get_incident_by_id(tenant_id=tenant_id, incident_id=incident_id)
+        return IncidentDto.from_db_incident(incident)
 
     incident_bl = IncidentBl(tenant_id, session)
 

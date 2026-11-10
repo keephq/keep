@@ -1,0 +1,14 @@
+workflow:
+  id: inventory-attention-sweep
+  name: Inventory durable deadline sweep candidate
+  description: Disabled scheduler; interval is a polling cadence, not an approved response deadline.
+  disabled: true
+  triggers:
+    - type: interval
+      value: 60
+  actions:
+    - name: sweep-durable-deadlines
+      provider:
+        type: inventory_attention
+        with:
+          operation: sweep

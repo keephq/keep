@@ -147,6 +147,7 @@ class SlackProvider(BaseProvider):
         attachments=[],
         username="",
         notification_type="message",
+        request_timeout=None,
         **kwargs: dict,
     ):
         """
@@ -269,7 +270,7 @@ class SlackProvider(BaseProvider):
                     payload["token"] = self.authentication_config.access_token
 
             response = requests.post(
-                f"{SlackProvider.SLACK_API}/{method}", json=payload,
+                f"{SlackProvider.SLACK_API}/{method}", json=payload, timeout=request_timeout,
                 headers={
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {self.authentication_config.access_token}",
