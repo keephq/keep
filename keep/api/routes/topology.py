@@ -383,6 +383,11 @@ def create_dependencies(
             session=session,
             tenant_id=authenticated_entity.tenant_id,
         )
+    except ServiceNotFoundException:
+        raise HTTPException(
+            status_code=404,
+            detail="One or more specified services not found for this tenant.",
+        )
     except ServiceNotManualException:
         raise HTTPException(
             status_code=404,
@@ -410,6 +415,11 @@ def update_dependency(
         )
     except DependencyNotFoundException:
         raise HTTPException(status_code=404, detail="Dependency not found")
+    except ServiceNotFoundException:
+        raise HTTPException(
+            status_code=404,
+            detail="One or more specified services not found for this tenant.",
+        )
     except ServiceNotManualException:
         raise HTTPException(
             status_code=404,
