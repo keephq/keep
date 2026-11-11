@@ -451,3 +451,67 @@ def test_get_application_based_incident_skips_deleted_incident(db_session):
         processor._get_application_based_incident(SINGLE_TENANT_UUID, application)
         is None
     )
+
+
+def test_topology_reimport_preserves_application_id(db_session):
+    """
+    Test for issue #6731: Re-importing topology YAML without explicit IDs
+    should preserve application UUIDs so incidents remain associated.
+    """
+    tenant_id = SINGLE_TENANT_UUID
+    topology_data = {
+        "services": [
+            {
+                "id": 10,
+                "service": "test_service_reimport",
+                "display_name": "Reimport Service",
+                "tags": [],
+                "team": "team",
+                "email": "test@example.com",
+            }
+        ],
+        "applications": [
+            {
+                "name": "Persistent App",
+                "description": "App to test ID preservation",
+                "services": [10],
+            }
+        ],
+        "dependencies": [],
+    }
+
+    # First import
+    TopologiesService.import_to_db(topology_data, db_session, tenant_id)
+    app_1 = db_session.exec(
+        select(TopologyApplication)
+        .where(TopologyApplication.tenant_id == tenant_id)
+        .where(TopologyApplication.name == "Persistent App")
+    ).first()
+    assert app_1 is not None
+    original_id = app_1.id
+
+    # Create an incident linked to app_1
+    processor = TopologyProcessor()
+    processor._create_application_based_incident(tenant_id, app_1, {})
+    incident_before = db_session.exec(
+        select(Incident).where(Incident.incident_application == original_id)
+    ).first()
+    assert incident_before is not None
+    incident_id = incident_before.id
+
+    # Re-import identical topology
+    TopologiesService.import_to_db(topology_data, db_session, tenant_id)
+    app_2 = db_session.exec(
+        select(TopologyApplication)
+        .where(TopologyApplication.tenant_id == tenant_id)
+        .where(TopologyApplication.name == "Persistent App")
+    ).first()
+    assert app_2 is not None
+
+    # Verify ID is preserved
+    assert app_2.id == original_id
+
+    # Verify existing incident is still retrieved for the app
+    matched_incident = processor._get_application_based_incident(tenant_id, app_2)
+    assert matched_incident is not None
+    assert matched_incident.id == incident_id

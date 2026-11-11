@@ -242,6 +242,24 @@ class TopologyProcessor:
                     Incident.status != IncidentStatus.DELETED.value,
                 )
             ).first()
+
+            # Fallback: if application UUID changed (e.g. legacy re-import or external ID change),
+            # match by application name within the tenant so existing incident is reused.
+            if not incident and application.name:
+                incident = session.exec(
+                    select(Incident).where(
+                        Incident.tenant_id == tenant_id,
+                        Incident.incident_type == "topology",
+                        Incident.user_generated_name == f"Application incident: {application.name}",
+                        Incident.status != IncidentStatus.DELETED.value,
+                    )
+                ).first()
+                if incident and incident.incident_application != application.id:
+                    # Link incident to current application ID
+                    incident.incident_application = application.id
+                    session.add(incident)
+                    session.commit()
+
             return incident
 
     def _get_topology_data(self, tenant_id: str):
