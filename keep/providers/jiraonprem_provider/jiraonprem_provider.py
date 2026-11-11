@@ -361,7 +361,7 @@ class JiraonpremProvider(BaseProvider):
         issue_id: str,
         summary: str = "",
         description: str = "",
-        priority: str = "Medium",
+        priority: str = None,
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
@@ -521,7 +521,7 @@ class JiraonpremProvider(BaseProvider):
         labels: List[str] = None,
         components: List[str] = None,
         custom_fields: dict = None,
-        priority: str = "Medium",
+        priority: str = None,
         **kwargs: dict,
     ):
         """
@@ -574,7 +574,7 @@ class JiraonpremProvider(BaseProvider):
                 labels=labels,
                 components=components,
                 custom_fields=custom_fields,
-                priority=priority,
+                priority=priority or "Medium",
                 **kwargs,
             )
             result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
