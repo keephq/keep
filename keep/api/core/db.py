@@ -13,7 +13,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from functools import wraps
-from typing import Any, Callable, Dict, Iterator, List, Tuple, Type, Union, Optional
+from typing import Any, Callable, Dict, Iterator, List, Tuple, Type, Union, Optional, Set
 from uuid import UUID, uuid4
 
 from dateutil.parser import parse
@@ -5317,16 +5317,20 @@ def is_all_alerts_resolved(
     fingerprints: Optional[List[str]] = None,
     incident: Optional[Incident] = None,
     session: Optional[Session] = None,
+    include_suppressed: bool = True,
 ):
+    statuses = [AlertStatus.RESOLVED]
+    if include_suppressed:
+        statuses.append(AlertStatus.SUPPRESSED)
     return is_all_alerts_in_status(
-        fingerprints, incident, AlertStatus.RESOLVED, session
+        fingerprints, incident, statuses, session
     )
 
 
 def is_all_alerts_in_status(
     fingerprints: Optional[List[str]] = None,
     incident: Optional[Incident] = None,
-    status: AlertStatus = AlertStatus.RESOLVED,
+    status: Union[AlertStatus, List[AlertStatus], Tuple[AlertStatus, ...], Set[AlertStatus]] = AlertStatus.RESOLVED,
     session: Optional[Session] = None,
 ):
 
@@ -5373,6 +5377,11 @@ def is_all_alerts_in_status(
 
         subquery = subquery.subquery()
 
+        status_values = [
+            s.value if isinstance(s, AlertStatus) else str(s)
+            for s in (status if isinstance(status, (list, tuple, set)) else [status])
+        ]
+
         not_in_status_exists = session.query(
             exists(
                 select(
@@ -5382,10 +5391,13 @@ def is_all_alerts_in_status(
                 .select_from(subquery)
                 .where(
                     or_(
-                        subquery.c.enriched_status != status.value,
+                        and_(
+                            subquery.c.enriched_status.is_not(None),
+                            subquery.c.enriched_status.notin_(status_values),
+                        ),
                         and_(
                             subquery.c.enriched_status.is_(None),
-                            subquery.c.status != status.value,
+                            subquery.c.status.notin_(status_values),
                         ),
                     )
                 )
@@ -5396,19 +5408,30 @@ def is_all_alerts_in_status(
 
 
 def is_last_incident_alert_resolved(
-    incident: Incident, session: Optional[Session] = None
+    incident: Incident,
+    session: Optional[Session] = None,
+    include_suppressed: bool = True,
 ) -> bool:
-    return is_edge_incident_alert_resolved(incident, func.max, session)
+    return is_edge_incident_alert_resolved(
+        incident, func.max, session, include_suppressed=include_suppressed
+    )
 
 
 def is_first_incident_alert_resolved(
-    incident: Incident, session: Optional[Session] = None
+    incident: Incident,
+    session: Optional[Session] = None,
+    include_suppressed: bool = True,
 ) -> bool:
-    return is_edge_incident_alert_resolved(incident, func.min, session)
+    return is_edge_incident_alert_resolved(
+        incident, func.min, session, include_suppressed=include_suppressed
+    )
 
 
 def is_edge_incident_alert_resolved(
-    incident: Incident, direction: Callable, session: Optional[Session] = None
+    incident: Incident,
+    direction: Callable,
+    session: Optional[Session] = None,
+    include_suppressed: bool = True,
 ) -> bool:
 
     if incident.alerts_count == 0:
@@ -5421,7 +5444,7 @@ def is_edge_incident_alert_resolved(
         )
         status_field = get_json_extract_field(session, Alert.event, "status")
 
-        finerprint, enriched_status, status = session.exec(
+        first_res = session.exec(
             select(Alert.fingerprint, enriched_status_field, status_field)
             .select_from(Alert)
             .outerjoin(
@@ -5444,8 +5467,18 @@ def is_edge_incident_alert_resolved(
             .order_by(direction(Alert.timestamp))
         ).first()
 
-        return enriched_status == AlertStatus.RESOLVED.value or (
-            enriched_status is None and status == AlertStatus.RESOLVED.value
+        if not first_res:
+            return False
+
+        fingerprint, enriched_status, status = first_res
+
+        resolved_statuses = {AlertStatus.RESOLVED.value}
+        if include_suppressed:
+            resolved_statuses.add(AlertStatus.SUPPRESSED.value)
+
+        return (
+            enriched_status in resolved_statuses
+            or (enriched_status is None and status in resolved_statuses)
         )
 
 

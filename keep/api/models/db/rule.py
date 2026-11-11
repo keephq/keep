@@ -14,6 +14,7 @@ class ResolveOn(Enum):
     FIRST = "first_resolved"
     LAST = "last_resolved"
     ALL = "all_resolved"
+    ALL_OR_SUPPRESSED = "all_resolved_or_suppressed"
     NEVER = "never"
 
 
