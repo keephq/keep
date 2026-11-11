@@ -339,7 +339,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
         """Create a deterministic UUID from the ServiceNow incident number."""
         md5 = hashlib.md5()
         md5.update(incident_number.encode("utf-8"))
-        return uuid.UUID(md5.hexdigest())
+        return str(uuid.UUID(md5.hexdigest()))
 
     def _get_incidents(self) -> list[IncidentDto]:
         """Pull incidents from the ServiceNow incident table."""
