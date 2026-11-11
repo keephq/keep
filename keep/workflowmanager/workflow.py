@@ -62,7 +62,6 @@ class Workflow:
         self.on_failure = on_failure
         self.context_manager = context_manager
         self.context_manager.set_consts_context(workflow_consts)
-        self.context_manager.set_secret_context()
         self.io_nandler = IOHandler(context_manager)
         self.logger = logging.getLogger(__name__)
         self.workflow_debug = workflow_debug
@@ -184,6 +183,11 @@ class Workflow:
         self.context_manager.set_execution_context(
             self.workflow_id, workflow_execution_id
         )
+        # Load the workflow secrets only when the workflow actually runs.
+        # Workflow objects are built for every workflow on every event batch
+        # (WorkflowManager.insert_events), so loading here instead of in
+        # __init__ avoids a secret manager round trip per workflow per event.
+        self.context_manager.set_secret_context()
         try:
             self.run_steps()
         except StepError as e:

@@ -41,6 +41,7 @@ export function getConfig(): InternalConfig {
     "source",
     "description",
     "message",
+    "labels",
     "fingerprint",
     "url",
     "incidents",

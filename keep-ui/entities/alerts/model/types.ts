@@ -65,6 +65,7 @@ export interface AlertDto {
   incident?: string;
   incident_dto?: any[];
   alert_query?: string;
+  labels?: Record<string, unknown> | null;
 
   // From AlertWithIncidentLinkMetadataDto
   is_created_by_ai?: boolean;

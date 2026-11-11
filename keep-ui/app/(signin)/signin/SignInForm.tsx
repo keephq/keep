@@ -22,7 +22,8 @@ export interface Providers {
   keycloak?: Provider;
   "microsoft-entra-id"?: Provider;
   okta?: Provider;
-  onelogin?: Provider
+  onelogin?: Provider;
+  oidc?: Provider;
 }
 
 interface SignInFormInputs {
@@ -85,6 +86,9 @@ export default function SignInForm({
       } else if (providers.onelogin) {
         console.log("Signing in with OneLogin provider");
         signIn("onelogin", { callbackUrl: "/" });
+      } else if (providers.oidc) {
+        console.log("Signing in with generic OIDC provider");
+        signIn("oidc", { callbackUrl: "/" });
       } else if (
         providers.credentials &&
         providers.credentials.name === "OAuth2Proxy"

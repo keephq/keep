@@ -60,6 +60,7 @@ export type AlertSidebarFieldName =
   | "source"
   | "description"
   | "message"
+  | "labels"
   | "fingerprint"
   | "url"
   | "incidents"
@@ -224,6 +225,23 @@ export const alertSidebarFieldsConfig: Record<
     name: "incidents",
     shouldRender: (alert) => !!alert.incident_dto,
     render: () => null, // This is rendered separately in the component
+  },
+  labels: {
+    name: "labels",
+    shouldRender: (alert) =>
+      !!alert.labels && Object.keys(alert.labels).length > 0,
+    render: ({ alert }) => (
+      <div>
+        <FieldHeader>Labels</FieldHeader>
+        <div className="flex flex-wrap gap-1">
+          {Object.entries(alert.labels ?? {}).map(([key, value]) => (
+            <Badge key={key} size="sm" color="gray">
+              {`${key}=${typeof value === "object" ? JSON.stringify(value) : String(value)}`}
+            </Badge>
+          ))}
+        </div>
+      </div>
+    ),
   },
   timeline: {
     name: "timeline",

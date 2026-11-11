@@ -121,11 +121,13 @@ class EnrichmentsBl:
             self.tenant_id, rule_id, session=self.db_session
         )
 
-        # so we can track the enrichment event
-        alert.event["event_id"] = alert.id
         if not rule:
             raise HTTPException(status_code=404, detail="Extraction rule not found")
-        return self.run_extraction_rules(alert.event, pre=False, rules=[rule])
+        # so we can track the enrichment event. The id is a string (the event
+        # must stay JSON-compatible for CEL) and goes on a copy, so the stored
+        # alert event is not modified.
+        event = {**alert.event, "event_id": str(alert.id)}
+        return self.run_extraction_rules(event, pre=False, rules=[rule])
 
     def run_extraction_rules(
         self, event: AlertDto | dict, pre=False, rules: list[ExtractionRule] = None

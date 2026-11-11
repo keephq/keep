@@ -16,6 +16,7 @@ Keep supports various authentication providers and architectures to accommodate 
 - [**AzureAD**](/deployment/authentication/azuread-auth) - Utilize Azure AD for SSO/SAML/OIDC nterprise authentication.
 - [**Okta**](/deployment/authentication/okta-auth) - Utilize Okta for SSO/OIDC authentication.
 - [**OneLogin**](/deployment/authentication/onelogin-auth) - Utilize OneLogin for SSO/OIDC authentication.
+- [**Generic OIDC**](/deployment/authentication/oidc-auth) - Bring your own OIDC provider: Dex, Authentik, Zitadel, Authelia, Kanidm, Keycloak and similar.
 
 Choosing the right authentication strategy depends on your specific use case, security requirements, and deployment environment. You can read more about each authentication provider.
 
@@ -33,6 +34,7 @@ Choosing the right authentication strategy depends on your specific use case, se
 | **Azure AD**       |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ❌            |        By Azure AD        |         By Azure AD         |    ✅    |   **EE**   |
 | **Okta**           |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ✅            |        ❌        |         ❌         |    ✅    |   **OSS**   |
 | **OneLogin**           |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ✅            |        ❌        |         ❌         |    ✅    |   **OSS**   |
+| **Generic OIDC**       |  ✅ <br />(Predefiend roles)  |     ✅     |  ❌   |             ❌            |        ❌        |         ❌         |    ✅    |   **OSS**   |
 ### How To Configure
 <Tip>
 Some authentication providers require additional environment variables. These will be covered in detail on the specific authentication provider pages.
@@ -50,5 +52,6 @@ The authentication scheme on Keep is controlled with environment variables both 
 | **AzureAD** | `AUTH_TYPE=AZUREAD` | See [AzureAD Configuration](/deployment/authentication/azuread-auth) |
 | **Okta** | `AUTH_TYPE=OKTA` | `OKTA_DOMAIN`, `OKTA_CLIENT_ID`, `OKTA_CLIENT_SECRET` |
 | **OneLogin** | `AUTH_TYPE=ONELOGIN` | See [OneLogin Configuration](/deployment/authentication/onelogin-auth) |
+| **Generic OIDC** | `AUTH_TYPE=OIDC` | See [Generic OIDC Configuration](/deployment/authentication/oidc-auth) |
 
 For more details on each authentication strategy, including setup instructions and implications, refer to the respective sections.

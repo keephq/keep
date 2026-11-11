@@ -51,16 +51,22 @@ actions:
       provider: kubernetes
       config: "{{ provider.my_provider_name }}"
       with:
-        action: {value}  # The action to perform. Supported actions are:
-- rollout_restart: Restart a deployment/statefulset/daemonset
-- restart_pod: Restart a specific pod
-- cordon_node: Mark node as unschedulable
-- uncordon_node: Mark node as schedulable
-- drain_node: Safely evict pods from node
-- scale_deployment: Scale deployment up/down
-- scale_statefulset: Scale statefulset up/down
-- exec_pod_command: Execute command in pod
-        # Additional arguments for the action.
+        action: {value}  
+        kind: {value}  
+        name: {value}  
+        namespace: {value}  
+        labels: {value}  
+        pod_name: {value}  
+        container_name: {value}  
+        message: {value}  
+        node_name: {value}  
+        force: {value}  
+        ignore_daemonsets: {value}  
+        delete_emptydir_data: {value}  
+        deployment_name: {value}  
+        statefulset_name: {value}  
+        replicas: {value}  
+        command: {value}  
 ```
 
 
