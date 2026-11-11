@@ -439,10 +439,16 @@ class TopologiesService:
         ).first()
 
     @staticmethod
-    def get_dependency_by_id(_id: int, session: Session) -> TopologyServiceDependency:
-        return session.exec(
-            select(TopologyServiceDependency).where(TopologyServiceDependency.id == _id)
-        ).first()
+    def get_dependency_by_id(
+        _id: int, session: Session, tenant_id: Optional[str] = None
+    ) -> Optional[TopologyServiceDependency]:
+        query = select(TopologyServiceDependency).where(TopologyServiceDependency.id == _id)
+        if tenant_id is not None:
+            query = query.join(
+                TopologyService,
+                TopologyServiceDependency.service_id == TopologyService.id,
+            ).where(TopologyService.tenant_id == tenant_id)
+        return session.exec(query).first()
 
     @staticmethod
     def create_service(
@@ -577,9 +583,18 @@ class TopologiesService:
         enforce_manual: bool = True,
     ) -> TopologyServiceDependencyDto:
         try:
+            # Enforcing that referenced services belong to caller's tenant
+            service_ids = [dependency.service_id, dependency.depends_on_service_id]
+            existing_count = session.query(TopologyService).filter(
+                TopologyService.id.in_(service_ids),
+                TopologyService.tenant_id == tenant_id,
+            ).count()
+            if existing_count != len(set(service_ids)):
+                raise ServiceNotFoundException()
+
             # Enforcing is_manual on the service_id and depends_on_service_id
             if enforce_manual and validate_non_manual_exists(
-                service_ids=[dependency.service_id, dependency.depends_on_service_id],
+                service_ids=service_ids,
                 session=session,
                 tenant_id=tenant_id,
             ):
@@ -610,12 +625,18 @@ class TopologiesService:
             db_dependencies = []
 
             for dependency in dependencies:
+                # Enforcing that referenced services belong to caller's tenant
+                service_ids = [dependency.service_id, dependency.depends_on_service_id]
+                existing_count = session.query(TopologyService).filter(
+                    TopologyService.id.in_(service_ids),
+                    TopologyService.tenant_id == tenant_id,
+                ).count()
+                if existing_count != len(set(service_ids)):
+                    raise ServiceNotFoundException()
+
                 # Enforcing is_manual on the service_id and depends_on_service_id
                 if enforce_manual and validate_non_manual_exists(
-                    service_ids=[
-                        dependency.service_id,
-                        dependency.depends_on_service_id,
-                    ],
+                    service_ids=service_ids,
                     session=session,
                     tenant_id=tenant_id,
                 ):
@@ -641,6 +662,27 @@ class TopologiesService:
         tenant_id: str,
     ) -> TopologyServiceDependencyDto:
         try:
+            db_dependency: Optional[TopologyServiceDependency] = (
+                TopologiesService.get_dependency_by_id(
+                    _id=dependency.id, session=session, tenant_id=tenant_id
+                )
+            )
+            if db_dependency is None:
+                raise DependencyNotFoundException()
+
+            # Enforcing that any updated service references belong to caller's tenant
+            service_ids_to_check = [
+                sid for sid in (dependency.service_id, dependency.depends_on_service_id)
+                if sid is not None
+            ]
+            if service_ids_to_check:
+                existing_count = session.query(TopologyService).filter(
+                    TopologyService.id.in_(service_ids_to_check),
+                    TopologyService.tenant_id == tenant_id,
+                ).count()
+                if existing_count != len(set(service_ids_to_check)):
+                    raise ServiceNotFoundException()
+
             # Enforcing is_manual on the service_id and depends_on_service_id
             if validate_non_manual_exists(
                 service_ids=[dependency.service_id, dependency.depends_on_service_id],
@@ -649,24 +691,16 @@ class TopologiesService:
             ):
                 raise ServiceNotManualException()
 
-            db_dependency: TopologyServiceDependency = (
-                TopologiesService.get_dependency_by_id(
-                    _id=dependency.id, session=session
-                )
-            )
             service_dict = dependency.dict()
-            if db_dependency is None:
-                raise DependencyNotFoundException()
-            else:  # We update it.
-                for attr in service_dict:
-                    if (
-                        service_dict[attr] is not None
-                        and db_dependency.__getattribute__(attr) != service_dict[attr]
-                    ):
-                        db_dependency.__setattr__(attr, service_dict[attr])
-                session.commit()
-                session.refresh(db_dependency)
-                return TopologyServiceDependencyDto.from_orm(db_dependency)
+            for attr in service_dict:
+                if (
+                    service_dict[attr] is not None
+                    and db_dependency.__getattribute__(attr) != service_dict[attr]
+                ):
+                    db_dependency.__setattr__(attr, service_dict[attr])
+            session.commit()
+            session.refresh(db_dependency)
+            return TopologyServiceDependencyDto.from_orm(db_dependency)
         except Exception as e:
             session.rollback()
             logger.error(f"Error while updating the Dependency manually: {e}")
@@ -677,11 +711,14 @@ class TopologiesService:
     @staticmethod
     def delete_dependency(dependency_id: int, session: Session, tenant_id: str):
         try:
-            db_dependency: TopologyServiceDependency = (
+            db_dependency: Optional[TopologyServiceDependency] = (
                 TopologiesService.get_dependency_by_id(
-                    _id=dependency_id, session=session
+                    _id=dependency_id, session=session, tenant_id=tenant_id
                 )
             )
+            if db_dependency is None:
+                raise DependencyNotFoundException()
+
             # Enforcing is_manual on the service_id and depends_on_service_id
             if validate_non_manual_exists(
                 service_ids=[
@@ -693,14 +730,12 @@ class TopologiesService:
             ):
                 raise ServiceNotManualException()
 
-            if db_dependency is None:
-                raise DependencyNotFoundException()
             session.delete(db_dependency)
             session.commit()
             return None
         except Exception as e:
             session.rollback()
-            logger.error(f"Error while updating the Dependency manually: {e}")
+            logger.error(f"Error while deleting the Dependency manually: {e}")
             raise e
         finally:
             session.close()
