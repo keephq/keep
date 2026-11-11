@@ -481,3 +481,40 @@ class TestPullTopologyFields:
         assert "owned_by.name" in fields
         assert "manufacturer.name" in fields
         assert "owned_by.namemanufacturer.name" not in fields
+
+
+class TestValidateScopes:
+    """Tests for validate_scopes error handling and safety."""
+
+    def test_validate_scopes_with_itil_role(self, servicenow_provider):
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.json.return_value = {"result": [{"name": "itil"}]}
+
+        with patch("requests.get", return_value=mock_response):
+            scopes = servicenow_provider.validate_scopes()
+            assert scopes == {"itil": True}
+
+    def test_validate_scopes_without_itil_role(self, servicenow_provider):
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.json.return_value = {"result": [{"name": "admin"}]}
+
+        with patch("requests.get", return_value=mock_response):
+            scopes = servicenow_provider.validate_scopes()
+            assert scopes == {"itil": "This user does not have the ITIL role"}
+
+    def test_validate_scopes_missing_result_key(self, servicenow_provider):
+        """ServiceNow returns dict without 'result' key."""
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.json.return_value = {}
+
+        with patch("requests.get", return_value=mock_response):
+            scopes = servicenow_provider.validate_scopes()
+            assert scopes == {"itil": "This user does not have the ITIL role"}
+
+    def test_validate_scopes_skip_env(self, servicenow_provider, monkeypatch):
+        monkeypatch.setenv("KEEP_SERVICENOW_PROVIDER_SKIP_SCOPE_VALIDATION", "true")
+        scopes = servicenow_provider.validate_scopes()
+        assert scopes == {"itil": True}

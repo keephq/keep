@@ -200,7 +200,7 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             headers["Authorization"] = f"Bearer {self._access_token}"
         return headers
 
-    def validate_scopes(self):
+    def validate_scopes(self) -> dict[str, bool | str]:
         """
         Validates that the user has the required scopes to use the provider.
         """
@@ -244,7 +244,13 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
 
             if response.ok:
                 roles = response.json()
-                roles_names = [role.get("name") for role in roles.get("result")]
+                raw_result = roles.get("result") if isinstance(roles, dict) else []
+                result_list = raw_result if isinstance(raw_result, list) else []
+                roles_names = [
+                    role.get("name")
+                    for role in result_list
+                    if isinstance(role, dict)
+                ]
                 if "itil" in roles_names:
                     self.logger.info("User has ITIL role")
                     scopes = {
