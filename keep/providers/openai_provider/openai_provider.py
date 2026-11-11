@@ -66,14 +66,21 @@ class OpenaiProvider(BaseProvider):
             max_tokens=max_tokens,
             response_format=structured_output_format,
         )
-        response = response.choices[0].message.content
+        # An OpenAI-compatible backend can return HTTP 200 with an empty
+        # choices list (e.g. when blocked by a content filter). Degrade to ""
+        # gracefully instead of crashing with IndexError.
         try:
-            response = json.loads(response)
+            content = response.choices[0].message.content or ""
+        except (IndexError, AttributeError):
+            content = ""
+
+        try:
+            content = json.loads(content)
         except Exception:
             pass
 
         return {
-            "response": response,
+            "response": content,
         }
 
 
