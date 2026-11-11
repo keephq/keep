@@ -355,3 +355,172 @@ class TestJiraProvider:
 
                 # If we get here without the "string indices must be integers" error, the fix worked
                 assert result is not None
+
+    @pytest.mark.parametrize(
+        "creation_url,expected_base",
+        [
+            (
+                "https://jira.company.com/secure/CreateIssue.jspa",
+                "https://jira.company.com",
+            ),
+            (
+                "https://jira.company.com/jira/secure/CreateIssue.jspa",
+                "https://jira.company.com/jira",
+            ),
+            (
+                "https://jira.company.com/secure/CreateIssue!default.jspa?pid=10000&issuetype=1",
+                "https://jira.company.com",
+            ),
+            (
+                "jira.company.com/secure/CreateIssue.jspa",
+                "https://jira.company.com",
+            ),
+            ("jira.company.com", "https://jira.company.com"),
+            ("https://jira.company.com/jira/", "https://jira.company.com/jira"),
+            (
+                "http://jira.internal:8080/secure/CreateIssue.jspa",
+                "http://jira.internal:8080",
+            ),
+            ("", "https://test.atlassian.net"),
+            (None, "https://test.atlassian.net"),
+        ],
+    )
+    def test_jira_ticket_base_url_resolution(
+        self, context_manager, creation_url, expected_base
+    ):
+        config = ProviderConfig(
+            description="Test Jira Provider",
+            authentication={
+                "email": "test@example.com",
+                "api_token": "test_token",
+                "host": "https://test.atlassian.net",
+                "ticket_creation_url": creation_url,
+            },
+        )
+        provider = JiraProvider(context_manager, "test_jira", config)
+        assert provider.ticket_base_url == expected_base
+
+    @pytest.mark.parametrize(
+        "creation_url,expected_base",
+        [
+            (
+                "https://jira.company.com/secure/CreateIssue.jspa",
+                "https://jira.company.com",
+            ),
+            (
+                "https://jira.company.com/jira/secure/CreateIssue.jspa",
+                "https://jira.company.com/jira",
+            ),
+            (
+                "https://jira.company.com/secure/CreateIssue!default.jspa?pid=10000&issuetype=1",
+                "https://jira.company.com",
+            ),
+            (
+                "jira.company.com/secure/CreateIssue.jspa",
+                "https://jira.company.com",
+            ),
+            ("jira.company.com", "https://jira.company.com"),
+            ("https://jira.company.com/jira/", "https://jira.company.com/jira"),
+            (
+                "http://jira.internal:8080/secure/CreateIssue.jspa",
+                "http://jira.internal:8080",
+            ),
+            ("", "https://test-jira.com"),
+            (None, "https://test-jira.com"),
+        ],
+    )
+    def test_jiraonprem_ticket_base_url_resolution(
+        self, context_manager, creation_url, expected_base
+    ):
+        config = ProviderConfig(
+            description="Test Jira On-Prem Provider",
+            authentication={
+                "host": "https://test-jira.com",
+                "personal_access_token": "test_token",
+                "ticket_creation_url": creation_url,
+            },
+        )
+        provider = JiraonpremProvider(context_manager, "test_jiraonprem", config)
+        assert provider.ticket_base_url == expected_base
+
+    @patch("requests.post")
+    @patch("requests.get")
+    def test_notify_uses_ticket_creation_url_base_on_create(
+        self, mock_get, mock_post, context_manager
+    ):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "projects": [{"issuetypes": [{"name": "Task"}]}]
+        }
+        mock_post.return_value.status_code = 201
+        mock_post.return_value.json.return_value = {"key": "TEST-123", "id": "12345"}
+
+        config = ProviderConfig(
+            description="Test Jira Provider",
+            authentication={
+                "email": "test@example.com",
+                "api_token": "test_token",
+                "host": "https://jira.internal:8080",
+                "ticket_creation_url": "https://jira.company.com/secure/CreateIssue.jspa",
+            },
+        )
+        provider = JiraProvider(context_manager, "test_jira", config)
+        result = provider._notify(
+            summary="Test Summary",
+            description="Test Description",
+            project_key="TEST",
+        )
+        assert result["ticket_url"] == "https://jira.company.com/browse/TEST-123"
+
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_notify_uses_ticket_creation_url_base_on_update(
+        self, mock_get, mock_put, context_manager
+    ):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"key": "TEST-123"}
+        mock_put.return_value.status_code = 204
+
+        config = ProviderConfig(
+            description="Test Jira Provider",
+            authentication={
+                "email": "test@example.com",
+                "api_token": "test_token",
+                "host": "https://jira.internal:8080",
+                "ticket_creation_url": "https://jira.company.com/jira/secure/CreateIssue.jspa",
+            },
+        )
+        provider = JiraProvider(context_manager, "test_jira", config)
+        result = provider._notify(
+            issue_id="12345",
+            summary="Updated Summary",
+        )
+        assert result["ticket_url"] == "https://jira.company.com/jira/browse/TEST-123"
+
+    @patch("requests.post")
+    @patch("requests.get")
+    def test_jiraonprem_notify_uses_ticket_creation_url(
+        self, mock_get, mock_post, context_manager
+    ):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "projects": [{"issuetypes": [{"name": "Task"}]}]
+        }
+        mock_post.return_value.status_code = 201
+        mock_post.return_value.json.return_value = {"key": "ONPREM-456", "id": "67890"}
+
+        config = ProviderConfig(
+            description="Test Jira On-Prem Provider",
+            authentication={
+                "host": "https://jira.internal.corp:9000",
+                "personal_access_token": "test_token",
+                "ticket_creation_url": "https://jira.public.corp/secure/CreateIssue.jspa",
+            },
+        )
+        provider = JiraonpremProvider(context_manager, "test_jiraonprem", config)
+        result = provider._notify(
+            summary="OnPrem Summary",
+            description="OnPrem Description",
+            project_key="ONPREM",
+        )
+        assert result["ticket_url"] == "https://jira.public.corp/browse/ONPREM-456"
