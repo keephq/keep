@@ -18,4 +18,5 @@ class InventoryAttentionProvider(BaseProvider):
         from keep.api.core.db import engine
         from keep.providers.providers_factory import ProvidersFactory
         slack = ProvidersFactory.get_installed_provider(tenant, config['slack_provider_id'], 'slack')
-        return InventoryWorkflow(engine, tenant, config, NativeSlackNotifier(slack, config)).run(operation, alert)
+        fallback = ProvidersFactory.get_installed_provider(tenant, config["fallback_provider_id"], "webhook")
+        return InventoryWorkflow(engine, tenant, config, NativeSlackNotifier(slack, config, fallback)).run(operation, alert)

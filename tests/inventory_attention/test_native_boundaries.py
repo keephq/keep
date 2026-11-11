@@ -9,7 +9,7 @@ import pytest
 from fastapi import HTTPException
 
 from test_contract import db, policy, clock, TENANT, JOB, GRAPH, rows, Incident
-from test_runtime import config, OfflineOAuthSlack
+from test_runtime import config, OfflineOAuthSlack, OfflineWebhook
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def test_native_formatter_template_provider_circuit(db, configured_file, monkeyp
     assert isinstance(rendered['alert'], dict)
     slack = OfflineOAuthSlack()
     monkeypatch.setattr(native_db, 'engine', db)
-    monkeypatch.setattr(ProvidersFactory, 'get_installed_provider', lambda *args: slack)
+    monkeypatch.setattr(ProvidersFactory, 'get_installed_provider', lambda *args: OfflineWebhook() if args[-1] == 'webhook' else slack)
     provider = InventoryAttentionProvider(context, 'fixture-inventory-provider', ProviderConfig(authentication={}))
     state = provider._notify(**rendered)
     repeated = provider._notify(**rendered)

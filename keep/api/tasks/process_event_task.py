@@ -673,6 +673,10 @@ def process_event(
     notify_client: bool = True,
     timestamp_forced: datetime.datetime | None = None,
 ) -> list[Alert]:
+    from keep.api.bl.inventory_attention_runtime import filter_inactive_inventory
+    event = filter_inactive_inventory(tenant_id, event)
+    if event is None:
+        return []
     start_time = time.time()
     job_id = ctx.get("job_id")
 
@@ -805,6 +809,10 @@ def process_event(
                     provider_id=provider_id,
                     provider_type=provider_type,
                 )
+
+            event = filter_inactive_inventory(tenant_id, event)
+            if event is None:
+                return []
 
             with tracer.start_as_current_span("process_event_internal_preparation"):
                 __internal_prepartion(event, fingerprint, api_key_name)

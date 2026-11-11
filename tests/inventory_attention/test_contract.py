@@ -76,6 +76,7 @@ def policy():
         primary_after_seconds=30,
         ack_seconds=10,
         claim_timeout_seconds=5,
+        reconciliation_seconds=7,
         max_notification_attempts=3,
         allowed_humans=(PRIMARY, BACKUP, LEAD),
         coverage="fixture-only; no operational coverage implied",

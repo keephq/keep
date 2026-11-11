@@ -14,7 +14,7 @@ from keep.api.bl.inventory_attention_ack import acknowledge_owned_incident
 
 @pytest.fixture
 def config(policy):
-    return {"policy": asdict(policy), "slack_targets": {
+    return {"policy": asdict(policy), "fallback_provider_id": "fixture-independent-webhook", "slack_targets": {
         "primary": "U00000001", "backup": "U00000002", "incident_lead": "U00000003"}}
 
 
@@ -28,6 +28,16 @@ class OfflineOAuthSlack:
     def _notify(self, **kwargs):
         self.calls.append(kwargs)
         return {"slack_timestamp": kwargs["thread_timestamp"] or "1700000000.000001"}
+
+
+class OfflineWebhook:
+    authentication_config = SimpleNamespace(
+        url='https://fixture-independent.example.invalid/attention', method='POST',
+        http_basic_authentication_username=None, http_basic_authentication_password=None,
+        api_key=None, headers={})
+
+    def _query(self, **kwargs):
+        return {'status': True, 'body': {'receipt_id': 'fixture-independent-receipt'}}
 
 
 def alert(clock, **changes):
@@ -145,6 +155,7 @@ def test_transport_route_drift_stops_before_new_claim(db, config, clock):
     changed['slack_targets']['primary'] = 'U99999999'
     restarted = InventoryWorkflow(db, TENANT, changed, NativeSlackNotifier(slack, changed), clock)
     clock.advance(30)
-    with pytest.raises(ValueError, match='(?i)transport|routing|route'):
-        restarted.run('sweep')
+    quarantined = restarted.run('sweep')
+    assert quarantined[0]['status'] == 'quarantined'
+    assert quarantined[0]['coverage_error'] == 'ValueError'
     assert len(slack.calls) == 1

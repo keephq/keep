@@ -1166,3 +1166,23 @@ async def unenrich_incident(
             )
 
     return Response(status_code=202)
+
+
+@router.post('/{incident_id}/inventory/resolve', description='Resolve Inventory with an authorized business reconciliation attestation')
+def resolve_inventory_incident(
+    incident_id: UUID, payload: dict = Body(...),
+    authenticated_entity: AuthenticatedEntity = Depends(IdentityManagerFactory.get_auth_verifier(['write:incident'])),
+):
+    from keep.api.bl.inventory_attention_ack import human_lifecycle_action
+    from keep.api.core.db import engine
+    return human_lifecycle_action(engine, incident_id, authenticated_entity, 'resolve', payload)
+
+
+@router.post('/{incident_id}/inventory/reopen', description='Authorize a distinct Inventory recurrence; never inferred from event freshness')
+def reopen_inventory_incident(
+    incident_id: UUID, payload: dict = Body(...),
+    authenticated_entity: AuthenticatedEntity = Depends(IdentityManagerFactory.get_auth_verifier(['write:incident'])),
+):
+    from keep.api.bl.inventory_attention_ack import human_lifecycle_action
+    from keep.api.core.db import engine
+    return human_lifecycle_action(engine, incident_id, authenticated_entity, 'reopen', payload)
