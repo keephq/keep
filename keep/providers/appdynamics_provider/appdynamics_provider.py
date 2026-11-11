@@ -259,9 +259,22 @@ class AppdynamicsProvider(BaseProvider):
         temp = tempfile.NamedTemporaryFile(mode="w+t", delete=True)
 
         template = json.load(open(rf"{Path(__file__).parent}/httpactiontemplate.json"))
-        template[0]["host"] = keep_api_host.lstrip("http://").lstrip("https://")
-        template[0]["path"], template[0]["query"] = keep_api_path.split("?")
-        template[0]["path"] = "/" + template[0]["path"].rstrip("/")
+        if keep_api_host.startswith("https://"):
+            template[0]["scheme"] = "HTTPS"
+            template[0]["host"] = keep_api_host.removeprefix("https://")
+        elif keep_api_host.startswith("http://"):
+            template[0]["scheme"] = "HTTP"
+            template[0]["host"] = keep_api_host.removeprefix("http://")
+        else:
+            template[0]["host"] = keep_api_host
+
+        if "?" in keep_api_path:
+            path_part, query_part = keep_api_path.split("?", 1)
+        else:
+            path_part, query_part = keep_api_path, ""
+
+        template[0]["path"] = "/" + path_part.rstrip("/")
+        template[0]["query"] = query_part
 
         template[0]["headers"][0]["value"] = api_key
 
