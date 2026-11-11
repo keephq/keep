@@ -383,6 +383,9 @@ def add_time_to_date(date, date_format, time_str):
     if isinstance(date, str):
         date = datetime.datetime.strptime(date, date_format)
 
+    if not isinstance(time_str, str):
+        raise ValueError("time_str must be a string")
+
     time_units = {
         "w": "weeks",
         "d": "days",
@@ -394,6 +397,10 @@ def add_time_to_date(date, date_format, time_str):
     time_dict = {unit: 0 for unit in time_units.values()}
 
     matches = re.findall(r"(\d+)([wdhms])", time_str)
+    if not matches:
+        raise ValueError(
+            f"Invalid time string '{time_str}'. Must contain at least one valid time unit (w, d, h, m, s)."
+        )
     for value, unit in matches:
         time_dict[time_units[unit]] += int(value)
 
