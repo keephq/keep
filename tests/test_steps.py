@@ -176,3 +176,60 @@ def test_continue_on_error_explicit_false():
         {},
     )
     assert step.continue_on_error is False
+
+
+@pytest.mark.parametrize(
+    "resolved_value",
+    [
+        0,
+        False,
+        "",
+        0.0,
+        [],
+        {},
+    ],
+)
+def test_get_foreach_items_single_falsy_value(resolved_value):
+    """Ensure Step._get_foreach_items does not fall through to zip(*foreach_items)
+    when a single foreach reference resolves to a falsy scalar/container (issue #6721).
+    """
+    context_manager = Mock()
+    context_manager.get_full_context.return_value = {
+        "steps": {
+            "check": {
+                "results": resolved_value,
+            }
+        }
+    }
+    step = Step(
+        context_manager,
+        "test_step",
+        {"foreach": "{{ steps.check.results }}"},
+        StepType.STEP,
+        Mock(),
+        {},
+    )
+    items = step._get_foreach_items()
+    assert items == resolved_value
+
+
+def test_get_foreach_items_multiple_references_uses_zip():
+    """Ensure multiple && references are still zipped together."""
+    context_manager = Mock()
+    context_manager.get_full_context.return_value = {
+        "steps": {
+            "a": {"items": [1, 2]},
+            "b": {"items": ["x", "y"]},
+        }
+    }
+    step = Step(
+        context_manager,
+        "test_step",
+        {"foreach": "{{ steps.a.items }} && {{ steps.b.items }}"},
+        StepType.STEP,
+        Mock(),
+        {},
+    )
+    items = list(step._get_foreach_items())
+    assert items == [(1, "x"), (2, "y")]
+
