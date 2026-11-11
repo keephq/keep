@@ -435,7 +435,10 @@ class IncidentBl:
 
         should_resolve = False
 
-        if incident.resolve_on == ResolveOn.ALL.value and is_all_alerts_resolved(
+        if incident.resolve_on in (
+            ResolveOn.ALL.value,
+            ResolveOn.ALL_OR_SUPPRESSED.value,
+        ) and is_all_alerts_resolved(
             incident=incident, session=self.session
         ):
             should_resolve = True
