@@ -31,7 +31,8 @@ def _discover_jwks_uri(issuer: str) -> str:
     be obtained from the provider's discovery document at
     ``{issuer}/.well-known/openid-configuration``.
     """
-    discovery_url = f"{issuer}/.well-known/openid-configuration"
+    normalized_issuer = issuer.rstrip("/")
+    discovery_url = f"{normalized_issuer}/.well-known/openid-configuration"
     resp = requests.get(discovery_url, timeout=10, headers={"User-Agent": "keep-api"})
     resp.raise_for_status()
     jwks_uri = resp.json().get("jwks_uri")
@@ -49,7 +50,7 @@ def _get_jwks_client(issuer: str, jwks_url: str = None) -> tuple[str, jwt.PyJWKC
     unknown ``kid``, so key rotation on the provider side is handled without
     invalidating this cache.
     """
-    cache_key = jwks_url or issuer
+    cache_key = jwks_url or issuer.rstrip("/")
     if cache_key not in _jwks_clients:
         jwks_uri = jwks_url or _discover_jwks_uri(issuer)
         _jwks_clients[cache_key] = (
@@ -87,9 +88,13 @@ class OidcAuthVerifier(AuthVerifierBase):
                 "Missing KEEP_OIDC_ISSUER or KEEP_OIDC_CLIENT_ID environment variable"
             )
 
-        # Remove trailing slash if present on issuer
-        if self.oidc_issuer.endswith("/"):
-            self.oidc_issuer = self.oidc_issuer[:-1]
+        # Support OIDC providers with or without trailing slash (e.g. Authentik vs Keycloak)
+        # Preserve configured issuer, and build allowed issuers for token verification
+        issuer_no_slash = self.oidc_issuer.rstrip("/")
+        issuer_with_slash = f"{issuer_no_slash}/"
+        self.allowed_issuers = list(
+            dict.fromkeys([self.oidc_issuer, issuer_no_slash, issuer_with_slash])
+        )
 
         # For id_tokens the OIDC spec guarantees aud=client_id, so client_id is
         # the default audience. KEEP_OIDC_AUDIENCE overrides it for providers
@@ -144,7 +149,7 @@ class OidcAuthVerifier(AuthVerifierBase):
                 key=signing_key,
                 algorithms=["RS256"],
                 audience=self.token_audience,
-                issuer=self.oidc_issuer,
+                issuer=self.allowed_issuers,
                 leeway=60,
                 options={"verify_exp": True},
             )
