@@ -87,12 +87,15 @@ def signal_from_alert(alert):
         raise ValueError("Alert must be a JSON object")
     if alert.get('inventory_attention_owner') != 'inventory-attention-v1':
         raise ValueError('Alert is not opted into Inventory attention')
-    observed = alert.get('inventory_observed_at') or alert.get('annotations', {}).get('inventory_observed_at') or alert.get('lastReceived')
+    annotations = alert.get('annotations') if isinstance(alert.get('annotations'), dict) else {}
+    observed = alert.get('inventory_observed_at') or annotations.get('inventory_observed_at') or alert.get('lastReceived')
     # lastReceived is Keep intake time, never acceptance or durable progress.
     if isinstance(observed, str) and not observed.replace('.', '', 1).isdigit():
         observed = datetime.fromisoformat(observed.replace('Z', '+00:00')).timestamp()
     kind = alert.get('inventory_kind', 'parent_unknown')
-    if alert.get('alertname') in ('DatasourceNoData', 'DatasourceError'):
+    evaluation_error = bool(annotations.get('Error') or annotations.get('error'))
+    truncated = alert.get('coverage') == 'truncated'
+    if evaluation_error or truncated or alert.get('alertname') in ('DatasourceNoData', 'DatasourceError'):
         kind = 'coverage_unknown'
     elif alert.get('status') == 'resolved':
         kind = 'recovery'
@@ -101,10 +104,10 @@ def signal_from_alert(alert):
                 job_uuid=alert.get('job_uuid'), graph_uuid=alert.get('graph_uuid'),
                 operation_id=alert.get('operation_id'), source_fingerprint=alert.get('fingerprint'),
                 evidence={'source': 'grafana-postgresql', 'captured_at': observed,
-                          'queue_state': alert.get('queue_state', 'unknown'),
-                          'business_state': alert.get('business_state', 'unknown'),
+                          'queue_state': 'unknown' if evaluation_error else alert.get('queue_state', 'unknown'),
+                          'business_state': 'unknown' if evaluation_error else alert.get('business_state', 'unknown'),
                           'truncated': alert.get('coverage', 'unknown'),
-                          'completeness': 'retained_jobs_only; source_order_unknown; business_success_not_proven'})
+                          'completeness': ('datasource_or_evaluation_error; business_success_not_proven' if evaluation_error else 'detector_result_truncated; business_success_not_proven' if truncated else 'retained_jobs_only; source_order_unknown; business_success_not_proven')})
 
 
 class InventoryWorkflow:

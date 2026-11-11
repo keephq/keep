@@ -159,3 +159,25 @@ def test_transport_route_drift_stops_before_new_claim(db, config, clock):
     assert quarantined[0]['status'] == 'quarantined'
     assert quarantined[0]['coverage_error'] == 'ValueError'
     assert len(slack.calls) == 1
+
+
+@pytest.mark.parametrize('status', ['firing', 'resolved'])
+@pytest.mark.parametrize('error_key', ['Error', 'error'])
+def test_grafana_evaluation_error_keeps_uncertainty_despite_original_rule_labels(clock, status, error_key):
+    from keep.api.bl.inventory_attention_runtime import signal_from_alert
+    raw_error = '[sse.readDataError] [A] got error: input data must be a wide series but got type long (input refid)'
+    payload = alert(clock, alertname='Inventory retained failure candidate', status=status,
+                    annotations={error_key: raw_error}, business_state='done')
+    signal = signal_from_alert(payload)
+    assert signal['kind'] == 'coverage_unknown'
+    assert signal['evidence']['queue_state'] == 'unknown'
+    assert signal['evidence']['business_state'] == 'unknown'
+    assert 'datasource_or_evaluation_error' in signal['evidence']['completeness']
+    assert raw_error not in str(signal)
+
+
+def test_empty_grafana_error_does_not_change_verified_failure_classification(clock):
+    from keep.api.bl.inventory_attention_runtime import signal_from_alert
+    signal = signal_from_alert(alert(clock, annotations={'Error': ''}))
+    assert signal['kind'] == 'parent_failed'
+    assert signal['evidence']['queue_state'] == 'failed'

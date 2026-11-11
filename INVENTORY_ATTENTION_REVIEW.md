@@ -23,7 +23,7 @@ accepted-work and verified business-effect evidence.
 
 Native workflow intervals are clock drivers, not durable timers. Native Incident
 PK plus reserved AlertEnrichment uniqueness/row locking serialize policy state;
-no schema migration or replacement scheduler is introduced. Integrated migrated-PostgreSQL validation found upstream ORM metadata still declares fingerprint-only uniqueness while migrations16309df224d1 and2a6132b443ab install `(tenant_id, alert_fingerprint)`. The candidate now uses the installed composite conflict target; fixture tables mirror that migration constraint and do not alter upstream production metadata. The actual migration/image test remains authoritative. Native no-ACK/time
+no schema migration or replacement scheduler is introduced. Integrated migrated-PostgreSQL validation found upstream ORM metadata still declares fingerprint-only uniqueness while migrations 16309df224d1 and 2a6132b443ab install `(tenant_id, alert_fingerprint)`. The candidate now uses the installed composite conflict target; fixture tables mirror that migration constraint and do not alter upstream production metadata. The actual migration/image test remains authoritative. Native no-ACK/time
 rules alone cannot represent uncertain delivery or safely dedupe external effects.
 No exact-once remote delivery is claimed.
 
@@ -91,3 +91,14 @@ formatter owner retention, scheduler disable semantics and entrypoint/migrations
 Run unrelated native API regression suite, real PG compatibility suite and full
 inactive image test before replacing pins. No floating version auto-updates.
 Future upstream extension hooks may shrink generic patches, but are not assumed.
+
+The capped detector does not claim universal failure coverage. When the retained
+query finds more than 100 results, emitted cases are explicitly `coverage_unknown`
+with `missing: detector_coverage`, while observed `queue_state=failed` remains
+separate evidence. Operator coverage triage is required; this increment does not
+introduce a persistent pagination system or infer that omitted jobs are healthy.
+The independent destination must be operationally independent of the failing Slack
+path; a different provider ID or URL does not establish that. Before activation,
+verify that its receiver does not proxy back into the same Slack failure domain,
+that it preserves receipt evidence, and that the assigned native queue has coverage.
+This is an explicit destination/coverage decision, not a claim made by the adapter.

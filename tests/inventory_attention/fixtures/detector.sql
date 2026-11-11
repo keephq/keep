@@ -18,7 +18,7 @@ WITH failures AS MATERIALIZED (
    THEN (ref->'ids'->>0)::bigint END END AS candidate_operation_id
  FROM parsed
 )
-SELECT now() AS time, q.uuid AS job_uuid, coalesce(q.graph_uuid::text,'') AS graph_uuid,
+SELECT q.uuid::text AS job_uuid, coalesce(q.graph_uuid::text,'') AS graph_uuid,
  coalesce(o.id::text,'') AS operation_id,
  coalesce(o.state,'unknown') AS business_state,
  CASE WHEN o.id IS NULL THEN 'operation_reference_missing_or_unverified'

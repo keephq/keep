@@ -239,6 +239,8 @@ class InventoryAttentionService:
             if not evidence:
                 missing.append("evidence")
             missing.extend(f"evidence.{key}" for key in ("source", "captured_at", "queue_state", "completeness") if not evidence.get(key))
+            if evidence.get("truncated") == "truncated":
+                missing.append("detector_coverage")
             if kind == "no_progress":
                 # A timer cannot create accepted_at or a durable business receipt.
                 missing.extend(["accepted_at", "last_verified_success_at"])

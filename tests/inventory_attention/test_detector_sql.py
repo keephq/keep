@@ -54,6 +54,10 @@ def test_actual_sql_safe_operation_correlation_and_done_remains_open(detector_db
     assert results[0]['business_state'] == 'done'
     assert all(row['operation_id'] == '' for row in results[1:])
     assert all(row['coverage'] == 'retained_only' for row in results)
+    # Grafana tabular alert input needs one numeric value, all other columns labels.
+    # A time column makes SSE interpret the label table as an unsupported long series.
+    assert all(row['value'] == 1 for row in results)
+    assert all(isinstance(value, str) for row in results for key, value in row.items() if key != 'value')
     row = dict(results[0])
     row.update(fingerprint='fixture-sql-alert', lastReceived=clock(), status='firing')
     slack = OfflineOAuthSlack()
@@ -64,8 +68,16 @@ def test_actual_sql_safe_operation_correlation_and_done_remains_open(detector_db
     assert 'business_success_unverified' in row['correlation_evidence']
 
 
-def test_actual_sql_cap_marks_truncation_instead_of_complete_coverage(detector_db):
+def test_actual_sql_cap_marks_truncation_instead_of_complete_coverage(detector_db, config, clock):
     insert_jobs(detector_db, [reference([42])] * 101)
     results = execute_detector(detector_db)
     assert len(results) == 100
     assert {row['coverage'] for row in results} == {'truncated'}
+    row = dict(results[0])
+    row.update(fingerprint='fixture-truncated', lastReceived=clock(), status='firing')
+    workflow = InventoryWorkflow(detector_db, TENANT, config, NativeSlackNotifier(OfflineOAuthSlack(), config), clock)
+    state = workflow.run('ingest', row)
+    assert state['kind'] == 'coverage_unknown'
+    assert 'detector_coverage' in state['missing']
+    assert state['evidence']['queue_state'] == 'failed'
+    assert state['status'] == 'open'
