@@ -373,9 +373,13 @@ class PagerdutyProvider(
 
         Args:
             title: Title of alert
-            alert_body: UTF-8 string of custom message for alert. Shown in incident body
+            routing_key: PagerDuty routing key
             dedup: Any string, max 255, characters used to deduplicate alerts
+            severity: Severity for events API (critical/error/warning/info)
             event_type: The type of event to send to PagerDuty
+            source: Source field for events API
+            client: Name of the monitoring client triggering this event
+            client_url: URL of the monitoring client triggering this event
 
         Returns:
             Dictionary of alert body for JSON serialization
@@ -475,9 +479,11 @@ class PagerdutyProvider(
 
         Args:
             title: Title of the alert.
-            alert_body: UTF-8 string of custom message for alert. Shown in incident body
+            routing_key: PagerDuty routing key
             dedup: Any string, max 255, characters used to deduplicate alerts
+            severity: Severity for events API (critical/error/warning/info)
             event_type: The type of event to send to PagerDuty
+            source: Source field for events API
             client: Name of the monitoring client triggering this event
             client_url: URL of the monitoring client triggering this event
         """
