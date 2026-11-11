@@ -697,10 +697,23 @@ def test_workflow_test_run(browser: Page):
     setup_console_listener(browser, log_entries)
     yaml_content = get_workflow_yaml("workflow-inputs-alert.yaml")
     try:
-        init_e2e_test(browser, next_url="/signin")
-        page.goto("http://localhost:3000/workflows")
-        page.get_by_role("button", name="Create workflow").click()
-        page.get_by_role("button", name="Start from scratch").click()
+        init_e2e_test(browser, next_url="/workflows")
+        expect(
+            page.locator(
+                '[data-testid="workflows-exist-state"], '
+                '[data-testid="no-workflows-state"]'
+            )
+        ).to_be_visible()
+        if page.locator('[data-testid="workflows-exist-state"]').is_visible():
+            page.get_by_role("button", name="Create workflow").click()
+            page.get_by_role("button", name="Start from scratch").click()
+        elif page.locator('[data-testid="no-workflows-state"]').is_visible():
+            page.get_by_role("button", name="Start from scratch").click()
+        else:
+            raise Exception("Unknown state is visible for workflows page")
+        page.wait_for_url(
+            re.compile(r"http://localhost:3000/workflows/builder.*")
+        )
         page.get_by_test_id("wf-open-editor-button").click()
         editor = page.get_by_test_id("wf-builder-yaml-editor").locator(".monaco-editor")
         editor.click()
