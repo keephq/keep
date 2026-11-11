@@ -128,6 +128,36 @@ def test_threshold_condition_percentage_values_compared_numerically():
     assert threshold_condition.apply("50%", "9%") is False
 
 
+def test_threshold_condition_negative_values_compared_numerically():
+    context_manager = ContextManager(tenant_id="mock", workflow_id=None)
+    gt_condition = ThresholdCondition(
+        context_manager=context_manager,
+        condition_type="threshold",
+        condition_name="mock",
+        condition_config={"compare_type": "gt"},
+    )
+    lt_condition = ThresholdCondition(
+        context_manager=context_manager,
+        condition_type="threshold",
+        condition_name="mock",
+        condition_config={"compare_type": "lt"},
+    )
+    # Issue #6866: negative thresholds must be compared numerically, not as text strings
+    # -3 is greater than -5 (-3 > -5 is True)
+    assert gt_condition.apply("-5", "-3") is True
+    assert lt_condition.apply("-5", "-3") is False
+    # floats with negative values
+    assert gt_condition.apply("-5.5", "-3") is True
+    assert lt_condition.apply("-5.5", "-3") is False
+    assert gt_condition.apply("-3", "-5") is False
+    assert lt_condition.apply("-3", "-5") is True
+    # mixed positive and negative
+    assert gt_condition.apply("-5", "2") is True
+    assert lt_condition.apply("-5", "2") is False
+    assert gt_condition.apply("5", "-2") is False
+    assert lt_condition.apply("5", "-2") is True
+
+
 def test_threshold_condition_multithreshold():
     context_manager = ContextManager(tenant_id="mock", workflow_id=None)
     threshold_condition = ThresholdCondition(
