@@ -79,6 +79,7 @@ class SentryProvider(BaseProvider):
         ),
     ]
     DEFAULT_TIMEOUT = 600
+    DEFAULT_PAGE_CAP = 10
     PROVIDER_CATEGORY = ["Monitoring"]
     SEVERITIES_MAP = {
         "fatal": AlertSeverity.CRITICAL,
@@ -440,6 +441,63 @@ class SentryProvider(BaseProvider):
                 self.logger.info(f"Sentry webhook already exists for {project_slug}")
         self.logger.info("Sentry webhook setup complete")
 
+    def _paginate(
+        self,
+        url: str,
+        timeout: int = DEFAULT_TIMEOUT,
+        page_cap: int = DEFAULT_PAGE_CAP,
+    ) -> list[dict]:
+        """
+        Follow Sentry's cursor pagination via the Link rel="next" header until
+        results="false" or page_cap is reached.
+
+        Args:
+            url (str): initial endpoint URL
+            timeout (int): request timeout in seconds
+            page_cap (int): maximum number of pages to fetch
+
+        Raises:
+            Exception: if an API request fails
+
+        Returns:
+            list[dict]: aggregated items across all retrieved pages
+        """
+        items: list[dict] = []
+        current_url: str | None = url
+        pages = 0
+
+        while current_url and pages < page_cap:
+            pages += 1
+            response = requests.get(
+                current_url,
+                headers=self.__headers,
+                timeout=timeout,
+            )
+            if not response.ok:
+                raise Exception(response.json())
+            data = response.json()
+            if isinstance(data, list):
+                items.extend(data)
+            else:
+                break
+
+            next_link = response.links.get("next")
+            if (
+                next_link
+                and str(next_link.get("results", "")).lower() == "true"
+                and next_link.get("url")
+            ):
+                current_url = next_link["url"]
+            else:
+                current_url = None
+
+        if current_url and pages >= page_cap:
+            self.logger.warning(
+                f"Hit Sentry pagination cap ({page_cap} pages); stopping pagination for url: {url}"
+            )
+
+        return items
+
     def __get_issues(self, project_slug: str) -> dict:
         """
         Get all issues for a project
@@ -453,26 +511,18 @@ class SentryProvider(BaseProvider):
         Returns:
             dict: issues by id
         """
-        issues_response = requests.get(
-            f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/issues/?query=*",
-            headers=self.__headers,
-        )
-        if not issues_response.ok:
-            raise Exception(issues_response.json())
-        return {issue["id"]: issue for issue in issues_response.json()}
+        url = f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/issues/?query=*"
+        issues = self._paginate(url, timeout=SentryProvider.DEFAULT_TIMEOUT)
+        return {issue["id"]: issue for issue in issues}
 
     def _get_alerts(self) -> list[AlertDto]:
         all_events_by_project = {}
         all_issues_by_project = {}
         if self.authentication_config.project_slug:
-            response = requests.get(
-                f"{self.sentry_api}/projects/{self.sentry_org_slug}/{self.project_slug}/events/",
-                headers=self.__headers,
-                timeout=SentryProvider.DEFAULT_TIMEOUT,
+            url = f"{self.sentry_api}/projects/{self.sentry_org_slug}/{self.project_slug}/events/"
+            all_events_by_project[self.project_slug] = self._paginate(
+                url, timeout=SentryProvider.DEFAULT_TIMEOUT
             )
-            if not response.ok:
-                raise Exception(response.json())
-            all_events_by_project[self.project_slug] = response.json()
             all_issues_by_project[self.project_slug] = self.__get_issues(
                 self.project_slug
             )
@@ -487,20 +537,25 @@ class SentryProvider(BaseProvider):
             projects = projects_response.json()
             for project in projects:
                 project_slug = project.get("slug")
-                response = requests.get(
-                    f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/events/",
-                    headers=self.__headers,
-                    timeout=SentryProvider.DEFAULT_TIMEOUT,
-                )
-                if not response.ok:
-                    error = response.json()
+                url = f"{self.sentry_api}/projects/{self.sentry_org_slug}/{project_slug}/events/"
+                try:
+                    all_events_by_project[project_slug] = self._paginate(
+                        url, timeout=SentryProvider.DEFAULT_TIMEOUT
+                    )
+                except Exception as exc:
                     self.logger.warning(
                         "Failed to get events for project",
-                        extra={"project_slug": project_slug, **error},
+                        extra={"project_slug": project_slug, "error": str(exc)},
                     )
                     continue
-                all_events_by_project[project_slug] = response.json()
-                all_issues_by_project[project_slug] = self.__get_issues(project_slug)
+                try:
+                    all_issues_by_project[project_slug] = self.__get_issues(project_slug)
+                except Exception as exc:
+                    self.logger.warning(
+                        "Failed to get issues for project",
+                        extra={"project_slug": project_slug, "error": str(exc)},
+                    )
+                    continue
 
         if not all_events_by_project:
             # We didn't manage to get any events for some reason
