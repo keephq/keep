@@ -173,7 +173,8 @@ class PagertreeProvider(BaseProvider):
 
         Args:
             title: Title of the alert.
-            description: UTF-8 string of custom message for alert. Shown in incident description
+            incident_severity: Severity of the incident.
+            incident_message: UTF-8 string of custom message for alert. Shown in incident description
             urgency: low|medium|high|critical
             destination_team_ids: destination team_ids to send alert to
             destination_router_ids: destination router_ids to send alert to
