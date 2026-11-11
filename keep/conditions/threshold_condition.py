@@ -54,6 +54,17 @@ class ThresholdCondition(BaseCondition):
                 return True
         return False
 
+    @staticmethod
+    def _is_numeric(val):
+        if isinstance(val, bool):
+            return False
+        if isinstance(val, (int, float)):
+            return True
+        s = str(val).strip()
+        if s.startswith(("-", "+")):
+            s = s[1:]
+        return s.replace(".", "", 1).isdigit() and len(s) > 0 and s != "."
+
     def _validate(self, compare_to, compare_value):
         """validate the condition.
 
@@ -62,26 +73,13 @@ class ThresholdCondition(BaseCondition):
             compare_value (_type_): the actual value
 
         """
-        # check if compare_to is a number (supports also float, hence the . replace)
-        if (
-            str(compare_to).replace(".", "", 1).isdigit()
-            and str(compare_to).replace(".", "", 1).isdigit()
-        ):
-            compare_to = float(compare_to)
-            try:
-                compare_value = float(compare_value)
-            except ValueError as exc:
-                raise Exception(
-                    "Invalid values for threshold - the compare_to is a float where the compare_value is not"
-                ) from exc
-        # validate they are both the same type
-        if not isinstance(compare_value, type(compare_to)):
+        if self._is_percentage(compare_to) and not self._is_percentage(compare_value):
             raise Exception(
                 "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
                     compare_to, compare_value
                 )
             )
-        if self._is_percentage(compare_to) and not self._is_percentage(compare_value):
+        if not self._is_percentage(compare_to) and self._is_percentage(compare_value):
             raise Exception(
                 "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
                     compare_to, compare_value
@@ -89,6 +87,32 @@ class ThresholdCondition(BaseCondition):
             )
         if self._is_percentage(compare_to) and self._is_percentage(compare_value):
             return float(compare_to.strip("%")), float(compare_value.strip("%"))
+
+        # check if compare_to or compare_value is a number (supports negative numbers, floats, integers)
+        if self._is_numeric(compare_to):
+            compare_to = float(compare_to)
+            try:
+                compare_value = float(compare_value)
+            except (ValueError, TypeError) as exc:
+                raise Exception(
+                    "Invalid values for threshold - the compare_to is a float where the compare_value is not"
+                ) from exc
+        elif self._is_numeric(compare_value) and "," not in str(compare_to):
+            try:
+                compare_to = float(compare_to)
+                compare_value = float(compare_value)
+            except (ValueError, TypeError) as exc:
+                raise Exception(
+                    "Invalid values for threshold - the compare_to is a float where the compare_value is not"
+                ) from exc
+
+        # validate they are both the same type
+        if not isinstance(compare_value, type(compare_to)):
+            raise Exception(
+                "Invalid threshold value, currently support only numeric and percentage values but got {} and {}".format(
+                    compare_to, compare_value
+                )
+            )
         return compare_to, compare_value
 
     def apply(self, compare_to, compare_value) -> bool:
