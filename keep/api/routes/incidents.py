@@ -527,7 +527,10 @@ def merge_incidents(
 
         if failed_ids:
             message += f", {pluralize(len(failed_ids), 'incident')} failed to merge"
-            raise HTTPException(f"Some incidents failed to merge. {message}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Some incidents failed to merge. {message}",
+            )
 
         return MergeIncidentsResponseDto(
             merged_incident_ids=merged_ids,

@@ -907,6 +907,28 @@ def test_merge_incidents_app(
 """
 
 
+@pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
+def test_merge_incidents_app_reports_partial_failure(client, test_app):
+    source_id = uuid4()
+    destination_id = uuid4()
+
+    with patch(
+        "keep.api.routes.incidents.merge_incidents_to_id",
+        return_value=([], [source_id]),
+    ):
+        response = client.post(
+            "/incidents/merge",
+            headers={"x-api-key": "some-key"},
+            json={
+                "source_incident_ids": [str(source_id)],
+                "destination_incident_id": str(destination_id),
+            },
+        )
+
+    assert response.status_code == 500
+    assert "failed to merge" in response.json()["detail"]
+
+
 @pytest.mark.asyncio
 async def test_split_incident(db_session, create_alert):
     # Create source incident with multiple alerts
