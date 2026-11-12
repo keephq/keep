@@ -1,0 +1,93 @@
+---
+title: "PostgreSQL workflow history retention"
+sidebarTitle: "Workflow history retention"
+---
+
+Workflow execution results (including their TOAST storage) and execution logs can grow independently of alert history. The opt-in maintenance command below removes old terminal execution history; it does not delete alerts, incidents, workflow definitions, or versions. No background cleanup is enabled automatically.
+
+## Prepare the database
+
+This command currently supports PostgreSQL. Use an image/package containing `keep.cli.workflow_retention` and the same database configuration as the Keep API. The command reuses Keep's configured synchronous engine. Do not put database passwords in command-line arguments or shell history.
+
+Take a database backup and verify a restore procedure before the first apply. The first cleanup can generate substantial I/O and WAL; budget free space for index creation, temporary sort files, WAL, and ongoing application writes.
+
+The Alembic revision `6942a1b2c3d4` adds an index on `workflowexecutionlog.workflow_execution_id`. PostgreSQL builds it concurrently, outside the migration transaction. Existing large installations should prebuild it during a planned window **before upgrading** so API startup does not have to wait for a long index build:
+
+```sql
+CREATE INDEX CONCURRENTLY idx_workflowexecutionlog_workflow_execution_id
+ON workflowexecutionlog (workflow_execution_id);
+```
+
+Run this statement outside a transaction block. Check the existing definition before creating an index with that name. The migration accepts an existing valid, non-partial index beginning with `workflow_execution_id`; a failed build that left the named index invalid requires explicit operator inspection/repair before retrying. The migration never silently drops an invalid index. A downgrade removes only the named index, not equivalent indexes with other names.
+
+Cleanup performs no DDL and refuses to run without a valid, non-partial leading execution-ID index on the log and both association tables. It also refuses unknown inbound execution dependencies. These checks prevent a new schema dependency or an unindexed lookup from being silently ignored.
+
+## Preview first
+
+Find the tenant ID using the database's tenant metadata or your existing administration tools. You must explicitly choose `--tenant-id` or `--all-tenants`.
+
+```bash
+python -m keep.cli.workflow_retention \
+  --tenant-id TENANT_ID \
+  --success-retention-days 14 \
+  --failure-retention-days 30 \
+  --success-log-retention-days 7
+```
+
+From a source checkout, `python scripts/cleanup_workflow_executions.py` is an equivalent entry point. The packaged module is available in API images; it does not depend on a top-level `scripts` directory being included in the image.
+
+The default mode is read-only dry-run; `--dry-run` is an optional explicit spelling. Previews count the complete eligible scope instead of stopping after one batch, and include stored result bytes and log/association counts. Result bytes are not a prediction of filesystem space returned. A bounded, repeatable-read transaction provides a consistent preview. An incomplete/timeout report has `completed: false`; never interpret a partial count as the full deletion scope.
+
+## Apply bounded batches
+
+Use the same policy and scope, adding `--apply` only after checking the preview:
+
+```bash
+python -m keep.cli.workflow_retention \
+  --tenant-id TENANT_ID \
+  --success-retention-days 14 \
+  --failure-retention-days 30 \
+  --success-log-retention-days 7 \
+  --batch-size 100 \
+  --log-batch-size 5000 \
+  --max-runtime-seconds 600 \
+  --apply
+```
+
+Defaults and limits:
+
+| Option | Default | Meaning |
+|---|---:|---|
+| `--success-retention-days` / `--retention-days` | 30 | Success execution/result retention |
+| `--failure-retention-days` | 30 | Error and `providers_not_configured` retention |
+| `--success-log-retention-days` | unset | Optional shorter success-log retention; must not exceed success retention |
+| `--keep-failed` | off | Preserve failures indefinitely instead of applying failure retention |
+| `--keep-successes` | 5 | Preserve the latest 1–100 non-test successes per tenant/workflow |
+| `--batch-size` | 100 | At most 1,000 candidate parents per batch |
+| `--log-batch-size` | 5,000 | At most 10,000 rows per child-table DELETE; association fan-out uses the same bound |
+| `--batch-pause-ms` | 200 | Pause between committed batches; 0–10,000 milliseconds |
+| `--max-runtime-seconds` | 600 | Runtime budget, checked between batches; maximum 3,600 |
+| `--statement-timeout-ms` | 15,000 | Per-statement timeout, also limited by remaining budget at batch start |
+| `--lock-timeout-ms` | 1,000 | Bound waits for database locks |
+
+Only `success`, `error`, and `providers_not_configured` executions with a valid nonnegative `execution_time` are eligible. Both the start and calculated completion time must be older than the relevant cutoff. Active, unknown, and ambiguous timeout executions are skipped. `is_running` is not treated as a boolean: Keep uses it as a scheduling sentinel/random integer.
+
+The latest non-test successful records and the scheduler-relevant last completed record per tenant/workflow are protected independently of age. Test executions are never used as checkpoints. Incremental workflows retain their complete protected results. The command does not rewrite checkpoints or change Keep's existing one-day successful-history lookup window; recovery after a longer pause still needs the documented workflow-specific recovery procedure.
+
+Children are drained in bounded transactions before deleting the execution. Large log or association sets can therefore be partially cleaned while their old parent remains for the next batch. Final parent deletion requires no remaining children, rechecks eligibility, and shares a transaction with that batch's association deletions. Earlier committed batches are preserved if a later batch fails; the current transaction rolls back. Apply counters describe committed rows only. Retrying with the same policy is supported.
+
+Exit codes: `0` means the scan completed, `2` means an incomplete report/runtime or query limit (and also argparse usage errors), and `1` means preflight or execution failure. Apply errors must be investigated before retrying. Counts and payloads are JSON on stdout; progress logs use stderr. No result payloads, SQL text, or connection credentials are included in the report.
+
+## Catch up and schedule
+
+Start with a small apply window and observe query latency, free space, WAL, application workflow success, and checkpoint continuity. Repeat bounded catch-up runs until the backlog is manageable, then schedule regular maintenance using your deployment's existing scheduler. Run one maintenance process per database; for Kubernetes CronJobs set `concurrencyPolicy: Forbid`, and do not overlap manual runs. The command is restartable but does not provide a cross-process lease or exactly-once scheduling guarantee.
+
+Retained history is no longer available in execution-history screens after deletion; alert and incident records remain. A code rollback cannot restore committed deletions. Restore historical records from a backup into a separate database and recover selectively instead of overwriting newer application data.
+
+## Vacuum and monitor
+
+After the initial catch-up, inspect dead tuples and autovacuum activity for both tables and their TOAST storage. Consider lower table-level autovacuum thresholds after measuring I/O: default scale factors can require millions of deleted rows on a large log table. A controlled ordinary `VACUUM (ANALYZE)` can help after a large cleanup, outside the cleanup transaction.
+
+DELETE and ordinary VACUUM generally make space reusable within PostgreSQL. They do not promise an immediate decrease in PVC filesystem usage. `VACUUM FULL` rewrites a table, needs extra space, and takes an exclusive lock; plan it separately if filesystem compaction is necessary. This command never performs VACUUM or truncation.
+
+Monitor the age and count of eligible history, committed cleanup throughput, incomplete/failed runs, free space and growth, WAL, and the protected workflows' checkpoint continuity. Reducing newly persisted intermediate outputs is a separate change; do not clear a successful checkpoint just to reduce history size.
