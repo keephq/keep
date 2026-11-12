@@ -40,3 +40,10 @@ services:
       - SOKETI_DEFAULT_APP_ID=1
       - SOKETI_DEFAULT_APP_KEY=keepappkey
       - SOKETI_DEFAULT_APP_SECRET=keepappsecret
+
+  keep-mcp-common:
+    ports:
+      - "8090:8090"
+    environment:
+      - KEEP_MCP_KEEP_API_URL=http://keep-backend:8080
+      - KEEP_MCP_KEEP_API_KEY=${KEEP_MCP_KEEP_API_KEY:-keepappkey}
