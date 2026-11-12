@@ -31,7 +31,9 @@ def _discover_jwks_uri(issuer: str) -> str:
     be obtained from the provider's discovery document at
     ``{issuer}/.well-known/openid-configuration``.
     """
-    discovery_url = f"{issuer}/.well-known/openid-configuration"
+    # Normalize only the URL join; the configured issuer itself must stay
+    # unaltered for the exact `iss` comparison during token verification.
+    discovery_url = f"{issuer.rstrip('/')}/.well-known/openid-configuration"
     resp = requests.get(discovery_url, timeout=10, headers={"User-Agent": "keep-api"})
     resp.raise_for_status()
     jwks_uri = resp.json().get("jwks_uri")
@@ -86,10 +88,6 @@ class OidcAuthVerifier(AuthVerifierBase):
             raise Exception(
                 "Missing KEEP_OIDC_ISSUER or KEEP_OIDC_CLIENT_ID environment variable"
             )
-
-        # Remove trailing slash if present on issuer
-        if self.oidc_issuer.endswith("/"):
-            self.oidc_issuer = self.oidc_issuer[:-1]
 
         # For id_tokens the OIDC spec guarantees aud=client_id, so client_id is
         # the default audience. KEEP_OIDC_AUDIENCE overrides it for providers
