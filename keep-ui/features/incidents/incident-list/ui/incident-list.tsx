@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -16,13 +16,14 @@ import { InitialFacetsData } from "@/features/filter/api";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import { Icon } from "@tremor/react";
 import {
+  EmptyStateCard,
   KeepLoader,
   PageSubtitle,
   PageTitle,
   SeverityBorderIcon,
   UISeverity,
 } from "@/shared/ui";
-import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
+import { BellIcon, BellSlashIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { useUser } from "@/entities/users/model/useUser";
@@ -52,6 +53,7 @@ import EnhancedDateRangePickerV2, {
 } from "@/components/ui/DateRangePickerV2";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
 import { PaginationState } from "@/features/filter/pagination";
+import { AlertsRulesBuilder } from "@/features/presets/presets-manager";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -74,7 +76,8 @@ export function IncidentList({
     DEFAULT_INCIDENTS_SORTING,
   ]);
 
-  const [filterCel, setFilterCel] = useState<string | null>(null);
+  const [filterCel, setFilterCel] = useState<string | null>("");
+  const [searchCel, setSearchCel] = useState<string | null>(null);
 
   const [dateRange, setDateRange] = useTimeframeState({
     enableQueryParams: true,
@@ -98,6 +101,7 @@ export function IncidentList({
     limit: incidentsPagination.limit,
     offset: incidentsPagination.offset,
     sorting: incidentsSorting[0],
+    searchCel: searchCel,
     filterCel: filterCel,
     timeFrame: dateRange,
   });
@@ -227,12 +231,42 @@ export function IncidentList({
       limit: DEFAULT_INCIDENTS_PAGE_SIZE,
       offset: 0,
     });
+    setSearchCel("");
     setClearFiltersToken(uuidV4());
   };
+
+  useEffect(() => {
+    setIncidentsPagination((current) => ({
+      ...current,
+      offset: 0,
+    }));
+  }, [filterCel, searchCel]);
 
   function renderIncidents() {
     if (incidentsLoading) {
       return <KeepLoader></KeepLoader>;
+    }
+
+    const hasFilterCel = !!filterCel;
+    const hasSearchCel = !!searchCel;
+    const showSearchEmptyState =
+      incidents?.items.length === 0 && hasSearchCel;
+    const showFilterEmptyState =
+      incidents?.items.length === 0 && hasFilterCel && !hasSearchCel;
+
+    if (showSearchEmptyState) {
+      return (
+        <div className="flex-1 flex items-center h-full w-full">
+          <div className="flex flex-col justify-center items-center w-full p-4">
+            <EmptyStateCard
+              noCard
+              title="No Incidents Matching Your CEL Query"
+              description="Check your CEL query and try again"
+              icon={MagnifyingGlassIcon}
+            />
+          </div>
+        </div>
+      );
     }
 
     if (incidents && incidents.items.length > 0) {
@@ -253,7 +287,7 @@ export function IncidentList({
       return <IncidentsNotFoundPlaceholder />;
     }
 
-    if (facetsCel && incidents?.items.length === 0) {
+    if (facetsCel && showFilterEmptyState) {
       return (
         <IncidentsNotFoundForFiltersPlaceholder
           onClearFilters={handleClearFilters}
@@ -333,20 +367,30 @@ export function IncidentList({
               <IncidentListError incidentError={incidentsError} />
             ) : null}
             {incidentsError ? null : (
-              <div className="flex flex-row gap-5">
-                <FacetsPanelServerSide
-                  className="mt-14"
-                  entityName={"incidents"}
-                  facetsConfig={facetsConfig}
-                  facetOptionsCel={facetsCel}
-                  usePropertyPathsSuggestions={true}
-                  clearFiltersToken={clearFiltersToken}
-                  initialFacetsData={initialFacetsData}
-                  onCelChange={setFilterCel}
-                  revalidationToken={filterRevalidationToken}
+              <div className="flex flex-col gap-3">
+                <AlertsRulesBuilder
+                  key={clearFiltersToken || "default"}
+                  defaultQuery=""
+                  entityName="incidents"
+                  showSave={false}
+                  showSqlImport={false}
+                  shouldSetQueryParam={false}
+                  onCelChanges={setSearchCel}
                 />
-                <div className="flex flex-col gap-5 flex-1 min-w-0">
-                  {renderIncidents()}
+                <div className="flex flex-row gap-5">
+                  <FacetsPanelServerSide
+                    entityName={"incidents"}
+                    facetsConfig={facetsConfig}
+                    facetOptionsCel={facetsCel}
+                    usePropertyPathsSuggestions={true}
+                    clearFiltersToken={clearFiltersToken}
+                    initialFacetsData={initialFacetsData}
+                    onCelChange={setFilterCel}
+                    revalidationToken={filterRevalidationToken}
+                  />
+                  <div className="flex flex-col gap-5 flex-1 min-w-0">
+                    {renderIncidents()}
+                  </div>
                 </div>
               </div>
             )}
