@@ -18,7 +18,7 @@ from keep.workflowmanager.workflowstore import WorkflowStore
 
 PORT = int(os.environ.get("PORT", 8080))
 # Keep these as config defaults so GUNICORN_CMD_ARGS and explicit CLI flags win.
-bind = os.environ.get("KEEP_API_BIND", f"[::]:{PORT}")
+bind = os.environ.get("KEEP_API_BIND", f"0.0.0.0:{PORT}")
 workers = int(os.environ.get("KEEP_API_WORKERS", "4"))
 if workers < 1:
     raise ValueError("KEEP_API_WORKERS must be a positive integer")

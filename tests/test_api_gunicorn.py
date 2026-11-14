@@ -49,7 +49,7 @@ class ApiGunicornTests(unittest.TestCase):
 
     def test_image_defaults(self):
         cfg = self.load_config()
-        self.assertEqual(cfg.bind, ["[::]:8080"])
+        self.assertEqual(cfg.bind, ["0.0.0.0:8080"])
         self.assertEqual(cfg.workers, 4)
         self.assertTrue(cfg.preload_app)
         self.assertEqual(
@@ -60,7 +60,7 @@ class ApiGunicornTests(unittest.TestCase):
 
     def test_environment_defaults(self):
         cfg = self.load_config({"PORT": "9090", "KEEP_API_WORKERS": "2"})
-        self.assertEqual(cfg.bind, ["[::]:9090"])
+        self.assertEqual(cfg.bind, ["0.0.0.0:9090"])
         self.assertEqual(cfg.workers, 2)
 
     def test_explicit_bind_includes_port(self):
@@ -99,10 +99,21 @@ class ApiGunicornTests(unittest.TestCase):
             ):
                 self.load_config({"KEEP_API_WORKERS": workers})
 
+    def test_default_listener_uses_ipv4_socket(self):
+        cfg = self.load_config({"PORT": "0"})
+        listeners = create_sockets(cfg, MagicMock())
+        self.addCleanup(lambda: [listener.close() for listener in listeners])
+        listener = listeners[0]
+        self.assertEqual(listener.family, socket.AF_INET)
+        port = listener.getsockname()[1]
+        with socket.create_connection(("127.0.0.1", port), timeout=2):
+            connection, _ = listener.accept()
+            connection.close()
+
     @unittest.skipUnless(socket.has_ipv6, "IPv6 unavailable")
     def test_ipv6_listener_accepts_connections(self):
-        # Use an ephemeral port with the default wildcard host.
-        cfg = self.load_config({"PORT": "0"})
+        # IPv6 is explicitly enabled; use an ephemeral port.
+        cfg = self.load_config({"KEEP_API_BIND": "[::]:0"})
         listeners = create_sockets(cfg, MagicMock())
         self.addCleanup(lambda: [listener.close() for listener in listeners])
         listener = listeners[0]

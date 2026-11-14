@@ -31,19 +31,20 @@ Keep is highly configurable through environment variables. This allows you to cu
 
 ### API server binding and workers
 
-The API container's Gunicorn server listens on `[::]:8080` by default, with four
-worker processes. The IPv6 wildcard also accepts IPv4 connections on systems
-configured for dual-stack sockets. On hosts with IPv6 disabled, explicitly use
-an IPv4 bind address.
+The API container's Gunicorn server retains its IPv4 default, `0.0.0.0:8080`,
+with four worker processes. IPv6 is opt-in so hosts without IPv6 support
+continue to work without configuration changes.
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `KEEP_API_BIND` | Gunicorn bind address, including the port | `[::]:<PORT>` (`[::]:8080` by default) |
+| `KEEP_API_BIND` | Gunicorn bind address, including the port | `0.0.0.0:<PORT>` (`0.0.0.0:8080` by default) |
 | `KEEP_API_WORKERS` | Positive integer number of API worker processes | `4` |
 
 For example, set `KEEP_API_WORKERS=2` to reduce API process count without
-replacing the container command. Set `KEEP_API_BIND=0.0.0.0:8080` for an IPv4-only
-listener, or use `[::1]:8080` for IPv6 loopback. An explicit `KEEP_API_BIND`
+replacing the container command. Set `KEEP_API_BIND=[::]:8080` for an IPv6
+wildcard listener, or use `[::1]:8080` for IPv6 loopback. IPv6 listeners require
+IPv6 support in the host; the wildcard also accepts IPv4 connections when the
+host enables dual-stack sockets. An explicit `KEEP_API_BIND`
 includes its own port and takes precedence over `PORT` for the listener.
 
 These settings are Gunicorn configuration defaults. `GUNICORN_CMD_ARGS` can
