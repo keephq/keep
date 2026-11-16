@@ -92,6 +92,12 @@ class Site24X7Provider(BaseProvider):
         "CRITICAL": AlertStatus.FIRING,
         "UP": AlertStatus.RESOLVED,
     }
+    OUTAGE_TYPES_MAP = {
+        0: "DOWN",
+        2: "TROUBLE",
+        3: "CRITICAL",
+    }
+
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
     ):
@@ -174,10 +180,7 @@ class Site24X7Provider(BaseProvider):
                 "Error while authenticating user",
                 extra={"status_code": response.status_code},
             )
-        return {
-            "authenticated": authentication_scope,
-            "valid_tld": True
-        }
+        return {"authenticated": authentication_scope, "valid_tld": True}
 
     def setup_webhook(
         self, tenant_id: str, keep_api_url: str, api_key: str, setup_alerts: bool = True
@@ -246,7 +249,9 @@ class Site24X7Provider(BaseProvider):
         event: dict, provider_instance: "BaseProvider" = None
     ) -> AlertDto:
         status_raw = event.get("STATUS", "DOWN")
-        severity = Site24X7Provider.SEVERITIES_MAP.get(status_raw, AlertSeverity.WARNING)
+        severity = Site24X7Provider.SEVERITIES_MAP.get(
+            status_raw, AlertSeverity.WARNING
+        )
         status = Site24X7Provider.STATUS_MAP.get(status_raw, AlertStatus.FIRING)
 
         # Extract tags and labels from webhook payload
@@ -273,19 +278,22 @@ class Site24X7Provider(BaseProvider):
 
     def _get_alerts(self) -> list[AlertDto]:
         response = requests.get(
-            self.__get_url(paths=["alert_logs"]), headers=self.__get_headers()
+            self.__get_url(paths=["reports", "alarm"], query_params={"period": 1}),
+            headers=self.__get_headers(),
         )
         if response.status_code == 200:
             alerts = []
             response = response.json()
-            for alert in response["data"]:
-                alerts.append(
-                    AlertDto(
-                        name=alert["display_name"],
-                        title=alert["msg"],
-                        startedAt=alert["sent_time"],
-                    )
-                )
+            for monitor in response["data"]["outage_details"]:
+                for outage in monitor["outages"]:
+                    event = {
+                        "STATUS": self.OUTAGE_TYPES_MAP.get(outage["type"], "DOWN"),
+                        "MONITORNAME": monitor["display_name"],
+                        "MONITOR_ID": monitor["monitor_id"],
+                        "INCIDENT_REASON": outage["reason"],
+                        "INCIDENT_TIME_ISO": outage["start_time"],
+                    }
+                    alerts.append(self._format_alert(event))
             return alerts
         else:
             self.logger.error(
