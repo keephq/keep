@@ -355,3 +355,54 @@ class TestJiraProvider:
 
                 # If we get here without the "string indices must be integers" error, the fix worked
                 assert result is not None
+
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jiraonprem_notify_update_leaves_priority_alone(
+        self, mock_get, mock_put, jiraonprem_provider
+    ):
+        """Test that an update that never mentioned priority does not set it"""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"key": "TEST-1"}
+        mock_put.return_value.status_code = 204
+
+        jiraonprem_provider._notify(summary="Updated", issue_id="TEST-1")
+
+        update = mock_put.call_args[1]["json"]["update"]
+        assert "priority" not in update
+        assert update["summary"] == [{"set": "Updated"}]
+
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jiraonprem_notify_update_sets_priority_when_asked(
+        self, mock_get, mock_put, jiraonprem_provider
+    ):
+        """Test that an update sets the priority the workflow named"""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"key": "TEST-1"}
+        mock_put.return_value.status_code = 204
+
+        jiraonprem_provider._notify(
+            summary="Updated", issue_id="TEST-1", priority="High"
+        )
+
+        update = mock_put.call_args[1]["json"]["update"]
+        assert update["priority"] == [{"set": {"name": "High"}}]
+
+    @patch("requests.post")
+    def test_jiraonprem_notify_create_defaults_to_medium(
+        self, mock_post, jiraonprem_provider
+    ):
+        """Test that a created issue gets Medium when the workflow names no priority"""
+        mock_post.return_value.status_code = 201
+        mock_post.return_value.json.return_value = {"key": "TEST-2", "id": "2"}
+
+        jiraonprem_provider._notify(
+            summary="Created",
+            description="Created by Keep",
+            issue_type="Task",
+            project_key="TEST",
+        )
+
+        fields = mock_post.call_args[1]["json"]["fields"]
+        assert fields["priority"] == {"name": "Medium"}
