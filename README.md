@@ -417,7 +417,7 @@
         </a>
     </td>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/postgres-provider" target="_blank">
+        <a href="https://docs.keephq.dev/providers/documentation/postgresql-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/postgres-icon.png" alt="PostgreSQL"/><br/>
             PostgreSQL
         </a>
@@ -438,7 +438,7 @@
 <table>
 <tr>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/discord" target="_blank">
+        <a href="https://docs.keephq.dev/providers/documentation/discord-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/discord-icon.png" alt="Discord"/><br/>
             Discord
         </a>
@@ -656,7 +656,7 @@
         </a>
     </td>
     <td align="center" width="150">
-        <a href="https://docs.keephq.dev/providers/documentation/microsoft-planner-provider" target="_blank">
+        <a href="https://docs.keephq.dev/providers/documentation/planner-provider" target="_blank">
             <img width="40" src="keep-ui/public/icons/microsoft-planner-icon.svg" alt="Microsoft Planner"/><br/>
             Microsoft Planner
         </a>
