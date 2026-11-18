@@ -797,6 +797,57 @@ def test_merge_incidents(db_session, create_alert, setup_stress_alerts_no_elasti
     assert incident_3.merged_by == "test-user-email"
 
 
+# The SQLite test database shares one connection between all sessions, so only
+# a real database catches two sessions of one merge waiting on each other's row
+# locks (https://github.com/keephq/keep/issues/6973).
+@pytest.mark.parametrize("db_session", [None, {"db": "mysql"}], indirect=True)
+def test_merge_several_incidents(db_session, create_alert):
+    destination = create_incident_from_dict(
+        SINGLE_TENANT_UUID,
+        {"user_generated_name": "destination", "user_summary": "destination"},
+    )
+    sources = []
+    for name in ("source-1", "source-2", "source-3"):
+        incident = create_incident_from_dict(
+            SINGLE_TENANT_UUID, {"user_generated_name": name, "user_summary": name}
+        )
+        create_alert(
+            f"fp-{name}",
+            AlertStatus.FIRING,
+            datetime.utcnow(),
+            {"severity": AlertSeverity.WARNING.value},
+        )
+        add_alerts_to_incident(SINGLE_TENANT_UUID, incident, [f"fp-{name}"])
+        sources.append(incident)
+
+    merged_ids, failed_ids = merge_incidents_to_id(
+        SINGLE_TENANT_UUID,
+        [source.id for source in sources],
+        destination.id,
+        "test-user-email",
+    )
+
+    assert set(merged_ids) == {source.id for source in sources}
+    assert failed_ids == []
+
+    destination = get_incident_by_id(
+        SINGLE_TENANT_UUID, destination.id, with_alerts=True
+    )
+    assert {alert.fingerprint for alert in destination._alerts} == {
+        "fp-source-1",
+        "fp-source-2",
+        "fp-source-3",
+    }
+    assert destination.alerts_count == 3
+
+    for source in sources:
+        source = get_incident_by_id(SINGLE_TENANT_UUID, source.id, with_alerts=True)
+        assert source.status == IncidentStatus.MERGED.value
+        assert source.merged_into_incident_id == destination.id
+        assert source._alerts == []
+        assert source.alerts_count == 0
+
+
 """
 @pytest.mark.parametrize("test_app", ["NO_AUTH"], indirect=True)
 def test_merge_incidents_app(
