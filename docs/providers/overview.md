@@ -120,7 +120,7 @@ By leveraging Keep Providers, users are able to deeply integrate Keep with the t
 - [Twilio](/providers/documentation/twilio-provider)
 - [UptimeKuma](/providers/documentation/uptimekuma-provider)
 - [VictoriaLogs](/providers/documentation/victorialogs-provider)
-- [Victoriametrics](/providers/documentation/victoriametrics-provider)
+- [VictoriaMetrics](/providers/documentation/victoriametrics-provider)
 - [vLLM](/providers/documentation/vllm-provider)
 - [Wazuh](/providers/documentation/wazuh-provider)
 - [Webhook](/providers/documentation/webhook-provider)
