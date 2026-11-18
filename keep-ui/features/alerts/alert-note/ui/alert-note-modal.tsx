@@ -40,7 +40,6 @@ export const AlertNoteModal = ({
     "italic",
     "underline",
     "list",
-    "bullet",
     "link",
     "align",
     "blockquote",
