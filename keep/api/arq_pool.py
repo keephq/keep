@@ -1,6 +1,7 @@
-from arq import create_pool
-from keep.api.redis_settings import get_redis_settings
+import arq.connections as arq_connections
+
+from keep.api.redis_settings import get_redis_settings  # importing applies the patch
+
 
 async def get_pool():
-    """Create and return an ARQ Redis pool using shared Redis settings."""
-    return await create_pool(get_redis_settings())
+    return await arq_connections.create_pool(get_redis_settings())
