@@ -2,8 +2,11 @@
 Centreon is a class that provides a set of methods to interact with the Centreon API.
 """
 
+import contextlib
 import dataclasses
 import datetime
+import os
+import tempfile
 
 import pydantic
 import requests
@@ -37,6 +40,50 @@ class CentreonProviderAuthConfig:
             "sensitive": True,
         },
         default=None,
+    )
+
+    verify: bool = dataclasses.field(
+        default=True,
+        metadata={
+            "required": False,
+            "description": "Verify SSL certificates",
+            "hint": "Set to false to allow self-signed certificates",
+            "sensitive": False,
+            "type": "switch",
+        },
+    )
+
+    ca_certificate: str = dataclasses.field(
+        default="",
+        metadata={
+            "name": "ca_certificate",
+            "description": "CA certificate (PEM) used to verify the Centreon server",
+            "required": False,
+            "sensitive": True,
+            "type": "file",
+        },
+    )
+
+    client_certificate: str = dataclasses.field(
+        default="",
+        metadata={
+            "name": "client_certificate",
+            "description": "Client certificate (PEM) for mutual TLS",
+            "required": False,
+            "sensitive": True,
+            "type": "file",
+        },
+    )
+
+    client_key: str = dataclasses.field(
+        default="",
+        metadata={
+            "name": "client_key",
+            "description": "Client private key (PEM) for mutual TLS",
+            "required": False,
+            "sensitive": True,
+            "type": "file",
+        },
     )
 
 
@@ -93,15 +140,54 @@ class CentreonProvider(BaseProvider):
             "centreon-auth-token": self.authentication_config.api_token,
         }
 
+    @contextlib.contextmanager
+    def __request_kwargs(self):
+        """Yield the TLS keyword arguments for a requests call.
+
+        The CA/client cert fields hold PEM content, so they are written to
+        temporary files for the duration of the request (requests expects paths)
+        and removed afterwards.
+        """
+        temp_paths = []
+
+        def _materialize(content: str) -> str:
+            temp = tempfile.NamedTemporaryFile(mode="w", suffix=".pem", delete=False)
+            temp.write(content)
+            temp.close()
+            temp_paths.append(temp.name)
+            return temp.name
+
+        kwargs = {}
+        auth = self.authentication_config
+        if not auth.verify:
+            kwargs["verify"] = False
+        elif auth.ca_certificate:
+            kwargs["verify"] = _materialize(auth.ca_certificate)
+        if auth.client_certificate and auth.client_key:
+            kwargs["cert"] = (
+                _materialize(auth.client_certificate),
+                _materialize(auth.client_key),
+            )
+        try:
+            yield kwargs
+        finally:
+            for path in temp_paths:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+
     def validate_scopes(self) -> dict[str, bool | str]:
         """
         Validate the scopes of the provider.
         """
         try:
-            response = requests.get(
-                self.__get_url("object=centreon_realtime_hosts&action=list"),
-                headers=self.__get_headers(),
-            )
+            with self.__request_kwargs() as request_kwargs:
+                response = requests.get(
+                    self.__get_url("object=centreon_realtime_hosts&action=list"),
+                    headers=self.__get_headers(),
+                    **request_kwargs,
+                )
             if response.ok:
                 scopes = {"authenticated": True}
             else:
@@ -118,7 +204,10 @@ class CentreonProvider(BaseProvider):
     def __get_host_status(self) -> list[AlertDto]:
         try:
             url = self.__get_url("object=centreon_realtime_hosts&action=list")
-            response = requests.get(url, headers=self.__get_headers())
+            with self.__request_kwargs() as request_kwargs:
+                response = requests.get(
+                    url, headers=self.__get_headers(), **request_kwargs
+                )
 
             if not response.ok:
                 self.logger.error(
@@ -154,7 +243,10 @@ class CentreonProvider(BaseProvider):
     def __get_service_status(self) -> list[AlertDto]:
         try:
             url = self.__get_url("object=centreon_realtime_services&action=list")
-            response = requests.get(url, headers=self.__get_headers())
+            with self.__request_kwargs() as request_kwargs:
+                response = requests.get(
+                    url, headers=self.__get_headers(), **request_kwargs
+                )
 
             if not response.ok:
                 self.logger.error(
