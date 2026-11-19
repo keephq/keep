@@ -1,5 +1,8 @@
 import json
 import os
+import sqlite3
+from importlib import import_module
+
 import pytest
 
 from keep.api.core.cel_to_sql.ast_nodes import DataType
@@ -10,6 +13,8 @@ from keep.api.core.cel_to_sql.properties_metadata import (
 from keep.api.core.cel_to_sql.sql_providers.get_cel_to_sql_provider_for_dialect import (
     get_cel_to_sql_provider_for_dialect,
 )
+from keep.api.core.cel_to_sql.sql_providers.mysql import CelToMySqlProvider
+from keep.api.core.cel_to_sql.sql_providers.postgresql import CelToPostgreSqlProvider
 
 fake_field_configurations = [
     FieldMappingConfiguration(
@@ -97,3 +102,66 @@ def test_cel_to_sql(testcase_key):
     instance = get_cel_to_sql_provider_for_dialect(dialect_name, properties_metadata)
     actual_sql_filter = instance.convert_to_sql_str(input_cel)
     assert actual_sql_filter == expected_sql
+
+
+@pytest.mark.parametrize(
+    "key",
+    ["x') OR (1=1) OR ('", 'with "double" quotes', r"back\slash", "cpu%"],
+)
+def test_json_index_key_is_escaped_on_sqlite(key):
+    """A JSON key with quotes or a backslash matches only the rows holding that key."""
+    db = sqlite3.connect(":memory:")
+    db.execute("CREATE TABLE alerts (alert_enrichments TEXT, alert_event TEXT)")
+    db.executemany(
+        "INSERT INTO alerts VALUES (?, ?)",
+        [
+            ("{}", json.dumps({"labels": {key: "v"}})),
+            ("{}", json.dumps({"labels": {"other": "v"}})),
+        ],
+    )
+    instance = get_cel_to_sql_provider_for_dialect("sqlite", properties_metadata)
+    # CEL string literals here only unescape quotes, so escape just the double quotes.
+    cel_key = '"' + key.replace('"', '\\"') + '"'
+
+    try:
+        for cel in (
+            f"alert.labels[{cel_key}] == 'v'",
+            f"has(alert.labels[{cel_key}])",
+        ):
+            sql = instance.convert_to_sql_str(cel)
+            matched = db.execute(f"SELECT count(*) FROM alerts WHERE {sql}").fetchone()[0]
+            assert matched == 1, sql
+    finally:
+        db.close()
+
+
+@pytest.mark.parametrize("dialect_name", ["postgresql", "mysql"])
+def test_json_index_key_is_quoted_for_the_real_dialect(dialect_name):
+    """Keys with %, quotes and backslashes are quoted once for the dialect that runs them."""
+    dialect = import_module(f"sqlalchemy.dialects.{dialect_name}").dialect()
+    provider_cls = {
+        "postgresql": CelToPostgreSqlProvider,
+        "mysql": CelToMySqlProvider,
+    }[dialect_name]
+    instance = provider_cls(dialect, properties_metadata)
+
+    sql = instance.convert_to_sql_str("alert.labels[\"cpu%\"] == 'v'")
+    assert "cpu%'" in sql or 'cpu%"' in sql
+    assert "%%" not in sql
+
+    sql = instance.convert_to_sql_str("alert.labels[\"x') OR (1=1) OR ('\"] == 'v'")
+    assert "x'') OR (1=1) OR (''" in sql
+
+    sql = instance.convert_to_sql_str('has(alert.labels["a\\"b"])')
+    expected_key = '"a\\\\"b"' if dialect_name == "mysql" else '"a\\"b"'
+    assert expected_key in sql, sql
+
+
+def test_mysql_json_path_keeps_backslashes_without_backslash_escapes():
+    """With NO_BACKSLASH_ESCAPES, MySQL keys keep single backslashes in the path."""
+    dialect = import_module("sqlalchemy.dialects.mysql").dialect()
+    dialect._backslash_escapes = False
+    instance = CelToMySqlProvider(dialect, properties_metadata)
+
+    sql = instance.convert_to_sql_str('has(alert.labels["a\\"b"])')
+    assert '"a\\"b"' in sql, sql
