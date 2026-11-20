@@ -5,9 +5,53 @@ This module provides a centralized way to configure Redis connections,
 supporting both direct Redis and Redis Sentinel configurations.
 """
 
+import arq.connections
 from arq.connections import RedisSettings
+from redis.asyncio.sentinel import Sentinel as _OrigSentinel
 
 from keep.api.core.config import config
+
+
+class _AuthenticatedSentinel(_OrigSentinel):
+    """
+    Subclass of redis.asyncio.sentinel.Sentinel ensuring credentials are forwarded
+    to Sentinel discovery nodes (port 26379) via sentinel_kwargs, resolving issue #6886.
+    """
+
+    def __init__(
+        self,
+        sentinels,
+        min_other_sentinels=0,
+        sentinel_kwargs=None,
+        **connection_kwargs,
+    ):
+        if sentinel_kwargs is None:
+            sentinel_kwargs = {
+                k: v for k, v in connection_kwargs.items() if k.startswith("socket_")
+            }
+            if "password" in connection_kwargs and connection_kwargs["password"]:
+                sentinel_kwargs["password"] = connection_kwargs["password"]
+            if "username" in connection_kwargs and connection_kwargs["username"]:
+                sentinel_kwargs["username"] = connection_kwargs["username"]
+        elif (
+            "password" in connection_kwargs
+            and "password" not in sentinel_kwargs
+            and connection_kwargs["password"]
+        ):
+            sentinel_kwargs["password"] = connection_kwargs["password"]
+
+        super().__init__(
+            sentinels,
+            min_other_sentinels=min_other_sentinels,
+            sentinel_kwargs=sentinel_kwargs,
+            **connection_kwargs,
+        )
+
+
+def _patch_arq_sentinel():
+    """Ensure arq.connections.Sentinel uses _AuthenticatedSentinel."""
+    if getattr(arq.connections, "Sentinel", None) is not _AuthenticatedSentinel:
+        arq.connections.Sentinel = _AuthenticatedSentinel
 
 
 def get_redis_settings() -> RedisSettings:
@@ -33,6 +77,7 @@ def get_redis_settings() -> RedisSettings:
     ssl_enabled = config("REDIS_SSL", cast=bool, default=False)
 
     if sentinel_enabled:
+        _patch_arq_sentinel()
         sentinel_hosts_str = config("REDIS_SENTINEL_HOSTS", default="localhost:26379")
         sentinel_hosts = []
         for host_port in sentinel_hosts_str.split(","):
