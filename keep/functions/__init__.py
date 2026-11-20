@@ -532,7 +532,9 @@ def is_business_hours(
             Defaults to 'UTC'.
 
     Returns:
-        bool: True if time is between start_hour and end_hour on a business day
+        bool: True if time is between start_hour and end_hour on a business day.
+            When ``start_hour`` > ``end_hour`` the window is treated as crossing
+            midnight (e.g. ``start_hour=20, end_hour=8`` covers 20:00–07:59).
 
     Raises:
         ValueError: If start_hour or end_hour are not between 0 and 23
@@ -588,7 +590,12 @@ def is_business_hours(
     # Get just the hour (in 24-hour format)
     hour = dt.hour
 
-    # Check if hour is between start_hour and end_hour
+    # Check if hour falls within the window.
+    # When start_hour > end_hour the window crosses midnight (e.g. 20-08 is the
+    # night shift): the hour qualifies if it is >= start_hour OR < end_hour.
+    # When start_hour <= end_hour the window sits inside a single day.
+    if start_hour > end_hour:
+        return hour >= start_hour or hour < end_hour
     return start_hour <= hour < end_hour
 
 
