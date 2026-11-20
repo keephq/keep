@@ -61,16 +61,16 @@ class Auth0AuthVerifier(AuthVerifierBase):
     """Handles authentication and authorization for multi tenant mode"""
 
     def __init__(self, scopes: list[str] = []) -> None:
-        # TODO: this verifier should be instantiated once and not for every endpoint/route
-        #       to better cache the jwks keys
         super().__init__(scopes)
-        # init once so the cache will actually work
         self.auth_domain = os.environ.get("AUTH0_DOMAIN")
         if not self.auth_domain:
             raise Exception("Missing AUTH0_DOMAIN environment variable")
-        self.jwks_uri = _discover_jwks_uri(self.auth_domain)
-        # Note: cache_keys is set to True to avoid fetching the jwks keys on every request
-        #       but it currently caches only per-route. After moving this auth verifier to be a singleton, we can cache it globally
+        # Re-use the JWKS URI that was discovered once at module-import time.
+        # Calling _discover_jwks_uri() here on every construction is wasteful:
+        # each call makes a 10 s timeout network request that is immediately
+        # discarded (the module-level `jwks_client` is what _verify_bearer_token
+        # actually uses).  See keephq/keep#6781.
+        self.jwks_uri = jwks_uri  # already discovered at import
         self.issuer = f"https://{self.auth_domain}/"
         self.auth_audience = os.environ.get("AUTH0_AUDIENCE")
 
