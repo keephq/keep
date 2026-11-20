@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "svc": "order-api",
+          "dep": "postgres-main",
+          "kind": "postgres"
+        },
+        "value": [1790075972, "1"]
+      },
+      {
+        "metric": {
+          "svc": "billing-api",
+          "dep": "postgres-main",
+          "kind": "postgres"
+        },
+        "value": [1790075972, "1"]
+      },
+      {
+        "metric": {
+          "svc": "order-api",
+          "dep": "payment-api",
+          "kind": "http"
+        },
+        "value": [1790075972, "1"]
+      }
+    ]
+  }
+}
