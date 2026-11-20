@@ -439,6 +439,19 @@ def test_add_time_to_date_with_datetime_string():
     assert functions.add_time_to_date(date_str, date_format, time_str) == expected_date
 
 
+def test_add_time_to_date_invalid_time_string():
+    """
+    Test that add_time_to_date raises ValueError when given unreadable or invalid time strings (#6778).
+    """
+    date_str = "2024-07-01"
+    date_format = "%Y-%m-%d"
+
+    invalid_inputs = ["1y", "3M", "10", "2 d", "", "invalid", None]
+    for invalid in invalid_inputs:
+        with pytest.raises(ValueError):
+            functions.add_time_to_date(date_str, date_format, invalid)
+
+
 def test_get_firing_time_case1(create_alert):
     fingerprint = "fp1"
     base_time = datetime.datetime.now(tz=pytz.utc)
