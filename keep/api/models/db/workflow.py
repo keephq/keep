@@ -49,11 +49,11 @@ class WorkflowVersion(SQLModel, table=True):
     revision: int = Field(primary_key=True)
     workflow_raw: str = Field(sa_column=Column(TEXT))
     updated_by: str
+    # A revision's save time must not change when is_current or metadata changes.
     updated_at: datetime = Field(
         sa_column=Column(
             DateTime(timezone=True),
             name="updated_at",
-            onupdate=func.now(),
             server_default=func.now(),
             nullable=False,
         )
