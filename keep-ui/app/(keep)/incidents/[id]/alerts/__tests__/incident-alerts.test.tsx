@@ -89,6 +89,10 @@ jest.mock('@/features/alerts/alert-detail-sidebar', () => ({
   },
 }));
 
+jest.mock('@/features/workflows/manual-run-workflow', () => ({
+  ManualRunWorkflowModal: () => null,
+}));
+
 // Mock alert table utilities
 jest.mock('@/widgets/alerts-table/lib/alert-table-utils', () => ({
   useAlertTableCols: jest.fn(() => [
