@@ -108,9 +108,10 @@ class TestFormatIncident:
         assert result == []
 
     def test_deterministic_id(self):
-        """Test that the same incident number always produces the same UUID."""
+        """Test that the same incident number always produces the same string UUID."""
         id1 = ServicenowProvider._get_incident_id("INC0010001")
         id2 = ServicenowProvider._get_incident_id("INC0010001")
+        assert isinstance(id1, str)
         assert id1 == id2
 
         id3 = ServicenowProvider._get_incident_id("INC0010002")
