@@ -364,7 +364,7 @@ class KeepProvider(BaseProvider):
         """
         Handle alerts without PENDING state - just FIRING or RESOLVED.
         Args:
-            state_alerts: list of new alerts from current evaluation
+            stateless_alerts: list of new alerts from current evaluation
         Returns:
             list of alerts that need state updates
         """
