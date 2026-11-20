@@ -355,3 +355,48 @@ class TestJiraProvider:
 
                 # If we get here without the "string indices must be integers" error, the fix worked
                 assert result is not None
+
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jiraonprem_update_issue_preserves_priority_when_unspecified(
+        self, mock_get, mock_put, jiraonprem_provider
+    ):
+        """Test that updating an issue without specifying priority does not inject or reset priority (#6751)"""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"key": "TEST-123"}
+        mock_put.return_value.status_code = 204
+
+        jiraonprem_provider._notify(
+            issue_id="TEST-123",
+            summary="New Summary",
+            description="New Description",
+        )
+
+        mock_put.assert_called_once()
+        request_body = mock_put.call_args[1]["json"]
+        assert "update" in request_body
+        assert "summary" in request_body["update"]
+        assert "description" in request_body["update"]
+        assert "priority" not in request_body["update"]
+
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jiraonprem_update_issue_forwards_explicit_priority(
+        self, mock_get, mock_put, jiraonprem_provider
+    ):
+        """Test that updating an issue with explicit priority updates the priority field (#6751)"""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"key": "TEST-123"}
+        mock_put.return_value.status_code = 204
+
+        jiraonprem_provider._notify(
+            issue_id="TEST-123",
+            summary="New Summary",
+            priority="Highest",
+        )
+
+        mock_put.assert_called_once()
+        request_body = mock_put.call_args[1]["json"]
+        assert "update" in request_body
+        assert "priority" in request_body["update"]
+        assert request_body["update"]["priority"] == [{"set": {"name": "Highest"}}]
