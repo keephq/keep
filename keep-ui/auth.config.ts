@@ -6,9 +6,10 @@ import Auth0 from "next-auth/providers/auth0";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import Okta from "next-auth/providers/okta";
 import OneLogin from "next-auth/providers/onelogin";
-import {AuthenticationError, AuthErrorCodes} from "@/errors";
+import {AuthenticationError, AuthErrorCodes, MissingRoleError} from "@/errors";
 import type {JWT} from "next-auth/jwt";
 import {getApiURL} from "@/utils/apiUrl";
+import {getKeepRoleFromKeycloak} from "@/utils/keycloakRole";
 import {
   AuthType,
   MULTI_TENANT,
@@ -433,6 +434,24 @@ export const config = {
           tenantId = (profile as any).keep_tenant_id || "keep";
           role = (profile as any).keep_role;
           accessToken = account.access_token;
+          // In single-tenant mode the backend derives the role from the Keycloak
+          // client roles in the access token. A user without any known role
+          // would be signed in here but rejected by every backend API call,
+          // bouncing between the frontend and Keycloak forever. Fail sign-in
+          // instead so the user lands on the error page with a clear message.
+          // (Multi-org mode derives roles from groups, checked separately.)
+          if (
+            process.env["KEYCLOAK_ROLES_FROM_GROUPS"] !== "true" &&
+            !getKeepRoleFromKeycloak(
+              profile as Record<string, unknown> | undefined,
+              accessToken,
+              process.env["KEYCLOAK_ID"]
+            )
+          ) {
+            throw new MissingRoleError(
+              "Keycloak user has no Keep role assigned (expected one of: admin, noc, workflowrunner, webhook)"
+            );
+          }
         } else if (authType === AuthType.OKTA) {
           // Extract tenant and role from Okta token
           tenantId = (profile as any).keep_tenant_id || "keep";

@@ -391,3 +391,63 @@ def test_update_user_not_found(db_session, client, test_app):
         ee.identitymanager.identity_managers.auth0.auth0_authverifier.jwks_client = (
             original_jwks_client
         )
+
+
+@pytest.fixture
+def keycloak_verifier_env(monkeypatch):
+    monkeypatch.setenv("KEYCLOAK_URL", "http://keycloak:8080")
+    monkeypatch.setenv("KEYCLOAK_REALM", "keep")
+    monkeypatch.setenv("KEYCLOAK_CLIENT_ID", "keep")
+    monkeypatch.delenv("KEYCLOAK_ROLES_FROM_GROUPS", raising=False)
+
+
+@pytest.mark.parametrize("roles", [["uma_protection"], []])
+def test_keycloak_bearer_token_without_roles_is_forbidden(keycloak_verifier_env, roles):
+    """A valid token without a Keep client role must be rejected with 403.
+
+    The token itself is valid, the user is just not authorized. Returning 401
+    makes the frontend sign the user out and re-authenticate, which loops
+    forever between the frontend and Keycloak when the missing role is the
+    actual problem.
+    """
+    from unittest.mock import MagicMock
+
+    from ee.identitymanager.identity_managers.keycloak.keycloak_authverifier import (
+        KeycloakAuthVerifier,
+    )
+
+    verifier = KeycloakAuthVerifier([])
+    verifier.keycloak_client = MagicMock()
+    verifier.keycloak_client.decode_token.return_value = {
+        "preferred_username": "user@example.com",
+        "resource_access": {"keep": {"roles": roles}},
+    }
+
+    with pytest.raises(HTTPException) as exc_info:
+        verifier._verify_bearer_token("test-token")
+
+    assert exc_info.value.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "decode_error",
+    ["Expired code, expired", "Some other validation failure"],
+)
+def test_keycloak_bearer_token_with_invalid_token_is_unauthorized(
+    keycloak_verifier_env, decode_error
+):
+    """Invalid or expired tokens must stay 401 so the frontend signs in again."""
+    from unittest.mock import MagicMock
+
+    from ee.identitymanager.identity_managers.keycloak.keycloak_authverifier import (
+        KeycloakAuthVerifier,
+    )
+
+    verifier = KeycloakAuthVerifier([])
+    verifier.keycloak_client = MagicMock()
+    verifier.keycloak_client.decode_token.side_effect = Exception(decode_error)
+
+    with pytest.raises(HTTPException) as exc_info:
+        verifier._verify_bearer_token("test-token")
+
+    assert exc_info.value.status_code == 401
