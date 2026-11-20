@@ -40,4 +40,26 @@ def preprocess_cel_expression(cel_expression: str) -> str:
         pattern, replace_matched, cel_expression, flags=re.IGNORECASE
     )
 
-    return modified_expression
+    in_pattern = r"(\bseverity\b\s+in\s*\[)([^\]]+)(\])"
+
+    def replace_severity_in_list(match):
+        prefix = match.group(1)
+        items_str = match.group(2)
+        suffix = match.group(3)
+
+        def replace_item(item_match):
+            val = item_match.group(1).lower()
+            severity_order = next(
+                (s.order for s in AlertSeverity if s.value == val),
+                None,
+            )
+            if severity_order is not None:
+                return str(severity_order)
+            return item_match.group(0)
+
+        new_items = re.sub(r"[\"']([a-zA-Z]+)[\"']", replace_item, items_str)
+        return f"{prefix}{new_items}{suffix}"
+
+    return re.sub(
+        in_pattern, replace_severity_in_list, modified_expression, flags=re.IGNORECASE
+    )
