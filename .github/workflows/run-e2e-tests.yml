@@ -23,7 +23,8 @@ on:
 jobs:
   # Run tests with all services in one job
   run-tests:
-    runs-on: ubuntu-latest
+    # Playwright's --with-deps does not support Ubuntu 26.04 (ubuntu-latest)
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write

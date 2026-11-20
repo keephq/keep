@@ -4614,11 +4614,14 @@ def get_last_alerts_for_incidents(
 
 
 def remove_alerts_to_incident_by_incident_id(
-    tenant_id: str, incident_id: str | UUID, fingerprints: List[str]
+    tenant_id: str,
+    incident_id: str | UUID,
+    fingerprints: List[str],
+    session: Optional[Session] = None,
 ) -> Optional[int]:
     if isinstance(incident_id, str):
         incident_id = __convert_to_uuid(incident_id)
-    with Session(engine) as session:
+    with existed_or_new_session(session) as session:
         incident = session.exec(
             select(Incident).where(
                 Incident.tenant_id == tenant_id,
@@ -4843,6 +4846,7 @@ def merge_incidents_to_id(
         merged_incident_ids = []
         failed_incident_ids = []
         for source_incident in source_incidents:
+            source_incident_id = source_incident.id
             source_incident_alerts_fingerprints = [
                 alert.fingerprint for alert in source_incident.alerts
             ]
@@ -4851,15 +4855,21 @@ def merge_incidents_to_id(
             source_incident.status = IncidentStatus.MERGED.value
             source_incident.merged_by = merged_by
             try:
+                # Same session: a second connection would wait forever on the
+                # row lock this session holds on the source incident.
                 remove_alerts_to_incident_by_incident_id(
                     tenant_id,
-                    source_incident.id,
-                    [alert.fingerprint for alert in source_incident.alerts],
+                    source_incident_id,
+                    source_incident_alerts_fingerprints,
+                    session=session,
                 )
             except OperationalError as e:
                 logger.error(
-                    f"Error removing alerts from incident {source_incident.id}: {e}"
+                    f"Error removing alerts from incident {source_incident_id}: {e}"
                 )
+                session.rollback()
+                failed_incident_ids.append(source_incident_id)
+                continue
             try:
                 add_alerts_to_incident(
                     tenant_id,
@@ -4867,12 +4877,13 @@ def merge_incidents_to_id(
                     source_incident_alerts_fingerprints,
                     session=session,
                 )
-                merged_incident_ids.append(source_incident.id)
+                merged_incident_ids.append(source_incident_id)
             except OperationalError as e:
                 logger.error(
-                    f"Error adding alerts to incident {destination_incident.id} from {source_incident.id}: {e}"
+                    f"Error adding alerts to incident {destination_incident_id} from {source_incident_id}: {e}"
                 )
-                failed_incident_ids.append(source_incident.id)
+                session.rollback()
+                failed_incident_ids.append(source_incident_id)
 
         session.commit()
         session.refresh(destination_incident)
