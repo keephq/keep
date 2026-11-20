@@ -4,8 +4,8 @@ JiraonpremProvider is a class that implements the BaseProvider interface for Jir
 
 import dataclasses
 import json
-from typing import List
-from urllib.parse import urlencode, urljoin
+from typing import List, Optional
+from urllib.parse import urlencode, urljoin, urlsplit
 
 import pydantic
 import requests
@@ -40,7 +40,7 @@ class JiraonpremProviderAuthConfig:
         }
     )
 
-    ticket_creation_url: str = dataclasses.field(
+    ticket_creation_url: Optional[str] = dataclasses.field(
         metadata={
             "required": False,
             "description": "URL for creating new tickets",
@@ -203,6 +203,22 @@ class JiraonpremProvider(BaseProvider):
         # should happen only if the user supplied invalid host, so just let validate_config fail
         except Exception:
             return self.authentication_config.host
+
+    @property
+    def ticket_base_url(self) -> str:
+        url = (
+            getattr(self.authentication_config, "ticket_creation_url", "") or ""
+        ).strip()
+        if not url:
+            return self.jira_host
+        if not url.startswith(("http://", "https://")):
+            url = f"https://{url}"
+        parsed = urlsplit(url)
+        path = parsed.path
+        if "/secure/CreateIssue" in path:
+            path = path.split("/secure/CreateIssue")[0]
+        path = path.rstrip("/")
+        return f"{parsed.scheme}://{parsed.netloc}{path}"
 
     def dispose(self):
         """
@@ -554,7 +570,7 @@ class JiraonpremProvider(BaseProvider):
 
                 issue_key = self._extract_issue_key_from_issue_id(issue_id)
 
-                result["ticket_url"] = f"{self.jira_host}/browse/{issue_key}"
+                result["ticket_url"] = f"{self.ticket_base_url}/browse/{issue_key}"
 
                 self.logger.info("Updated a jira issue: " + str(result))
                 return result
@@ -577,7 +593,7 @@ class JiraonpremProvider(BaseProvider):
                 priority=priority,
                 **kwargs,
             )
-            result["ticket_url"] = f"{self.jira_host}/browse/{result['issue']['key']}"
+            result["ticket_url"] = f"{self.ticket_base_url}/browse/{result['issue']['key']}"
             self.logger.info("Notified jira!")
 
             return result
