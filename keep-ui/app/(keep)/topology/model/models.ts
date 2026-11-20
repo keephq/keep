@@ -1,6 +1,7 @@
 import { InterfaceToType } from "@/utils/type-utils";
 import type { Node } from "@xyflow/react";
 import { KeyedMutator } from "swr";
+import { Severity } from "@/entities/alerts/model";
 
 export interface TopologyServiceDependency {
   id: string;
@@ -30,6 +31,12 @@ export interface TopologyService {
   applications: TopologyApplicationMinimal[];
   incidents?: number;
   alerts?: number;
+  // Highest severity among the service's firing alerts (client-side),
+  // undefined when the service has no firing alerts
+  highestAlertSeverity?: Severity;
+  // Number of distinct down services whose critical dependencies affect
+  // this service (cascade warning, client-side), 0 when unaffected
+  cascadeCount?: number;
   is_manual: boolean;
 }
 
