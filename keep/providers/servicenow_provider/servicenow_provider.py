@@ -838,7 +838,14 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
         """
         pass
 
-    def _notify(self, table_name: str, payload: dict = {}, **kwargs: dict):
+    def _notify(
+        self,
+        table_name: str,
+        payload: dict = {},
+        ticket_id: str | None = None,
+        fingerprint: str | None = None,
+        **kwargs: dict,
+    ):
         """
         Create a ticket in ServiceNow.
         Args:
@@ -863,9 +870,9 @@ class ServicenowProvider(BaseTopologyProvider, BaseIncidentProvider):
             raise ProviderException("Table name is required")
 
         # TODO - this could be separated into a ServicenowUpdateProvider once we support
-        if "ticket_id" in kwargs:
-            ticket_id = kwargs.pop("ticket_id")
-            fingerprint = kwargs.pop("fingerprint")
+        if ticket_id is not None or "ticket_id" in kwargs:
+            ticket_id = ticket_id or kwargs.pop("ticket_id")
+            fingerprint = fingerprint or kwargs.pop("fingerprint", "")
             return self._notify_update(table_name, ticket_id, fingerprint)
 
         # In ServiceNow tables are lower case
