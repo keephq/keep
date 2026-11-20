@@ -44,6 +44,14 @@ from keep.searchengine.searchengine import SearchEngine
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+COLUMN_CONFIG_OPTION_LABELS = {
+    "column_visibility",
+    "column_order",
+    "column_rename_mapping",
+    "column_time_formats",
+    "column_list_formats",
+}
+
 
 # SHAHAR: this function runs as background tasks as a seperate thread
 #         DO NOT ADD async HERE as it will run in the main thread and block the whole server
@@ -378,7 +386,17 @@ def update_preset(
     options_dict = [option.dict() for option in body.options]
     if not options_dict:
         raise HTTPException(400, "Options cannot be empty")
-    preset.options = options_dict
+    options_dict = [
+        option
+        for option in options_dict
+        if option.get("label", "").lower() not in COLUMN_CONFIG_OPTION_LABELS
+    ]
+    column_config_options = [
+        option
+        for option in preset.options
+        if option.get("label", "").lower() in COLUMN_CONFIG_OPTION_LABELS
+    ]
+    preset.options = options_dict + column_config_options
 
     # Handle tags
     tags = []
@@ -621,14 +639,9 @@ def update_preset_column_config(
 
     # Get current options and remove any existing column config options
     current_options = [
-        option for option in preset.options 
-        if option.get("label", "").lower() not in [
-            "column_visibility", 
-            "column_order", 
-            "column_rename_mapping", 
-            "column_time_formats", 
-            "column_list_formats"
-        ]
+        option
+        for option in preset.options
+        if option.get("label", "").lower() not in COLUMN_CONFIG_OPTION_LABELS
     ]
 
     # Add new column configuration options
