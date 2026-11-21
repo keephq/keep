@@ -1,0 +1,50 @@
+name: keep-mcp tests and dependency audit
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "keep-mcp/**"
+      - "docker/Dockerfile.mcp"
+      - ".github/workflows/keep-mcp-security.yml"
+  pull_request:
+    paths:
+      - "keep-mcp/**"
+      - "docker/Dockerfile.mcp"
+      - ".github/workflows/keep-mcp-security.yml"
+  schedule:
+    # new advisories appear without code changes
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: keep-mcp
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install package and tools
+        run: pip install ".[dev]" pip-audit bandit
+
+      - name: Unit tests
+        run: pytest -q
+
+      - name: Static security analysis (bandit)
+        run: bandit -r keep_mcp -ll
+
+      - name: Dependency vulnerability audit (pip-audit)
+        run: pip-audit --strict .
