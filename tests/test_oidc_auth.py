@@ -98,6 +98,51 @@ def _get_verifier():
     return IdentityManagerFactory.get_auth_verifier([])
 
 
+@pytest.mark.parametrize(
+    "test_app",
+    [{**OIDC_ENV, "KEEP_OIDC_ISSUER": "https://idp.example.com/"}],
+    indirect=True,
+)
+def test_oidc_issuer_trailing_slash_preserved(
+    db_session, client, test_app, monkeypatch
+):
+    """#6934: an issuer configured with a trailing slash (e.g. Authentik) must
+    reach the `iss` comparison unaltered - stripping it made every token fail
+    with "Invalid token: Invalid issuer"."""
+    private_pem, public_pem = generate_test_keys()
+    _patch_jwks_client(monkeypatch, public_pem)
+
+    token = _make_token(
+        private_pem, groups=["keep-admins"], issuer="https://idp.example.com/"
+    )
+
+    result = _get_verifier()(
+        token=token, api_key=None, authorization=None, request=None
+    )
+
+    assert isinstance(result, AuthenticatedEntity)
+    assert result.role == "admin"
+
+
+def test_oidc_discovery_url_normalizes_trailing_slash(monkeypatch):
+    """#6934: the discovery endpoint keeps a single-slash join whether or not
+    the configured issuer ends with one."""
+    for issuer in ("https://idp.example.com", "https://idp.example.com/"):
+        mock_get = MagicMock()
+        mock_get.return_value.json.return_value = {
+            "jwks_uri": "https://idp.example.com/jwks"
+        }
+        monkeypatch.setattr(oidc_authverifier.requests, "get", mock_get)
+
+        jwks_uri = oidc_authverifier._discover_jwks_uri(issuer)
+
+        assert jwks_uri == "https://idp.example.com/jwks"
+        assert (
+            mock_get.call_args.args[0]
+            == "https://idp.example.com/.well-known/openid-configuration"
+        )
+
+
 @pytest.mark.parametrize("test_app", [OIDC_ENV], indirect=True)
 def test_oidc_valid_token_admin_group(db_session, client, test_app, monkeypatch):
     """Valid id_token with an admin group -> authenticated as admin + JIT user creation"""
