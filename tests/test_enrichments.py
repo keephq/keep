@@ -13,6 +13,12 @@ from keep.api.core.dependencies import SINGLE_TENANT_UUID
 from keep.api.models.action_type import ActionType
 from keep.api.models.alert import AlertDto, AlertStatus
 from keep.api.models.db.alert import Alert
+from keep.api.models.db.enrichment_event import (
+    EnrichmentEvent,
+    EnrichmentLog,
+    EnrichmentStatus,
+    EnrichmentType,
+)
 from keep.api.models.db.extraction import ExtractionRule
 from keep.api.models.db.mapping import MappingRule
 from keep.api.models.db.topology import TopologyService
@@ -435,6 +441,92 @@ def test_check_matcher_with_or_condition(mock_session, mock_alert_dto):
     mock_alert_dto.severity = "low"
     enrichment_bl.run_mapping_rules(mock_alert_dto)
     assert not hasattr(mock_alert_dto, "service")
+
+
+def test_run_mapping_rules_tracks_enrichment_event_with_db_alert_id(
+    db_session, mock_alert_dto
+):
+    """
+    AlertDto.id holds the provider's alert id (e.g. "InstanceDown"), which is
+    not a UUID. The enrichment event must be tracked with the database alert
+    id (AlertDto.event_id), otherwise it is silently dropped and the rule's
+    executions page stays empty.
+    """
+    rule = MappingRule(
+        id=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=[["name"]],
+        rows=[{"name": "Test Alert", "service": "new_service"}],
+        name="new_rule",
+        disabled=False,
+        type="csv",
+    )
+    db_session.add(rule)
+    db_session.commit()
+
+    db_alert_id = str(uuid.uuid4())
+    # e.g. a prometheus alert, where the provider id is not a UUID
+    mock_alert_dto.id = "InstanceDown"
+    # set by process_event_task after the alert is saved to the database
+    mock_alert_dto.event_id = db_alert_id
+
+    enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID, db=db_session)
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+
+    # the alert was enriched
+    assert mock_alert_dto.service == "new_service"
+
+    # the execution is tracked and references the database alert id
+    events = db_session.query(EnrichmentEvent).all()
+    assert len(events) == 1
+    assert str(events[0].alert_id) == db_alert_id
+    assert events[0].rule_id == 1
+    assert events[0].status == EnrichmentStatus.SUCCESS.value
+    assert events[0].enrichment_type == EnrichmentType.MAPPING.value
+    assert events[0].enriched_fields == {"service": "new_service"}
+
+    # execution logs are attached to the event
+    logs = (
+        db_session.query(EnrichmentLog)
+        .filter(EnrichmentLog.enrichment_event_id == events[0].id)
+        .all()
+    )
+    assert len(logs) > 0
+
+
+def test_run_mapping_rules_skips_tracking_without_valid_alert_id(
+    db_session, mock_alert_dto
+):
+    """
+    When neither AlertDto.id nor AlertDto.event_id is a valid UUID (the alert
+    is not yet saved to the database), the enrichment still happens but no
+    execution is tracked.
+    """
+    rule = MappingRule(
+        id=1,
+        tenant_id=SINGLE_TENANT_UUID,
+        priority=1,
+        matchers=[["name"]],
+        rows=[{"name": "Test Alert", "service": "new_service"}],
+        name="new_rule",
+        disabled=False,
+        type="csv",
+    )
+    db_session.add(rule)
+    db_session.commit()
+
+    # provider id only, no database alert id (event_id) available
+    mock_alert_dto.id = "InstanceDown"
+
+    enrichment_bl = EnrichmentsBl(tenant_id=SINGLE_TENANT_UUID, db=db_session)
+    enrichment_bl.run_mapping_rules(mock_alert_dto)
+
+    # the alert was still enriched
+    assert mock_alert_dto.service == "new_service"
+    # but no execution could be tracked
+    events = db_session.query(EnrichmentEvent).all()
+    assert len(events) == 0
 
 
 @pytest.mark.parametrize(
