@@ -195,6 +195,12 @@ class WorkflowToIncidentExecution(SQLModel, table=True):
 
 
 class WorkflowExecutionLog(SQLModel, table=True):
+    __table_args__ = (
+        Index(
+            "idx_workflowexecutionlog_workflow_execution_id", "workflow_execution_id"
+        ),
+    )
+
     id: int = Field(default=None, primary_key=True)
     workflow_execution_id: str = Field(foreign_key="workflowexecution.id")
     timestamp: datetime
