@@ -30,6 +30,7 @@ export interface TopologyService {
   applications: TopologyApplicationMinimal[];
   incidents?: number;
   alerts?: number;
+  maxSeverity?: string;
   is_manual: boolean;
 }
 
