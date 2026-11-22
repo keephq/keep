@@ -92,7 +92,8 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
 
     const isAlertTable = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_TABLE;
     const isAlertCountPanel = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
-    
+    const isAlertTimeSeries = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_TIME_SERIES;
+
     if (isAlertCountPanel) {
       // Narrower, more compact layout for count panels with no minimum width
       return {
@@ -100,6 +101,17 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         h: 3,
         minW: 0,
         minH: 2,
+        static: false,
+      } as LayoutItem;
+    }
+
+    if (isAlertTimeSeries) {
+      // Larger initial size so the time series chart is readable
+      return {
+        w: 8,
+        h: 8,
+        minW: 6,
+        minH: 6,
         static: false,
       } as LayoutItem;
     }
@@ -209,11 +221,15 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
               <SelectItem value={PresetPanelType.ALERT_COUNT_PANEL}>
                 Alert Count Panel
               </SelectItem>
+              <SelectItem value={PresetPanelType.ALERT_TIME_SERIES}>
+                Time Series (alert count over time)
+              </SelectItem>
             </Select>
           )}
         />
       </div>
-      {formValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL && (
+      {(formValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL ||
+        formValues.presetPanelType === PresetPanelType.ALERT_TIME_SERIES) && (
         <>
           <div className="mb-4 mt-2">
             <div className="flex items-center justify-between">
