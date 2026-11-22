@@ -1,8 +1,9 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from keep.contextmanager.contextmanager import ContextManager
+from keep.exceptions.provider_exception import ProviderException
 from keep.providers.jira_provider.jira_provider import JiraProvider
 from keep.providers.jiraonprem_provider.jiraonprem_provider import JiraonpremProvider
 from keep.providers.models.provider_config import ProviderConfig
@@ -355,3 +356,128 @@ class TestJiraProvider:
 
                 # If we get here without the "string indices must be integers" error, the fix worked
                 assert result is not None
+
+    @patch("requests.post")
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jiraonprem_notify_with_transition(
+        self, mock_get, mock_put, mock_post, jiraonprem_provider
+    ):
+        """Test that transition_to moves an updated issue to the wanted status"""
+        # the same payload answers the issue key lookup and the transitions lookup
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "key": "TEST-1",
+            "transitions": [
+                {"id": "11", "name": "In Progress"},
+                {"id": "31", "name": "Done"},
+            ],
+        }
+        mock_put.return_value.status_code = 204
+        mock_post.return_value.status_code = 204
+
+        result = jiraonprem_provider._notify(
+            summary="Resolved",
+            description="Resolved by Keep",
+            issue_id="TEST-1",
+            transition_to="Done",
+        )
+
+        assert result["transition"] == {
+            "issue_id": "TEST-1",
+            "transition_id": "31",
+            "transition_name": "Done",
+            "success": True,
+        }
+
+        assert "/rest/api/2/issue/TEST-1/transitions" in mock_post.call_args[1]["url"]
+        assert mock_post.call_args[1]["json"] == {"transition": {"id": "31"}}
+
+    @patch("requests.post")
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jiraonprem_notify_with_transition_by_name_case_insensitive(
+        self, mock_get, mock_put, mock_post, jiraonprem_provider
+    ):
+        """Test that the transition name is matched regardless of case"""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "key": "TEST-1",
+            "transitions": [{"id": "31", "name": "Done"}],
+        }
+        mock_put.return_value.status_code = 204
+        mock_post.return_value.status_code = 204
+
+        result = jiraonprem_provider._notify(
+            summary="Resolved", issue_id="TEST-1", transition_to="done"
+        )
+
+        assert result["transition"]["transition_id"] == "31"
+
+    @patch("requests.post")
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jiraonprem_notify_with_unknown_transition(
+        self, mock_get, mock_put, mock_post, jiraonprem_provider
+    ):
+        """Test that an unknown transition name lists what the issue does offer"""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "key": "TEST-1",
+            "transitions": [{"id": "11", "name": "In Progress"}],
+        }
+        mock_put.return_value.status_code = 204
+
+        with pytest.raises(
+            ProviderException, match="Available transitions: In Progress"
+        ):
+            jiraonprem_provider._notify(
+                summary="Resolved", issue_id="TEST-1", transition_to="Done"
+            )
+
+        mock_post.assert_not_called()
+
+    @patch("requests.post")
+    @patch("requests.put")
+    @patch("requests.get")
+    def test_jiraonprem_notify_without_transition(
+        self, mock_get, mock_put, mock_post, jiraonprem_provider
+    ):
+        """Test that an update without transition_to does not touch transitions"""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"key": "TEST-1"}
+        mock_put.return_value.status_code = 204
+
+        result = jiraonprem_provider._notify(summary="Updated", issue_id="TEST-1")
+
+        assert "transition" not in result
+        mock_post.assert_not_called()
+
+    @patch("requests.post")
+    @patch("requests.get")
+    def test_jiraonprem_notify_transitions_a_created_issue(
+        self, mock_get, mock_post, jiraonprem_provider
+    ):
+        """Test that transition_to also applies to an issue created in the same step"""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {
+            "transitions": [{"id": "31", "name": "Done"}]
+        }
+
+        create_response = MagicMock()
+        create_response.status_code = 201
+        create_response.json.return_value = {"key": "TEST-2", "id": "2"}
+        transition_response = MagicMock()
+        transition_response.status_code = 204
+        mock_post.side_effect = [create_response, transition_response]
+
+        result = jiraonprem_provider._notify(
+            summary="Created",
+            description="Created by Keep",
+            issue_type="Task",
+            project_key="TEST",
+            transition_to="Done",
+        )
+
+        assert result["transition"]["issue_id"] == "TEST-2"
+        assert "/rest/api/2/issue/TEST-2/transitions" in mock_post.call_args[1]["url"]
