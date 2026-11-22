@@ -588,8 +588,11 @@ def is_business_hours(
     # Get just the hour (in 24-hour format)
     hour = dt.hour
 
-    # Check if hour is between start_hour and end_hour
-    return start_hour <= hour < end_hour
+    # Check if hour is between start_hour and end_hour.
+    # A start after the end means the window wraps midnight (e.g. 20-8).
+    if start_hour <= end_hour:
+        return start_hour <= hour < end_hour
+    return hour >= start_hour or hour < end_hour
 
 
 def dictget(data: str | dict, key: str, default: any = None) -> any:
