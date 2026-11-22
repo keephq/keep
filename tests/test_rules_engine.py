@@ -795,6 +795,56 @@ def test_rule_multiple_alerts(db_session, create_alert):
     assert alert_3.fingerprint in fingerprints
 
 
+def test_rule_multiple_alerts_with_null_in_definition(db_session, create_alert):
+    """A create_on=all rule whose CEL contains null should still start an incident."""
+
+    create_rule_db(
+        tenant_id=SINGLE_TENANT_UUID,
+        name="test-rule-null",
+        definition={
+            "sql": "N/A",  # we don't use it anymore
+            "params": {},
+        },
+        timeframe=600,
+        timeunit="seconds",
+        require_approve=False,
+        definition_cel=(
+            '(severity == "critical") || (service != null && severity == "high")'
+        ),
+        created_by="test@keephq.dev",
+        create_on=CreateIncidentOn.ALL.value,
+    )
+
+    create_alert(
+        "Critical Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.CRITICAL.value,
+        },
+    )
+
+    # Only the first sub-rule is satisfied so far, so the incident stays hidden.
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 0
+    assert db_session.query(Incident).filter(Incident.is_visible == False).count() == 1
+    incident = db_session.query(Incident).first()
+
+    create_alert(
+        "Service Alert",
+        AlertStatus.FIRING,
+        datetime.datetime.utcnow(),
+        {
+            "severity": AlertSeverity.HIGH.value,
+            "service": "api",
+        },
+    )
+
+    enrich_incidents_with_alerts(SINGLE_TENANT_UUID, [incident], db_session)
+
+    # Both sub-rules are now satisfied, so the incident should be started.
+    assert db_session.query(Incident).filter(Incident.is_visible == True).count() == 1
+
+
 def test_rule_event_groups_expires(db_session, create_alert):
 
     create_rule_db(
