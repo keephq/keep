@@ -454,7 +454,7 @@ export function TopologyMap({
 
   const { data: allIncidents } = useIncidents({});
   const { useLastAlerts } = useAlerts();
-  const { data: allAlerts } = useLastAlerts(undefined);
+  const { data: allAlerts } = useLastAlerts({ cel: '', limit: 1000, offset: 0 });
 
   useEffect(
     function createAndSetLayoutedNodesAndEdges() {
