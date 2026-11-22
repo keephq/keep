@@ -19,6 +19,17 @@ def test_vanilla(context_manager):
     assert s == "hello world"
 
 
+def test_positional_falsy_args_not_dropped(context_manager):
+    # literal False and empty containers must be passed through,
+    # not silently dropped by the positional-arg guard (issue #6728)
+    iohandler = IOHandler(context_manager)
+    assert iohandler.render("keep.json_dumps([])") == "[]"
+    assert iohandler.render("keep.json_dumps({})") == "{}"
+    assert iohandler.render("keep.json_dumps(()))") == "[]"
+    # False is parsed to the string "False" (truthy) and must reach the function
+    assert iohandler.render("keep.lowercase(False)") == "false"
+
+
 def test_with_basic_context(context_manager):
     iohandler = IOHandler(context_manager)
     context_manager.steps_context = {
