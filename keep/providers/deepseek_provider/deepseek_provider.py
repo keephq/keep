@@ -80,7 +80,10 @@ class DeepseekProvider(BaseProvider):
             max_tokens=max_tokens,
             response_format=structured_output_format,
         )
-        response = response.choices[0].message.content
+        if response and response.choices and len(response.choices) > 0:
+            response = response.choices[0].message.content or ""
+        else:
+            response = ""
         try:
             response = json.loads(response)
         except Exception:
