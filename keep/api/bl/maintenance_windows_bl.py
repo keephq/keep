@@ -120,20 +120,19 @@ class MaintenanceWindowsBl:
     @staticmethod
     def evaluate_cel(maintenance_window: MaintenanceWindowRule, alert: AlertDto | Alert, environment: celpy.Environment, logger, logger_extra_info: dict) -> bool:
 
-        cel = preprocess_cel_expression(maintenance_window.cel_query)
-        ast = environment.compile(cel)
-        prgm = environment.program(ast)
-
-        if isinstance(alert, AlertDto):
-            payload = alert.dict()
-        else:
-            payload = alert.event
-        # todo: fix this in the future
-        payload["source"] = payload["source"][0]
-
-        activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
-
         try:
+            cel = preprocess_cel_expression(maintenance_window.cel_query)
+            ast = environment.compile(cel)
+            prgm = environment.program(ast)
+
+            if isinstance(alert, AlertDto):
+                payload = alert.dict()
+            else:
+                payload = alert.event
+            # todo: fix this in the future
+            payload["source"] = payload["source"][0]
+
+            activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
             cel_result = prgm.evaluate(activation)
             return True if cel_result else False
         except celpy.evaluation.CELEvalError as e:
@@ -144,9 +143,14 @@ class MaintenanceWindowsBl:
                     extra={**logger_extra_info, "maintenance_rule_id": maintenance_window.id},
                 )
                 return False
-            # Log unexpected CEL errors but don't fail the entire event processing
             logger.error(
-                f"Unexpected CEL evaluation error: {str(e)}",
+                f"Failed to evaluate maintenance window CEL rule: {str(e)}",
+                extra={**logger_extra_info, "maintenance_rule_id": maintenance_window.id},
+            )
+            return False
+        except Exception as e:
+            logger.error(
+                f"Failed to evaluate maintenance window CEL rule: {str(e)}",
                 extra={**logger_extra_info, "maintenance_rule_id": maintenance_window.id},
             )
             return False
