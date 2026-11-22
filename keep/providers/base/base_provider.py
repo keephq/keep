@@ -317,6 +317,7 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 )
                 continue
         self.logger.info("Enriching alert", extra={"fingerprint": fingerprint})
+        enrichments_bl = None
         try:
             enrichments_bl = EnrichmentsBl(self.context_manager.tenant_id)
             enrichment_string = ", ".join(
@@ -364,6 +365,9 @@ class BaseProvider(metaclass=abc.ABCMeta):
                 extra={"fingerprint": fingerprint, "provider": self.provider_id},
             )
             raise e
+        finally:
+            if enrichments_bl is not None:
+                enrichments_bl.close()
         self.logger.info(
             f"{entity_type.capitalize()} enriched", extra={"fingerprint": fingerprint}
         )
