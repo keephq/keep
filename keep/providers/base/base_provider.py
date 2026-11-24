@@ -552,6 +552,12 @@ class BaseProvider(metaclass=abc.ABCMeta):
         logger = logging.getLogger(__name__)
         if not fingerprint_fields:
             return alert.name
+        # if the only fingerprint field is the fingerprint itself, the alert
+        # already carries a fingerprint provided by the monitoring tool -
+        # preserve it as-is instead of hashing it, so Keep's fingerprint stays
+        # aligned with the tool's (e.g. Grafana/Prometheus)
+        if fingerprint_fields == ["fingerprint"] and alert.fingerprint:
+            return alert.fingerprint
         fingerprint = hashlib.sha256()
         event_dict = alert.dict()
         matched_fields = []
