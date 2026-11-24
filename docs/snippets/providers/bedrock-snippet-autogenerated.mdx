@@ -1,0 +1,25 @@
+{/* This snippet is automatically generated using scripts/docs_render_provider_snippets.py 
+Do not edit it manually, as it will be overwritten */}
+
+## Authentication
+This provider requires authentication.
+- **region**: AWS region (e.g. us-east-1) (required: True, sensitive: False)
+- **access_key**: AWS access key (leave empty for IAM role) (required: False, sensitive: True)
+- **secret_access_key**: AWS secret access key (leave empty for IAM role) (required: False, sensitive: True)
+
+
+## In workflows
+
+This provider can be used in workflows.
+
+
+As "step" to query data, example:
+```yaml
+steps:
+    - name: Query bedrock
+      provider: bedrock
+      config: "{{ provider.my_provider_name }}"
+      with:
+        prompt: "Classify this alert severity"
+        model: "anthropic.claude-3-haiku-20240307-v1:0"
+```
