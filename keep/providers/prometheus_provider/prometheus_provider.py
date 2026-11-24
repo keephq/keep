@@ -49,6 +49,14 @@ class PrometheusProviderAuthConfig:
         },
         default=True,
     )
+    thanos_compatible: bool = dataclasses.field(
+        metadata={
+            "description": "Enable Thanos compatibility mode",
+            "hint": "Set to true when connecting to a Thanos Querier — disables the /api/v1/alerts endpoint which Thanos does not support",
+            "sensitive": False,
+        },
+        default=False,
+    )
 
 
 class PrometheusProvider(BaseProvider, ProviderHealthMixin):
@@ -112,7 +120,25 @@ receivers:
     def validate_scopes(self) -> dict[str, bool | str]:
         validated_scopes = {"connectivity": True}
         try:
-            self._get_alerts()
+            if self.authentication_config.thanos_compatible:
+                # Thanos doesn't support /api/v1/alerts; verify via /api/v1/rules instead
+                base_url = str(self.authentication_config.url).rstrip("/")
+                requests.get(
+                    f"{base_url}/api/v1/rules",
+                    params={"type": "alert"},
+                    auth=(
+                        HTTPBasicAuth(
+                            self.authentication_config.username,
+                            self.authentication_config.password,
+                        )
+                        if self.authentication_config.username
+                        and self.authentication_config.password
+                        else None
+                    ),
+                    verify=self.authentication_config.verify,
+                ).raise_for_status()
+            else:
+                self._get_alerts()
         except Exception as e:
             validated_scopes["connectivity"] = str(e)
         return validated_scopes
@@ -156,15 +182,52 @@ receivers:
             auth = HTTPBasicAuth(
                 self.authentication_config.username, self.authentication_config.password
             )
-        response = requests.get(
-            f"{self.authentication_config.url}/api/v1/alerts",
-            auth=auth,
-            verify=self.authentication_config.verify,
-        )
-        response.raise_for_status()
-        if not response.ok:
-            return []
-        alerts_data = response.json().get("data", {})
+
+        if self.authentication_config.thanos_compatible:
+            # Thanos Querier does not expose /api/v1/alerts (that endpoint only exists
+            # on Prometheus's rules evaluator). Use /api/v1/rules?type=alert instead —
+            # it is supported by Thanos and returns annotations, state, and activeAt.
+            import hashlib
+            import json as _json
+
+            base_url = str(self.authentication_config.url).rstrip("/")
+            response = requests.get(
+                f"{base_url}/api/v1/rules",
+                params={"type": "alert"},
+                auth=auth,
+                verify=self.authentication_config.verify,
+            )
+            response.raise_for_status()
+            rule_groups = response.json().get("data", {}).get("groups", [])
+            alerts_data = {"alerts": []}
+            for group in rule_groups:
+                for rule in group.get("rules", []):
+                    if rule.get("type") != "alerting":
+                        continue
+                    for alert in rule.get("alerts", []):
+                        labels = alert.get("labels", {})
+                        fp_src = _json.dumps(labels, sort_keys=True)
+                        fingerprint = hashlib.md5(fp_src.encode()).hexdigest()
+                        alerts_data["alerts"].append(
+                            {
+                                "labels": labels,
+                                "annotations": alert.get("annotations", {}),
+                                "state": alert.get("state", "firing"),
+                                "activeAt": alert.get("activeAt"),
+                                "fingerprint": fingerprint,
+                            }
+                        )
+        else:
+            response = requests.get(
+                f"{self.authentication_config.url}/api/v1/alerts",
+                auth=auth,
+                verify=self.authentication_config.verify,
+            )
+            response.raise_for_status()
+            if not response.ok:
+                return []
+            alerts_data = response.json().get("data", {})
+
         alert_dtos = self._format_alert(alerts_data)
         return alert_dtos
 
