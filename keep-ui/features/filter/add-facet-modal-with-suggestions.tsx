@@ -97,7 +97,11 @@ export const AddFacetModalWithSuggestions: React.FC<
                 <div className="flex-1 min-w-0 overflow-auto space-y-1">
                   {propertyPathSuggestions
                     ?.filter(
-                      (propPath) => !searchTerm || propPath.includes(searchTerm)
+                      (propPath) =>
+                        !searchTerm ||
+                        propPath
+                          .toLowerCase()
+                          .includes(searchTerm.toLowerCase())
                     )
                     .map((propPath, index) => (
                       <button
