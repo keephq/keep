@@ -59,6 +59,34 @@ To send alerts from Azure Monitor to Keep, Use the following webhook url to conf
         # no config
         pass
 
+    def _get_alerts(self) -> list[AlertDto]:
+        """
+        Get alerts from Azure Monitor.
+        """
+        self.logger.info("Fetching alerts from Azure Monitor")
+        api_token = self.config.authentication.get("api_token") # This might need a separate auth logic, but usually it's passed here
+        subscription_id = self.config.authentication.get("subscription_id")
+        
+        if not subscription_id:
+            raise ProviderConfigException("Azure subscription_id is required", self.provider_id)
+
+        url = f"https://management.azure.com/subscriptions/{subscription_id}/providers/Microsoft.AlertsManagement/alerts?api-version=2019-03-01"
+        headers = {"Authorization": f"Bearer {api_token}"}
+        
+        all_alerts = []
+        while url:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            alerts = data.get("value", [])
+            all_alerts.extend([self._format_alert({"data": alert}) for alert in alerts])
+            
+            # Pagination logic: check for nextLink
+            url = data.get("nextLink")
+            
+        return all_alerts
+
     @staticmethod
     def _format_alert(
         event: dict, provider_instance: "BaseProvider" = None
