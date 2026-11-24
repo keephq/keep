@@ -33,7 +33,9 @@ export default function Maintenance() {
             <MaintenanceRulesTable
               maintenanceRules={maintenanceRules}
               editCallback={(rule) => {
-                router.replace(`/maintenance?cel=${rule.cel_query}`);
+                router.replace(
+                  `/maintenance?cel=${encodeURIComponent(rule.cel_query)}`
+                );
                 setMaintenanceToEdit(rule);
               }}
             />
