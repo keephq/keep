@@ -96,8 +96,26 @@ class HttpProvider(BaseProvider):
             headers = json.loads(headers)
         if body is None:
             body = {}
+        if isinstance(body, str):
+            # A templated body such as `body: "{{ alert }}"` renders to a JSON
+            # string. Parse it so requests sends an object rather than
+            # serialising the string a second time (#6547). Mirrors the
+            # handling of `headers` above.
+            # Only an object or array is taken: json.loads("123") succeeds and
+            # returns an int, and a bare scalar was almost certainly meant as a
+            # plain-text body rather than as JSON.
+            try:
+                parsed = json.loads(body)
+            except ValueError:
+                parsed = None
+            if isinstance(parsed, (dict, list)):
+                body = parsed
         if params is None:
             params = {}
+
+        # `json=` re-serialises, so a body that is still a string after the
+        # parse above must go out as raw data with the caller's Content-Type.
+        body_kwarg = {"data": body} if isinstance(body, str) else {"json": body}
 
         extra_args = copy.deepcopy(kwargs)
 
@@ -124,27 +142,27 @@ class HttpProvider(BaseProvider):
             response = requests.post(
                 url,
                 headers=headers,
-                json=body,
                 proxies=proxies,
                 verify=verify,
+                **body_kwarg,
                 **extra_args,
             )
         elif method == "PUT":
             response = requests.put(
                 url,
                 headers=headers,
-                json=body,
                 proxies=proxies,
                 verify=verify,
+                **body_kwarg,
                 **extra_args,
             )
         elif method == "DELETE":
             response = requests.delete(
                 url,
                 headers=headers,
-                json=body,
                 proxies=proxies,
                 verify=verify,
+                **body_kwarg,
                 **extra_args,
             )
         else:
