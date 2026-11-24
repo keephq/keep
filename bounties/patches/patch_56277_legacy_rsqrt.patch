@@ -1,0 +1,40 @@
+From 8f9b23c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0 Mon Sep 17 00:00:00 2001
+From: Alistair <mydude92@users.noreply.github.com>
+Date: Fri, 11 Sep 2026 10:15:00 +0000
+Subject: [PATCH] refactor(ttnn): remove obsolete legacy_rsqrt parameter and compute branches (#56277)
+
+---
+ ttnn/cpp/ttnn/operations/normalization/layernorm/device/layernorm_types.hpp | 2 --
+ ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/compute/layernorm.cpp | 6 +-----
+ 2 files changed, 1 insertion(+), 7 deletions(-)
+
+diff --git a/ttnn/cpp/ttnn/operations/normalization/layernorm/device/layernorm_types.hpp b/ttnn/cpp/ttnn/operations/normalization/layernorm/device/layernorm_types.hpp
+index abc1234..def5678 100644
+--- a/ttnn/cpp/ttnn/operations/normalization/layernorm/device/layernorm_types.hpp
++++ b/ttnn/cpp/ttnn/operations/normalization/layernorm/device/layernorm_types.hpp
+@@ -25,7 +25,6 @@ struct LayerNormDefaultProgramConfig {
+     CoreRangeSet sub_core_grids;
+-    bool legacy_rsqrt = false;
+ };
+ 
+ struct LayerNormShardedMultiCoreProgramConfig {
+@@ -35,7 +34,6 @@ struct LayerNormShardedMultiCoreProgramConfig {
+     CoreCoord block_shape;
+-    bool legacy_rsqrt = false;
+ };
+ 
+diff --git a/ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/compute/layernorm.cpp b/ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/compute/layernorm.cpp
+index 1111111..2222222 100644
+--- a/ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/compute/layernorm.cpp
++++ b/ttnn/cpp/ttnn/operations/normalization/layernorm/device/kernels/compute/layernorm.cpp
+@@ -10,11 +10,6 @@
+ 
+-#if LEGACY_RSQRT
+-    rsqrt_tile_init<true>();
+-#else
+-    rsqrt_tile_init<false>();
+-#endif
++    rsqrt_tile_init<false>(); // Standard full-precision IEEE SFPU reciprocal square root
+ 
+-- 
+2.34.1
