@@ -480,6 +480,7 @@ class RulesEngine:
             #          So we need to replace "null" with ""
             #
             #          TODO: it works for strings now, but we need to add support on list/dict when needed
+            original_sub_rule = sub_rule
             if "null" in sub_rule:
                 sub_rule = sub_rule.replace("null", '""')
             ast = self.env.compile(sub_rule)
@@ -501,13 +502,13 @@ class RulesEngine:
                             sub_rule, prgm, activation, event
                         )
                         if coerced:
-                            sub_rules_matched.append(sub_rule)
+                            sub_rules_matched.append(original_sub_rule)
                             continue
                     except Exception:
                         pass
                 raise
             if r:
-                sub_rules_matched.append(sub_rule)
+                sub_rules_matched.append(original_sub_rule)
         # no subrules matched
         return sub_rules_matched
 
