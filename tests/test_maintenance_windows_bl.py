@@ -555,3 +555,30 @@ def test_strategy_alert_execution_wf(
     n_executions = get_workflow_executions(SINGLE_TENANT_UUID, workflow.id)[0]
 
     assert n_executions == executions
+
+
+def test_maintenance_window_cel_evaluation_exception_handling(
+    mock_session, active_maintenance_window_rule, alert_dto
+):
+    """
+    Feature: Generic - check_if_alert_in_maintenance_windows method exception handling
+    Scenario: When there is an exception checking the parameters inside the 
+            check_if_alert_in_maintenance_windows method, it should be handled and
+            the method should return False.
+            This prevents the system from crashing and continue with the main flow.
+    """
+
+    # GIVEN a maintenance window active with a erroneous CEL expression
+    active_maintenance_window_rule.cel_query = r'service.matches("(?i)^[10(\..*)?$")'
+    mock_session.query.return_value.filter.return_value.filter.return_value.filter.return_value.filter.return_value.all.return_value = [
+        active_maintenance_window_rule
+    ]
+
+    maintenance_window_bl = MaintenanceWindowsBl(
+        tenant_id="test-tenant", session=mock_session
+    )
+    # WHEN it checks if the alert is in maintenance windows
+    result = maintenance_window_bl.check_if_alert_in_maintenance_windows(alert_dto)
+
+    # Then it must return a boolean value, False in this case
+    assert result is False
