@@ -29,6 +29,7 @@ export const DEFAULT_CORRELATION_FORM_VALUES: CorrelationFormType = {
   multiLevelPropertyName: "",
   threshold: 1,
   assignee: undefined,
+  incidentEnrichments: [],
   query: {
     combinator: "or",
     rules: [
@@ -63,6 +64,12 @@ export const CorrelationSidebar = ({
       );
 
       const timeunit = selectedRule.timeunit ?? "seconds";
+      const incidentEnrichments = Object.entries(
+        selectedRule.incident_enrichments || {}
+      ).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }));
 
       return {
         name: selectedRule.name,
@@ -83,6 +90,7 @@ export const CorrelationSidebar = ({
         multiLevelPropertyName: selectedRule.multi_level_property_name || "",
         threshold: selectedRule.threshold || 1,
         assignee: selectedRule.assignee,
+        incidentEnrichments,
       };
     }
 

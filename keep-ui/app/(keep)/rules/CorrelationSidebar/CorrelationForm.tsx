@@ -9,9 +9,18 @@ import {
   Text,
   TextInput,
 } from "@tremor/react";
-import { Controller, get, useFormContext } from "react-hook-form";
+import {
+  Controller,
+  get,
+  useFieldArray,
+  useFormContext,
+} from "react-hook-form";
 import { AlertDto } from "@/entities/alerts/model";
-import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import {
+  PlusIcon,
+  QuestionMarkCircleIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import React from "react";
 import { CorrelationFormType } from "./types";
 import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
@@ -33,6 +42,14 @@ export const CorrelationForm = ({
     watch,
     formState: { errors, isSubmitted },
   } = useFormContext<CorrelationFormType>();
+  const {
+    fields: incidentEnrichmentFields,
+    append: appendIncidentEnrichment,
+    remove: removeIncidentEnrichment,
+  } = useFieldArray({
+    control,
+    name: "incidentEnrichments",
+  });
 
   const { data: tenantConfiguration } = useTenantConfiguration();
   const { data: users = [] } = useUsers();
@@ -352,6 +369,57 @@ export const CorrelationForm = ({
           <Text>Created incidents require manual approve</Text>
         </label>
       </div>
+      {tenantConfiguration?.["store_raw_alerts_enabled"] && (
+        <fieldset className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-tremor-default font-medium text-tremor-content-strong flex items-center">
+              Incident enrichments
+              <Button
+                className="cursor-default ml-2"
+                type="button"
+                tooltip="Add metadata to incidents when this rule creates a new incident. Templates: {{ alert.labels.monitor }}, {{ raw.alerts[0].data[0].model.conditions[0].evaluator.params[0] }}. Grafana: use raw.alerts[0].… not raw.data[0].…. Not re-applied when reusing an existing incident."
+                icon={QuestionMarkCircleIcon}
+                size="xs"
+                variant="light"
+                color="slate"
+              />
+            </label>
+            <Button
+              type="button"
+              size="xs"
+              variant="light"
+              color="orange"
+              icon={PlusIcon}
+              onClick={() => appendIncidentEnrichment({ key: "", value: "" })}
+            >
+              Add
+            </Button>
+          </div>
+          {incidentEnrichmentFields.map((field, index) => (
+            <div key={field.id} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <TextInput
+                type="text"
+                placeholder="owner"
+                {...register(`incidentEnrichments.${index}.key` as const)}
+              />
+              <TextInput
+                type="text"
+                placeholder="{{ alert.labels.owner }}"
+                {...register(`incidentEnrichments.${index}.value` as const)}
+              />
+              <Button
+                type="button"
+                size="xs"
+                variant="light"
+                color="red"
+                icon={TrashIcon}
+                tooltip="Remove enrichment"
+                onClick={() => removeIncidentEnrichment(index)}
+              />
+            </div>
+          ))}
+        </fieldset>
+      )}
       {tenantConfiguration?.["multi_level_enabled"] && (
         <div className="flex items-center space-x-2">
           <Controller

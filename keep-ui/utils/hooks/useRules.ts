@@ -29,6 +29,7 @@ export type Rule = {
   multi_level_property_name: string | null;
   threshold: number;
   assignee: string | undefined;
+  incident_enrichments: Record<string, string>;
 };
 
 export const useRules = (options?: SWRConfiguration) => {

@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
+from keep.api.consts import KEEP_STORE_RAW_ALERTS
 from keep.api.core.config import config
 from keep.api.core.db import get_session
 from keep.api.core.tenant_configuration import TenantConfiguration
@@ -433,5 +434,6 @@ def get_tenant_configuration(
 ) -> dict:
     tenant_id = authenticated_entity.tenant_id
     tenant_configuration = TenantConfiguration()
-    config_value = tenant_configuration.get_configuration(tenant_id=tenant_id)
+    config_value = tenant_configuration.get_configuration(tenant_id=tenant_id) or {}
+    config_value["store_raw_alerts_enabled"] = KEEP_STORE_RAW_ALERTS
     return JSONResponse(status_code=200, content=config_value)

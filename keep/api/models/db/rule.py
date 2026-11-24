@@ -58,3 +58,4 @@ class Rule(SQLModel, table=True):
     multi_level_property_name: str | None = None
     threshold: int = Field(sa_column_args=(CheckConstraint("threshold>0"),), default=1)
     assignee: str | None = None
+    incident_enrichments: dict = Field(sa_column=Column(JSON), default_factory=dict)

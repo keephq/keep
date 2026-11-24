@@ -1299,11 +1299,12 @@ def _enrich_entity(
     """
     enrichment = get_enrichment_with_session(session, tenant_id, fingerprint)
     if enrichment:
+        previous_enrichments = enrichment.enrichments or {}
         # if force - override exisitng enrichments. being used to dispose enrichments if necessary
         if force:
             new_enrichment_data = enrichments
         else:
-            new_enrichment_data = {**enrichment.enrichments, **enrichments}
+            new_enrichment_data = {**previous_enrichments, **enrichments}
         # SQLAlchemy doesn't support updating JSON fields, so we need to do it manually
         # https://github.com/sqlalchemy/sqlalchemy/discussions/8396#discussion-4308891
         stmt = (
@@ -2247,8 +2248,10 @@ def create_rule(
     multi_level_property_name=None,
     threshold=1,
     assignee=None,
+    incident_enrichments=None,
 ):
     grouping_criteria = grouping_criteria or []
+    incident_enrichments = incident_enrichments or {}
     with Session(engine) as session:
         rule = Rule(
             tenant_id=tenant_id,
@@ -2270,6 +2273,7 @@ def create_rule(
             multi_level_property_name=multi_level_property_name,
             threshold=threshold,
             assignee=assignee,
+            incident_enrichments=incident_enrichments,
         )
         session.add(rule)
         session.commit()
@@ -2296,6 +2300,7 @@ def update_rule(
     multi_level_property_name,
     threshold,
     assignee=None,
+    incident_enrichments=None,
 ):
     rule_uuid = __convert_to_uuid(rule_id)
     if not rule_uuid:
@@ -2324,6 +2329,7 @@ def update_rule(
             rule.multi_level_property_name = multi_level_property_name
             rule.threshold = threshold
             rule.assignee = assignee
+            rule.incident_enrichments = incident_enrichments or {}
             session.commit()
             session.refresh(rule)
             return rule
@@ -2424,9 +2430,9 @@ def create_incident_for_grouping_rule(
     incident_name: str = None,
     past_incident: Optional[Incident] = None,
     assignee: str | None = None,
+    enrichments: dict | None = None,
     session: Optional[Session] = None,
 ):
-
     with existed_or_new_session(session) as session:
         # Create and add a new incident if it doesn't exist
         incident = Incident(
@@ -2448,6 +2454,16 @@ def create_incident_for_grouping_rule(
             incident.user_generated_name = f"{rule.incident_prefix}-{incident.running_number} - {incident.user_generated_name}"
         session.commit()
         session.refresh(incident)
+        if enrichments:
+            enrich_entity(
+                tenant_id=tenant_id,
+                fingerprint=str(incident.id),
+                enrichments=enrichments,
+                action_type=ActionType.INCIDENT_ENRICH,
+                action_callee="correlation-engine",
+                action_description="Incident enriched during correlation",
+                session=session,
+            )
     return incident
 
 
