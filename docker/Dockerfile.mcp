@@ -1,0 +1,54 @@
+FROM python:3.13.5-alpine AS base
+
+RUN apk add --no-cache bash libstdc++
+
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONHASHSEED=random \
+    PYTHONUNBUFFERED=1
+
+RUN addgroup -g 1000 keep && \
+    adduser -u 1000 -G keep -s /bin/sh -D keep
+
+WORKDIR /app
+
+FROM base AS builder
+
+RUN apk add --no-cache gcc g++ musl-dev libffi-dev openssl-dev build-base linux-headers
+
+ENV PIP_DEFAULT_TIMEOUT=100 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    POETRY_VERSION=1.8.3
+
+RUN pip install "poetry==$POETRY_VERSION"
+RUN python -m venv /venv
+
+COPY keep-mcp/pyproject.toml keep-mcp/README.md ./keep-mcp/
+COPY keep-mcp/src ./keep-mcp/src
+
+RUN cd keep-mcp && \
+    poetry export -f requirements.txt --output /tmp/requirements.txt --without-hashes --only main && \
+    /venv/bin/python -m pip install --upgrade -r /tmp/requirements.txt && \
+    /venv/bin/pip install ./ && \
+    pip uninstall -y poetry && \
+    rm -rf /root/.cache/pip && \
+    find /venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+    find /venv -type f -name "*.pyc" -delete 2>/dev/null || true
+
+FROM base AS final
+ENV PATH="/venv/bin:${PATH}" \
+    VIRTUAL_ENV="/venv" \
+    KEEP_MCP_TRANSPORT=streamable-http \
+    KEEP_MCP_HTTP_HOST=0.0.0.0 \
+    KEEP_MCP_HTTP_PORT=8090
+
+COPY --from=builder /venv /venv
+
+USER keep
+
+EXPOSE 8090
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO- http://127.0.0.1:8090/healthz || exit 1
+
+ENTRYPOINT ["python", "-m", "keep_mcp"]
