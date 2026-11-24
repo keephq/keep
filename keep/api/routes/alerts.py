@@ -404,6 +404,100 @@ def delete_alert(
     return {"status": "ok"}
 
 
+@router.delete(
+    "/{fingerprint}",
+    description="Delete all alert instances by fingerprint (all timestamps)",
+)
+def delete_all_alert_instances(
+    fingerprint: str,
+    restore: bool = False,
+    authenticated_entity: AuthenticatedEntity = Depends(
+        IdentityManagerFactory.get_auth_verifier(["delete:alert"])
+    ),
+) -> dict[str, str | int]:
+    """
+    Delete all alert instances (all timestamps) for a given fingerprint.
+    This endpoint allows users to delete the entire alert history for a fingerprint
+    in a single request, instead of calling the delete endpoint for each timestamp.
+    """
+    tenant_id = authenticated_entity.tenant_id
+    user_email = authenticated_entity.email
+
+    logger.info(
+        "Deleting all alert instances",
+        extra={
+            "fingerprint": fingerprint,
+            "restore": restore,
+            "tenant_id": tenant_id,
+        },
+    )
+
+    # Get all alerts with this fingerprint to get all timestamps
+    db_alerts = get_alerts_by_fingerprint(
+        tenant_id=tenant_id,
+        fingerprint=fingerprint,
+        limit=None,  # Get all alerts
+    )
+
+    if not db_alerts:
+        logger.warning(
+            "No alerts found for fingerprint",
+            extra={
+                "fingerprint": fingerprint,
+                "tenant_id": tenant_id,
+            },
+        )
+        return {"status": "ok", "deleted_count": 0}
+
+    # Extract all timestamps (lastReceived) from the alerts
+    all_timestamps = [alert.timestamp.isoformat() for alert in db_alerts]
+
+    # Get existing enrichment to preserve existing deleted timestamps
+    deleted_last_received = []
+    assignees_last_receievd = {}
+
+    enrichment = get_enrichment(tenant_id, fingerprint)
+    if enrichment:
+        deleted_last_received = enrichment.enrichments.get("deletedAt", [])
+        assignees_last_receievd = enrichment.enrichments.get("assignees", {})
+
+    if restore:
+        # Restore all timestamps - remove all from deleted list
+        deleted_last_received = []
+    else:
+        # Delete all timestamps - add all to deleted list
+        for timestamp in all_timestamps:
+            if timestamp not in deleted_last_received:
+                deleted_last_received.append(timestamp)
+            # Auto-assign the deleting user to each alert
+            if timestamp not in assignees_last_receievd:
+                assignees_last_receievd[timestamp] = user_email
+
+    # Update the enrichment with all deleted timestamps
+    enrichment_bl = EnrichmentsBl(tenant_id)
+    enrichment_bl.enrich_entity(
+        fingerprint=fingerprint,
+        enrichments={
+            "deletedAt": deleted_last_received,
+            "assignees": assignees_last_receievd,
+        },
+        action_type=ActionType.DELETE_ALERT,
+        action_description=f"All alert instances deleted by {user_email}",
+        action_callee=user_email,
+    )
+
+    logger.info(
+        "Deleted all alert instances successfully",
+        extra={
+            "tenant_id": tenant_id,
+            "restore": restore,
+            "fingerprint": fingerprint,
+            "deleted_count": len(all_timestamps),
+        },
+    )
+    return {"status": "ok", "deleted_count": len(all_timestamps)}
+
+
 @router.post(
     "/{fingerprint}/assign/{last_received}", description="Assign alert to user"
 )
