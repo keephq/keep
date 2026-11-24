@@ -1154,3 +1154,36 @@ def test_safe_tuple_literal_still_works(context_manager):
     ):
         result = iohandler.render(template)
     assert result == "True"
+
+
+def _seed_statuses(context_manager, statuses, cancelled=False):
+    for step_id, status in statuses.items():
+        context_manager.set_step_status(step_id, status)
+    context_manager.workflow_cancelled = cancelled
+
+
+def test_status_check_success_and_failure(context_manager):
+    iohandler = IOHandler(context_manager)
+    _seed_statuses(context_manager, {"step-a": "success", "step-b": "skipped"})
+    assert iohandler.render("keep.success()") == "True"
+    assert iohandler.render("keep.failure()") == "False"
+    _seed_statuses(context_manager, {"step-c": "failure"})
+    assert iohandler.render("keep.success()") == "False"
+    assert iohandler.render("keep.failure()") == "True"
+
+
+def test_status_check_cancelled_and_always(context_manager):
+    iohandler = IOHandler(context_manager)
+    _seed_statuses(context_manager, {"step-a": "success"}, cancelled=False)
+    assert iohandler.render("keep.cancelled()") == "False"
+    assert iohandler.render("keep.always()") == "True"
+    context_manager.workflow_cancelled = True
+    assert iohandler.render("keep.cancelled()") == "True"
+
+
+def test_status_checks_with_no_steps_yet(context_manager):
+    iohandler = IOHandler(context_manager)
+    # before any step ran: nothing failed, so success() holds and failure() does not
+    assert iohandler.render("keep.success()") == "True"
+    assert iohandler.render("keep.failure()") == "False"
+    assert iohandler.render("keep.cancelled()") == "False"
