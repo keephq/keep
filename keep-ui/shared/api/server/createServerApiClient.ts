@@ -73,6 +73,12 @@ export async function createServerApiClient(): Promise<ApiClient> {
         oauth2Headers[headerConfig.groupsHeader] = groupsValue;
       }
 
+      // Forward incoming cookie header to preserve authentication session on server-to-server calls
+      const cookieHeader = headersList.get("cookie");
+      if (cookieHeader) {
+        oauth2Headers["cookie"] = cookieHeader;
+      }
+
       console.log("OAuth2Proxy headers:", oauth2Headers);
       return new ApiClient(session, config, { headers: oauth2Headers });
     }
