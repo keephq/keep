@@ -1,4 +1,8 @@
+import re
+
 from keep.conditions.base_condition import BaseCondition
+
+_NUMBER_RE = re.compile(r"^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$")
 
 
 class ThresholdCondition(BaseCondition):
@@ -54,6 +58,19 @@ class ThresholdCondition(BaseCondition):
                 return True
         return False
 
+    @staticmethod
+    def _is_number(value) -> bool:
+        """Whether the value is a plain number, e.g. 5, -5, 5.5, -.5 or 1e3.
+
+        Negative numbers have to be recognized too. Otherwise a value such as
+        "-3" is compared to "-5" as text, and "-3" > "-5" comes out False.
+        """
+        if isinstance(value, bool):
+            return False
+        if isinstance(value, (int, float)):
+            return True
+        return bool(_NUMBER_RE.match(str(value).strip()))
+
     def _validate(self, compare_to, compare_value):
         """validate the condition.
 
@@ -63,10 +80,7 @@ class ThresholdCondition(BaseCondition):
 
         """
         # check if compare_to is a number (supports also float, hence the . replace)
-        if (
-            str(compare_to).replace(".", "", 1).isdigit()
-            and str(compare_to).replace(".", "", 1).isdigit()
-        ):
+        if self._is_number(compare_to):
             compare_to = float(compare_to)
             try:
                 compare_value = float(compare_value)
