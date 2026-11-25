@@ -29,6 +29,7 @@ class MattermostProvider(BaseProvider):
 
     PROVIDER_DISPLAY_NAME = "Mattermost"
     PROVIDER_CATEGORY = ["Collaboration"]
+    DEFAULT_TIMEOUT = (10, 30)
 
     def __init__(
         self, context_manager: ContextManager, provider_id: str, config: ProviderConfig
@@ -72,7 +73,12 @@ class MattermostProvider(BaseProvider):
                 pass
             payload["attachments"] = attachments
 
-        response = requests.post(webhook_url, json=payload, verify=False)
+        response = requests.post(
+            webhook_url,
+            json=payload,
+            timeout=self.DEFAULT_TIMEOUT,
+            verify=False,
+        )
 
         if not response.ok:
             raise ProviderException(
