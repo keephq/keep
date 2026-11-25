@@ -53,7 +53,7 @@ def is_valid_uuid(uuid_str):
         # UUID() will convert string to UUID object if valid
         uuid.UUID(uuid_str)
         return True
-    except ValueError:
+    except (ValueError, TypeError, AttributeError):
         return False
 
 
@@ -147,7 +147,7 @@ class EnrichmentsBl:
         event_id = (
             event.get("event_id")
             if isinstance(event, dict)
-            else getattr(event, "id", None)
+            else (event.event_id or event.id)
         )
         self._add_enrichment_log(
             "Running extraction rules for incoming event",
@@ -339,6 +339,27 @@ class EnrichmentsBl:
 
         return alert
 
+    @staticmethod
+    def _get_alert_uuid(alert: AlertDto | Alert) -> UUID | None:
+        """
+        Get the database UUID of the alert, if available.
+
+        AlertDto.id is the provider's original alert id (e.g. "InstanceDown"),
+        not a UUID. The database alert id is stored in AlertDto.event_id
+        (set in process_event_task after the alert is saved to the DB).
+        When called with a db Alert (e.g. from run_mapping_rule_by_id),
+        the id is always the database UUID.
+        """
+        if isinstance(alert, AlertDto):
+            candidates = [alert.event_id, alert.id]
+        else:
+            candidates = [getattr(alert, "id", None)]
+
+        for candidate in candidates:
+            if candidate is not None and is_valid_uuid(candidate):
+                return candidate
+        return None
+
     def check_if_match_and_enrich(self, alert: AlertDto, rule: MappingRule) -> bool:
         """
         Check if the alert matches the conditions specified in the mapping rule.
@@ -351,6 +372,10 @@ class EnrichmentsBl:
         Returns:
         - bool: True if alert matches the rule, False otherwise.
         """
+        # The enrichment event must reference the database alert id,
+        # which is AlertDto.event_id (AlertDto.id is the provider's id)
+        alert_uuid = self._get_alert_uuid(alert)
+
         self._add_enrichment_log(
             "Checking alert against mapping rule",
             "debug",
@@ -385,7 +410,11 @@ class EnrichmentsBl:
                 },
             )
             self._track_enrichment_event(
-                alert.id, EnrichmentStatus.SKIPPED, EnrichmentType.MAPPING, rule.id, {}
+                alert_uuid,
+                EnrichmentStatus.SKIPPED,
+                EnrichmentType.MAPPING,
+                rule.id,
+                {},
             )
             return False
 
@@ -501,7 +530,7 @@ class EnrichmentsBl:
                 {"fingerprint": alert.fingerprint, "rule_id": rule.id},
             )
             self._track_enrichment_event(
-                alert.id,
+                alert_uuid,
                 EnrichmentStatus.SUCCESS,
                 EnrichmentType.MAPPING,
                 rule.id,
@@ -515,7 +544,7 @@ class EnrichmentsBl:
             {"rule_id": rule.id, "alert_fingerprint": alert.fingerprint},
         )
         self._track_enrichment_event(
-            alert.id,
+            alert_uuid,
             EnrichmentStatus.FAILURE,
             EnrichmentType.MAPPING,
             rule.id,
@@ -910,7 +939,7 @@ class EnrichmentsBl:
 
         if alert_id is None or not is_valid_uuid(alert_id):
             self.__logs = []
-            self.logger.debug(
+            self.logger.warning(
                 "Cannot track enrichment event without a valid alert_id",
                 extra={"tenant_id": self.tenant_id, "rule_id": rule_id},
             )

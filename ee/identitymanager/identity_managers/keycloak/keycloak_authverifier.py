@@ -319,8 +319,13 @@ class KeycloakAuthVerifier(AuthVerifierBase):
             # filter out uma_protection
             role = [r for r in role if not r.startswith("uma_protection")]
             if not role:
+                # 403 (not 401): the token itself is valid, the user is just
+                # not authorized. A 401 makes the frontend sign the user out
+                # and re-authenticate, which loops forever when the missing
+                # role is the actual problem.
                 raise HTTPException(
-                    status_code=401, detail="Invalid Keycloak token - no role"
+                    status_code=403,
+                    detail="Invalid Keycloak token - no role assigned (expected one of the client roles: admin, noc, workflowrunner, webhook)",
                 )
 
             role = role[0]

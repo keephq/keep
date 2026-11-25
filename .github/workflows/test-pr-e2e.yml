@@ -37,7 +37,8 @@ env:
 jobs:
   # Prepare test environment in parallel with Docker builds
   prepare-test-environment:
-    runs-on: ubuntu-latest
+    # Playwright's --with-deps does not support Ubuntu 26.04 (ubuntu-latest)
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3

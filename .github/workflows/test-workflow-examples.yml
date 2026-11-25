@@ -17,7 +17,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref }}-${{ github.job }}
   cancel-in-progress: true
 env:
-  NODE_VERSION: 20
+  NODE_VERSION: 24
   PYTHON_VERSION: 3.11
   STORAGE_MANAGER_DIRECTORY: /tmp/storage-manager
 

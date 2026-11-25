@@ -32,6 +32,11 @@ export const AuthError = ({
 
   const getErrorMessage = (errorType: string | null): string => {
     if (!errorType) return errorMessages.Default;
+    if (errorType === "AccessDenied" && authType === "KEYCLOAK") {
+      // Keycloak users without a Keep role land here after sign-in: explain
+      // what is missing instead of the generic permission message.
+      return "Your Keycloak account does not have any Keep role assigned (admin, noc, webhook or workflowrunner).\n\nPlease contact your administrator to assign you one of the keep client roles in Keycloak.";
+    }
     return errorMessages[errorType as ErrorType] || errorMessages.Default;
   };
 
