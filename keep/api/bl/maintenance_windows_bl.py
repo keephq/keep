@@ -1,3 +1,4 @@
+import copy
 import datetime
 import json
 import logging
@@ -20,7 +21,7 @@ from keep.api.core.db import (
 )
 from keep.api.core.dependencies import get_pusher_client
 from keep.api.models.action_type import ActionType
-from keep.api.models.alert import AlertDto, AlertStatus
+from keep.api.models.alert import AlertDto, AlertSeverity, AlertStatus
 from keep.api.models.db.alert import Alert, AlertAudit
 from keep.api.models.db.maintenance_window import MaintenanceWindowRule
 from keep.api.tasks.notification_cache import get_notification_cache
@@ -127,9 +128,16 @@ class MaintenanceWindowsBl:
         if isinstance(alert, AlertDto):
             payload = alert.dict()
         else:
-            payload = alert.event
+            payload = copy.deepcopy(alert.event)
         # todo: fix this in the future
         payload["source"] = payload["source"][0]
+        if isinstance(payload.get("severity"), str):
+            try:
+                payload["severity"] = AlertSeverity(
+                    payload["severity"].lower()
+                ).order
+            except (ValueError, AttributeError):
+                pass
 
         activation = celpy.json_to_cel(json.loads(json.dumps(payload, default=str)))
 
