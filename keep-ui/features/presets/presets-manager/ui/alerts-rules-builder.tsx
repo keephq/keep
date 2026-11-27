@@ -1,3 +1,6 @@
+// TODO: Separate or fix naming — this file powers CEL search for both alerts and incidents
+// (via entityName). Consider a shared CelRulesBuilder or entity-specific wrappers later.
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, Textarea } from "@tremor/react";
@@ -35,6 +38,13 @@ const staticOptions = [
   { value: 'status=="firing"', label: 'status == "firing"' },
   { value: 'source=="grafana"', label: 'source == "grafana"' },
   { value: 'message.contains("CPU")', label: 'message.contains("CPU")' },
+];
+
+const incidentStaticOptions = [
+  { value: 'severity == "critical"', label: 'severity == "critical"' },
+  { value: 'status == "firing"', label: 'status == "firing"' },
+  { value: 'name.contains("database")', label: 'name.contains("database")' },
+  { value: 'assignee != ""', label: 'assignee != ""' },
 ];
 
 const CustomOption = (props: any) => {
@@ -145,6 +155,8 @@ type AlertsRulesBuilderProps = {
   minimal?: boolean;
   showToast?: boolean;
   shouldSetQueryParam?: boolean;
+  /** @todo shared with incidents — see file-level TODO about splitting/renaming */
+  entityName?: "alerts" | "incidents";
 };
 
 const SQL_QUERY_PLACEHOLDER = `SELECT *
@@ -191,6 +203,7 @@ export const AlertsRulesBuilder = ({
   showToast = false,
   shouldSetQueryParam = true,
   onCelChanges,
+  entityName = "alerts",
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -199,7 +212,15 @@ export const AlertsRulesBuilder = ({
 
   const { deletePreset } = usePresetActions();
 
-  const { data: alertFields } = useFacetPotentialFields("alerts");
+  const { data: alertFields } = useFacetPotentialFields(entityName);
+  const staticCelOptions =
+    entityName === "incidents" ? incidentStaticOptions : staticOptions;
+  const celPlaceholder =
+    entityName === "incidents"
+      ? 'Use CEL to filter incidents e.g. name.contains("database").'
+      : 'Use CEL to filter your alerts e.g. source.contains("kibana").';
+  const celInputId =
+    entityName === "incidents" ? "incidents-cel-input" : "alerts-cel-input";
 
   const [isGUIOpen, setIsGUIOpen] = useState(false);
   const [isImportSQLOpen, setImportSQLOpen] = useState(false);
@@ -366,8 +387,8 @@ export const AlertsRulesBuilder = ({
             <div className="flex-grow relative" ref={wrapperRef}>
               <div className="relative">
                 <CelInput
-                  id="alerts-cel-input"
-                  placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
+                  id={celInputId}
+                  placeholder={celPlaceholder}
                   value={celRules}
                   fieldsForSuggestions={alertFields}
                   onValueChange={setCELRules}
@@ -380,7 +401,7 @@ export const AlertsRulesBuilder = ({
               {showSuggestions && (
                 <div className="absolute z-10 w-full">
                   <Select
-                    options={staticOptions}
+                    options={staticCelOptions}
                     onChange={handleSelectChange}
                     menuIsOpen={true}
                     components={
