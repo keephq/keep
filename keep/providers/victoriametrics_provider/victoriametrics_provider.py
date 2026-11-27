@@ -199,6 +199,7 @@ receivers:
         ),
     ]
     PROVIDER_CATEGORY = ["Monitoring"]
+    DEFAULT_TIMEOUT = (10, 30)
     SEVERITIES_MAP = {
         "critical": AlertSeverity.CRITICAL,
         "high": AlertSeverity.HIGH,
@@ -239,6 +240,7 @@ receivers:
                 self.vmalert_host,
                 auth=self._get_auth(),
                 verify=not self.authentication_config.insecure,
+                timeout=self.DEFAULT_TIMEOUT,
             )
             if vmalert_response.status_code == 200:
                 self.logger.info("Connected to VMAlert successfully")
@@ -254,6 +256,7 @@ receivers:
                 self.vmbackend_host,
                 auth=self._get_auth(),
                 verify=not self.authentication_config.insecure,
+                timeout=self.DEFAULT_TIMEOUT,
             )
             if vmbackend_response.status_code == 200:
                 self.logger.info("Connected to VM Backend successfully")
@@ -347,6 +350,7 @@ receivers:
                 url,
                 auth=self._get_auth(),
                 verify=not self.authentication_config.insecure,
+                timeout=self.DEFAULT_TIMEOUT,
             )
             self.logger.debug("Using HTTPS for VMAlert")
             self._vmalert_host = f"https://{host}"
@@ -387,6 +391,7 @@ receivers:
                 url,
                 auth=self._get_auth(),
                 verify=not self.authentication_config.insecure,
+                timeout=self.DEFAULT_TIMEOUT,
             )
             self.logger.debug("Using HTTPS for VM Backend")
             self._vmbackend_host = f"https://{host}"
@@ -440,6 +445,7 @@ receivers:
             f"{self.vmalert_host}/api/v1/alerts",
             auth=self._get_auth(),
             verify=not self.authentication_config.insecure,
+            timeout=self.DEFAULT_TIMEOUT,
         )
         try:
             response.raise_for_status()
@@ -484,6 +490,7 @@ receivers:
                 params={"query": query, "time": start},
                 auth=auth,
                 verify=not self.authentication_config.insecure,
+                timeout=self.DEFAULT_TIMEOUT,
             )
             try:
                 response.raise_for_status()
@@ -499,6 +506,7 @@ receivers:
                 params={"query": query, "start": start, "end": end, "step": step},
                 auth=auth,
                 verify=not self.authentication_config.insecure,
+                timeout=self.DEFAULT_TIMEOUT,
             )
             if response.status_code == 200:
                 results = response.json()
