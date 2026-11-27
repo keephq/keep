@@ -746,6 +746,14 @@ class TopologiesService:
         all_applications: list[TopologyApplicationDtoIn] = []
         all_dependencies: list[TopologyServiceDependencyCreateRequestDto] = []
         try:
+            # Capture existing application IDs by name before cleanup to preserve identities
+            existing_apps = session.exec(
+                select(TopologyApplication).where(
+                    TopologyApplication.tenant_id == tenant_id
+                )
+            ).all()
+            app_id_by_name = {app.name: app.id for app in existing_apps if app.name and app.id}
+
             # Clean existing data for the tenant before import
             TopologiesService.clean_before_import(tenant_id=tenant_id, session=session)
 
@@ -753,10 +761,15 @@ class TopologiesService:
                 all_services.append(TopologyServiceYAML(**service))
 
             for application in topology_data["applications"]:
-                application["services"] = [
-                    {"id": _id} for _id in application["services"]
+                app_copy = dict(application)
+                app_copy["services"] = [
+                    {"id": _id["id"] if isinstance(_id, dict) else _id}
+                    for _id in application["services"]
                 ]
-                all_applications.append(TopologyApplicationDtoIn(**application))
+                # Preserve existing application UUID if not explicitly specified in input
+                if not app_copy.get("id") and app_copy.get("name") in app_id_by_name:
+                    app_copy["id"] = app_id_by_name[app_copy["name"]]
+                all_applications.append(TopologyApplicationDtoIn(**app_copy))
 
             for dependency in topology_data["dependencies"]:
                 all_dependencies.append(
