@@ -1154,3 +1154,40 @@ def test_safe_tuple_literal_still_works(context_manager):
     ):
         result = iohandler.render(template)
     assert result == "True"
+
+
+def test_iohandler_preserves_empty_containers_and_false_positional_args(
+    context_manager,
+):
+    """Ensure IOHandler does not drop empty containers ([], {}, ()) or False positional arguments.
+
+    Regression test for issue #6728:
+    When parsing positional args to keep.* functions, the previous guard dropped
+    empty containers and literal False arguments, causing TypeError or shifted arguments.
+    """
+    iohandler = IOHandler(context_manager)
+
+    # 1. Empty list preserved as first argument
+    assert iohandler.render("keep.slice([], 0, 1)") == "[]"
+
+    # 2. Empty tuple preserved as first argument
+    assert iohandler.render("keep.slice((), 0, 1)") == "()"
+
+    # 3. Boolean False from sub-call preserved and not dropped
+    assert iohandler.render("keep.eq(keep.eq(1, 2), False)") == "False"
+
+    # 4. Direct verification of parsed args with custom mocked function
+    import keep.functions as keep_functions
+
+    captured = []
+
+    def dummy_func(*args):
+        captured.append(args)
+        return "ok"
+
+    with patch.object(keep_functions, "dummy_test_func", dummy_func, create=True):
+        res = iohandler.render("keep.dummy_test_func(keep.eq(1, 2), [], {}, (), '0', '', 'x')")
+        assert res == "ok"
+        assert len(captured) == 1
+        assert captured[0] == (False, [], {}, (), "0", "", "x")
+
