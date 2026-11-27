@@ -28,6 +28,7 @@ from keep.api.core.metrics import (
     workflows_running,
 )
 from keep.api.models.alert import AlertDto
+from keep.api.models.db.maintenance_window import MaintenanceWindowDto
 from keep.api.models.incident import IncidentDto
 from keep.api.utils.email_utils import KEEP_EMAILS_ENABLED, EmailTemplates, send_email
 from keep.providers.providers_factory import ProviderConfigurationException
@@ -208,6 +209,12 @@ class WorkflowScheduler:
                     workflow_id=workflow_id,
                     trigger_type=event_context.trigger if event_context else "interval",
                 ).inc()
+            elif isinstance(event_context, MaintenanceWindowDto):
+                workflow_executions_total.labels(
+                    tenant_id=tenant_id,
+                    workflow_id=workflow_id,
+                    trigger_type="maintenance",
+                ).inc()
             else:
                 # TODO: add trigger to incident
                 workflow_executions_total.labels(
@@ -219,6 +226,8 @@ class WorkflowScheduler:
             # Run the workflow
             if isinstance(event_context, AlertDto):
                 workflow.context_manager.set_event_context(event_context)
+            elif isinstance(event_context, MaintenanceWindowDto):
+                workflow.context_manager.set_maintenance_context(event_context)
             else:
                 workflow.context_manager.set_incident_context(event_context)
 
@@ -482,6 +491,8 @@ class WorkflowScheduler:
                 triggered_by = f"manually by {triggered_by_user}"
             elif triggered_by.startswith("incident:"):
                 triggered_by = f"type:{triggered_by} name:{event.name} id:{event.id}"
+            elif triggered_by.startswith("maintenance:"):
+                triggered_by = f"type:{triggered_by} name:{event.name} id:{event.id}"
             else:
                 triggered_by = f"type:alert name:{event.name} id:{event.id}"
 
@@ -489,6 +500,10 @@ class WorkflowScheduler:
                 event_id = str(event.id)
                 event_type = "incident"
                 fingerprint = event_id
+            elif isinstance(event, MaintenanceWindowDto):
+                event_id = str(event.id)
+                event_type = "maintenance"
+                fingerprint = f"maintenance:{event_id}"
             else:
                 event_id = event.event_id
                 event_type = "alert"
@@ -599,6 +614,8 @@ class WorkflowScheduler:
                         new_event.update(new_enrichment.enrichments)
                         if isinstance(event, IncidentDto):
                             event = IncidentDto(**new_event)
+                        elif isinstance(event, MaintenanceWindowDto):
+                            event = MaintenanceWindowDto(**new_event)
                         else:
                             event = AlertDto(**new_event)
                     self.logger.info(
