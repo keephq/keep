@@ -36,6 +36,7 @@ class RuleCreateDto(BaseModel):
     multiLevelPropertyName: str = None
     threshold: int = 1
     assignee: str = None
+    maxIncidentWindow: int | None = None
 
 
 @router.get(
@@ -96,6 +97,7 @@ async def create_rule(
     multi_level_property_name = rule_create_request.multiLevelPropertyName
     threshold = rule_create_request.threshold
     assignee = rule_create_request.assignee
+    max_incident_window = rule_create_request.maxIncidentWindow
 
     if not sql:
         raise HTTPException(status_code=400, detail="SQL is required")
@@ -147,6 +149,7 @@ async def create_rule(
         multi_level_property_name=multi_level_property_name,
         threshold=threshold,
         assignee=assignee,
+        max_incident_window=max_incident_window,
     )
     logger.info("Rule created")
     return rule
@@ -204,6 +207,7 @@ async def update_rule(
         multi_level_property_name = body.get("multiLevelPropertyName", None)
         threshold = body.get("threshold", 1)
         assignee = body.get("assignee", None)
+        max_incident_window = body.get("maxIncidentWindow", None)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -261,6 +265,7 @@ async def update_rule(
         multi_level_property_name=multi_level_property_name,
         threshold=threshold,
         assignee=assignee,
+        max_incident_window=max_incident_window,
     )
 
     if rule:
