@@ -1,3 +1,4 @@
+from keep.api.models.alert import AlertStatus
 from keep.providers.grafana_provider.grafana_provider import GrafanaProvider
 
 
@@ -101,3 +102,46 @@ class TestFormatAlertGrafana12:
 
         assert len(alerts) == 1
         assert alerts[0].url is None
+
+
+class TestGroupedNotificationStatus:
+    def test_each_alert_keeps_its_own_status(self):
+        """Ensure an alert that resolves inside a still-firing group is formatted as resolved (#6848)."""
+        event = _grafana12_test_payload()
+        event["status"] = "firing"
+        event["alerts"] = [
+            {
+                "status": "firing",
+                "labels": {"alertname": "TestAlert", "instance": "server1"},
+                "annotations": {},
+                "values": {},
+            },
+            {
+                "status": "resolved",
+                "labels": {"alertname": "TestAlert", "instance": "server2"},
+                "annotations": {},
+                "values": {},
+            },
+        ]
+
+        alerts = GrafanaProvider._format_alert(event)
+        assert len(alerts) == 2
+        assert alerts[0].status == AlertStatus.FIRING.value
+        assert alerts[1].status == AlertStatus.RESOLVED.value
+
+    def test_group_status_is_used_when_alert_has_no_status(self):
+        """Ensure fallback to top-level event status when alert has no status field."""
+        event = _grafana12_test_payload()
+        event["status"] = "resolved"
+        event["alerts"] = [
+            {
+                "labels": {"alertname": "TestAlert", "instance": "server1"},
+                "annotations": {},
+                "values": {},
+            }
+        ]
+
+        alerts = GrafanaProvider._format_alert(event)
+        assert len(alerts) == 1
+        assert alerts[0].status == AlertStatus.RESOLVED.value
+
