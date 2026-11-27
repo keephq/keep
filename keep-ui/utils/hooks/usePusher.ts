@@ -22,29 +22,65 @@ export const useWebsocket = () => {
     channelName = `private-${session?.tenantId}`;
     console.log("useWebsocket: Creating new Pusher instance");
     try {
-      // check if the pusher host is relative (e.g. /websocket)
-      const isRelative =
-        configData.PUSHER_HOST && configData.PUSHER_HOST.startsWith("/");
+      // Normalize Pusher host, path, and port for relative paths, URLs, and host/path combinations
+      let wsHost = configData.PUSHER_HOST || window.location.hostname;
+      let wsPath = "";
+      let wsPort = configData.PUSHER_PORT;
 
-      // if relative, get the relative port:
-      let port = configData.PUSHER_PORT;
-      if (isRelative) {
-        // Handle case where port is empty string (default ports 80/443)
-        if (window.location.port) {
-          port = parseInt(window.location.port, 10);
-        } else {
-          // Use default ports based on protocol
-          port = window.location.protocol === "https:" ? 443 : 80;
+      if (configData.PUSHER_HOST) {
+        if (configData.PUSHER_HOST.startsWith("/")) {
+          // Relative path like "/websocket"
+          wsHost = window.location.hostname;
+          wsPath = configData.PUSHER_HOST;
+          if (window.location.port) {
+            wsPort = parseInt(window.location.port, 10);
+          } else {
+            wsPort = window.location.protocol === "https:" ? 443 : 80;
+          }
+        } else if (configData.PUSHER_HOST.includes("://")) {
+          try {
+            const parsed = new URL(configData.PUSHER_HOST);
+            wsHost = parsed.hostname;
+            wsPath = parsed.pathname !== "/" ? parsed.pathname : "";
+            if (parsed.port) {
+              wsPort = parseInt(parsed.port, 10);
+            } else if (!wsPort) {
+              wsPort = parsed.protocol === "https:" ? 443 : 80;
+            }
+          } catch {
+            wsHost = configData.PUSHER_HOST;
+          }
+        } else if (configData.PUSHER_HOST.includes("/")) {
+          // host + path e.g. "soketi-svc/websocket" or "soketi-svc:6001/websocket"
+          const slashIdx = configData.PUSHER_HOST.indexOf("/");
+          const hostPart = configData.PUSHER_HOST.substring(0, slashIdx);
+          wsPath = configData.PUSHER_HOST.substring(slashIdx);
+          if (hostPart.includes(":")) {
+            const [h, p] = hostPart.split(":");
+            wsHost = h;
+            if (!wsPort && p) {
+              wsPort = parseInt(p, 10);
+            }
+          } else {
+            wsHost = hostPart;
+          }
+        } else if (configData.PUSHER_HOST.includes(":")) {
+          // host + port e.g. "soketi-svc:6001"
+          const [h, p] = configData.PUSHER_HOST.split(":");
+          wsHost = h;
+          if (!wsPort && p) {
+            wsPort = parseInt(p, 10);
+          }
         }
       }
 
-      console.log("useWebsocket: isRelativeHostAndNotLocal:", isRelative);
+      console.log("useWebsocket: wsHost:", wsHost, "wsPath:", wsPath, "wsPort:", wsPort);
 
       var pusherOptions: PusherOptions = {
-        wsHost: isRelative ? window.location.hostname : configData.PUSHER_HOST,
-        // in case its relative, use path e.g. "/websocket"
-        wsPath: isRelative ? configData.PUSHER_HOST : "",
-        wsPort: isRelative ? port : configData.PUSHER_PORT,
+        wsHost: wsHost,
+        // in case its relative or has a path segment, use path e.g. "/websocket"
+        wsPath: wsPath,
+        wsPort: wsPort,
         forceTLS: window.location.protocol === "https:",
         disableStats: true,
         enabledTransports: ["ws", "wss"],
