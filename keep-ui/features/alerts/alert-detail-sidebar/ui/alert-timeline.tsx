@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Subtitle, Button, Card, Title } from "@tremor/react";
 import { Chrono } from "react-chrono";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
@@ -26,6 +26,33 @@ export const AlertTimeline: React.FC<AlertTimelineProps> = ({
   isLoading,
   onRefresh,
 }) => {
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const scroller = timelineScrollRef.current;
+    if (!scroller) {
+      return;
+    }
+    // react-chrono renders nested overflow containers with zero scroll
+    // extent. Chrome latches wheel gestures onto the one under the cursor
+    // and never chains them to the real scroll container, so the clipped
+    // timeline cannot be scrolled. Scroll it ourselves; preventDefault
+    // only when the scroll position actually changed, so overscroll still
+    // chains to the page once the container reaches either end.
+    const onWheel = (e: WheelEvent) => {
+      if (scroller.scrollHeight <= scroller.clientHeight) {
+        return;
+      }
+      const before = scroller.scrollTop;
+      scroller.scrollTop += e.deltaY;
+      if (scroller.scrollTop !== before) {
+        e.preventDefault();
+      }
+    };
+    scroller.addEventListener("wheel", onWheel, { passive: false });
+    return () => scroller.removeEventListener("wheel", onWheel);
+  }, []);
+
   // Default audit event if no audit data is available
   const defaultAuditEvent = alert
     ? [
@@ -86,7 +113,8 @@ export const AlertTimeline: React.FC<AlertTimelineProps> = ({
           title="Refresh"
         />
       </div>
-      <Card className="max-h-[500px] overflow-y-auto p-0">
+      <Card className="p-0">
+        <div ref={timelineScrollRef} className="max-h-[500px] overflow-y-auto">
         {isLoading ? (
           <div className="flex justify-center items-center h-full">
             <p>Loading...</p>
@@ -129,6 +157,7 @@ export const AlertTimeline: React.FC<AlertTimelineProps> = ({
             </Chrono>
           </div>
         )}
+        </div>
       </Card>
     </div>
   );
