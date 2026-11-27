@@ -349,5 +349,23 @@
       "mysql": "FALSE",
       "postgresql": "FALSE"
     }
+  },
+  {
+    "input_cel": "alert.labels[\"x') OR (1=1) OR ('\"] == 'a'",
+    "description": "Index property access contains SQL injection",
+    "expected_sql_dialect_based": {
+      "sqlite": "CAST(COALESCE(json_extract(alert_enrichments, '$.\"labels\".\"x'') OR (1=1) OR (''\"'), json_extract(alert_event, '$.\"labels\".\"x'') OR (1=1) OR (''\"')) as TEXT) = 'a'",
+      "mysql": "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(alert_enrichments, '$.\"labels\".\"x'') OR (1=1) OR (''\"')), JSON_UNQUOTE(JSON_EXTRACT(alert_event, '$.\"labels\".\"x'') OR (1=1) OR (''\"'))) = 'a'",
+      "postgresql": "(COALESCE((alert_enrichments -> 'labels') ->> 'x'') OR (1=1) OR (''', (alert_event -> 'labels') ->> 'x'') OR (1=1) OR ('''))::TEXT = 'a'"
+    }
+  },
+  {
+    "input_cel": "has(alert.labels[\"x') OR (1=1) OR ('\"])",
+    "description": "HAS operation with index property access containing SQL injection",
+    "expected_sql_dialect_based": {
+      "sqlite": "(EXISTS (SELECT 1 FROM json_each(json_extract(alert_enrichments, '$.\"labels\"')) WHERE json_each.key = 'x'') OR (1=1) OR (''') OR EXISTS (SELECT 1 FROM json_each(json_extract(alert_event, '$.\"labels\"')) WHERE json_each.key = 'x'') OR (1=1) OR ('''))",
+      "mysql": "(JSON_CONTAINS_PATH(alert_enrichments, 'one', '$.\"labels\".\"x'') OR (1=1) OR (''\"') OR JSON_CONTAINS_PATH(alert_event, 'one', '$.\"labels\".\"x'') OR (1=1) OR (''\"'))",
+      "postgresql": "(JSONB_PATH_EXISTS(alert_enrichments::JSONB, '$.\"labels\".\"x'') OR (1=1) OR (''\"') OR JSONB_PATH_EXISTS(alert_event::JSONB, '$.\"labels\".\"x'') OR (1=1) OR (''\"'))"
+    }
   }
 ]
