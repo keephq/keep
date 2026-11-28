@@ -278,6 +278,7 @@
       "pages": [
         "deployment/configuration",
         "deployment/monitoring",
+        "deployment/workflow-retention",
         {
           "group": "Authentication",
           "pages": [

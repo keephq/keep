@@ -1,0 +1,61 @@
+name: PostgreSQL workflow retention tests
+on:
+  pull_request:
+    paths:
+      - "keep/api/core/workflow_retention.py"
+      - "keep/cli/workflow_retention.py"
+      - "keep/api/models/db/workflow.py"
+      - "keep/api/models/db/migrations/**"
+      - "scripts/cleanup_workflow_executions.py"
+      - "tests/maintenance/**"
+      - ".github/workflows/test-workflow-retention.yml"
+  push:
+    branches: [main]
+    paths:
+      - "keep/api/core/workflow_retention.py"
+      - "keep/cli/workflow_retention.py"
+      - "keep/api/models/db/workflow.py"
+      - "keep/api/models/db/migrations/**"
+      - "scripts/cleanup_workflow_executions.py"
+      - "tests/maintenance/**"
+      - ".github/workflows/test-workflow-retention.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    services:
+      postgres:
+        image: postgres:16.14-bookworm
+        env:
+          POSTGRES_DB: keep_retention_tests
+          POSTGRES_USER: keep_tests
+          POSTGRES_PASSWORD: keep_tests
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U keep_tests -d keep_retention_tests"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+    env:
+      KEEP_RETENTION_TEST_DATABASE_URL: postgresql+psycopg://keep_tests:keep_tests@localhost:5432/keep_retention_tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install focused test dependencies
+        run: >-
+          python -m pip install
+          sqlalchemy==2.0.36 sqlmodel==0.0.22 pydantic==1.10.27
+          alembic==1.13.3 "psycopg[binary]==3.2.3" pytest==8.3.5
+          ruff==0.11.4 black==24.10.0
+      - name: Lint and format changed Python
+        run: |
+          python -m ruff check keep/api/core/workflow_retention.py keep/cli/workflow_retention.py scripts/cleanup_workflow_executions.py tests/maintenance keep/api/models/db/migrations/versions/2026-11-12-13-30_6942a1b2c3d4.py
+          python -m black --check keep/api/core/workflow_retention.py keep/cli/workflow_retention.py scripts/cleanup_workflow_executions.py tests/maintenance keep/api/models/db/migrations/versions/2026-11-12-13-30_6942a1b2c3d4.py
+      - name: Test PostgreSQL constraints, bounded cleanup, and migration
+        run: python -m pytest --confcutdir=tests/maintenance tests/maintenance -q
