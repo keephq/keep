@@ -1,0 +1,23 @@
+FROM python:3.13.5-alpine
+
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN addgroup -g 1000 keep && \
+    adduser -u 1000 -G keep -s /bin/sh -D keep
+
+WORKDIR /app
+COPY keep-mcp/pyproject.toml ./pyproject.toml
+COPY keep-mcp/keep_mcp ./keep_mcp
+RUN pip install .
+
+ENV MCP_TRANSPORT=streamable-http \
+    MCP_HOST=0.0.0.0 \
+    MCP_PORT=8001 \
+    KEEP_API_URL=http://keep-backend:8080
+
+USER keep
+EXPOSE 8001
+CMD ["keep-mcp"]
